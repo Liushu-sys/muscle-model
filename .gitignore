@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+
+# 3D 源模型太大（25MB），不入库。需要跑 tools/extract_body_svg.py 时
+# 从原仓库 Bodymap-App 的 assets/anatomy.glb 手动拷过来。
+assets/anatomy.glb

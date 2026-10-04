@@ -1,0 +1,66 @@
+{
+  "name": "muscle-model",
+  "version": "0.1.0",
+  "description": "47 组肌肉矢量图 + 症状→肌肉诊断引擎 + 场景化动作库。纯 TypeScript，零运行时依赖，可直接被任何项目调用。",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./react": {
+      "types": "./src/react.ts",
+      "default": "./src/react.ts"
+    },
+    "./assets/*": "./assets/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "assets",
+    "docs",
+    "tools",
+    "examples",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "node tools/smoke_local.mjs && node tools/smoke_actions.mjs && tsc --noEmit",
+    "check:data": "python3 tools/check_data.py",
+    "check:engine": "node tools/smoke_local.mjs",
+    "check:actions": "node tools/smoke_actions.mjs",
+    "typecheck": "tsc --noEmit",
+    "gen:sides": "python3 tools/gen_body_sides.py",
+    "gen:table": "python3 tools/gen_muscle_table.py",
+    "gen:preview": "python3 tools/build_body_preview.py",
+    "example": "node tools/run-example.mjs",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "muscle",
+    "anatomy",
+    "body-map",
+    "kinesiology",
+    "posture",
+    "svg"
+  ]
+}

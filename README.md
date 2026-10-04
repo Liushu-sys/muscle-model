@@ -1,0 +1,116 @@
+# muscle-model
+
+**一套能直接被任何项目调用的肌肉模型**：47 组肌肉矢量图（左右可分别点亮）+ 症状→肌肉诊断引擎 + 场景化动作库。
+
+纯 TypeScript，**零运行时依赖**。不联网、不调 AI 也能跑完"说一句话 → 得出哪些肌肉过劳/过弱 → 给你 3 个现在就能做的动作"。
+
+依据来自《基础肌动学》第 4 版（北京科学技术出版社 2024）各关节「受限的常见模式」章节。
+
+---
+
+## 装着用
+
+```bash
+# SSH（私有仓库，走你本机的 ssh key，推荐）
+npm i git+ssh://git@github.com/Liushu-sys/muscle-model.git
+
+# 或者 HTTPS + token：在 ~/.npmrc 里加一行
+#   //npm.pkg.github.com/:_authToken=YOUR_TOKEN
+npm i github:Liushu-sys/muscle-model
+```
+
+不想装依赖也可以直接把 `src/` 整个拷进项目——所有内部 import 都是相对路径，不依赖任何 npm 包。
+
+## 最快上手
+
+```ts
+import { parseLocal, pickActions } from 'muscle-model'
+
+// 1. 一句话 → 诊断
+const r = parseLocal('看电脑两小时，左边肩膀又酸又硬', '')
+r.tight.map(x => x.muscle.name)   // ['胸大肌', '胸小肌']         过劳/偏紧
+r.weak.map(x => x.muscle.name)    // ['菱形肌', '中斜方肌', '前锯肌'] 过弱/无力
+
+// 2. 诊断 → 此刻能做的 3 个动作
+const acts = pickActions({
+  scene: 'desk',                                  // desk 工位 | gym 健身房 | open 公园/家里 | bed 床上
+  muscleIds: r.tight.map(x => x.muscle.id),
+  state: 'tight',
+  regions: [...new Set(r.tight.map(x => x.muscle.region))],
+}, 3)
+acts[0].howto   // '坐直，右手抓住椅背…'
+```
+
+完整可跑的示例在 `examples/`：
+
+```bash
+npm install
+npm run example -- examples/01-最小诊断.ts
+npm run example -- examples/02-用户确认位置.ts
+npm run example -- examples/03-按场景给动作.ts
+```
+
+## 三个出口
+
+| 入口 | 内容 | 需要 React？ |
+|---|---|---|
+| `muscle-model` | 肌肉库 / 模式库 / 诊断引擎 / 解释卡 / 动作库 | 否 |
+| `muscle-model/react` | `BodyMap` 人体图组件 + 配色常量 + 左右换算函数 | 是（peer，可选） |
+| `muscle-model/assets/*` | 原始矢量图 JSON（`body_paths.json` / `body_sides.json`） | — |
+
+只做后端诊断或非 React 前端，**别 import `/react`**，能省掉 React 和 100KB 图数据。
+
+## 目录
+
+```
+src/
+  data/muscles.ts    47 组肌肉定义（部位、正/背面、默认倾向、书页、依据等级）
+  data/patterns.ts   9 条「症状 → 肌肉」模式（书里各关节受限的常见模式）
+  data/actions.ts    50 个动作 + 按场景/肌肉/状态挑选
+  lib/engine.ts      诊断引擎：解析主诉、红旗拦截、用户确认后重算
+  lib/explain.ts     四段式解释卡组装（是什么 / 问题 / 为什么 / 建议方向）
+  components/BodyMap.tsx  可左右分别着色点亮的 SVG 人体图
+  assets/body_sides.json  左右分离后的矢量路径（组件直接读这个）
+assets/             矢量图源数据（body_paths.json 是未拆左右的原图）
+tools/              生成与自检脚本（下面「改数据后必跑」）
+docs/               设计说明 / 映射清单 / 书籍依据
+examples/           4 个可运行示例
+```
+
+## 改数据后必跑
+
+```bash
+npm run check          # 引擎冒烟 + 动作覆盖 + 类型检查，一条命令全跑
+npm run check:data     # 三张表 id 一致性（python3）
+npm run gen:sides      # 改了矢量图后重建左右分离数据
+npm run gen:table      # 重建 docs/02-47组肌肉映射清单.md
+```
+
+## ⚠️ 复用前必读的五条
+
+**1. 三张表的 id 必须完全一致**
+`muscles.ts` × `body_paths.json` × `patterns.ts`。任一处不一致就会出现「诊断说这块肌紧、图上这块不亮」。改完跑 `npm run check:data`。
+
+**2. 正面图上的左右是反的**
+正面图：屏幕左边 = 身体的**右**侧。背面图：屏幕左边 = 身体的**左**侧。
+用 `screenToBody(view, side)` 换算，**别自己再翻一次**。
+
+**3. 依据等级不能说错**
+书里按「模式」列名肌肉，同一个 id 在不同模式下依据等级不同。
+`pattern.tight/weak` 是书原句；`pattern.inferredTight/Weak` 是同群推断。
+解释卡里"书上讲"只准用在前者身上——把推断说成引用是这个产品最不能犯的错。
+
+**4. 红旗必须最先判**
+`hitRedFlag(text)` 命中（手麻、头晕、夜间痛醒、外伤…）就停止给任何动作建议，直接引导就医。别把它放在诊断之后。
+
+**5. 场景表只有一份**
+4 档：`desk` / `gym` / `open` / `bed`，唯一来源是 `SCENE_LABEL`。
+（打包时发现旧代码里还留了一份 5 档的 `SCENES`，对不上且无人引用，已删除。）
+
+## 边界
+
+这是**体态与劳损的自查辅助**，不是医疗器械，也不构成诊断意见。
+47 组里目前只有 33 组能被本地 9 条模式点亮，剩下 14 组是备位（需要时接 AI 引擎或补模式）。
+`docs/02-47组肌肉映射清单.md` 逐条列了每块肌肉的面、默认倾向、书页和路径情况。
+至于"这次判定到底是书原句还是同群推断"——那要看它落在 `pattern.tight` 还是
+`pattern.inferredTight`，不能按肌肉全局判断，原因见 `docs/01-设计说明.md` 第 4 节。
