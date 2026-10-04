@@ -403,12 +403,17 @@ def _win(st, n, i, L):
     return idx
 
 
-def body_wobble_flags(pts, L=BODY_L, cross=BODY_CROSS, vert=BODY_VERT):
-    """标出「竖直长边上来回摆」的点。"""
+def body_wobble_flags(pts, L=BODY_L, cross=BODY_CROSS, vert=BODY_VERT, protect=PROTECT):
+    """标出「竖直长边上来回摆」的点。手部（protect）里的点一律不算——手指本身
+    就是竖直细长结构，|Δy|/弧长 天然接近 1，会被误判成"锯齿"平滑掉（实测背面
+    有 5 个点中招，手指被磨短、形状变怪）。"""
     n = len(pts)
     st = _arc_steps(pts)
     flags = [False] * n
     for i in range(n):
+        if any(x0 <= pts[i][0] <= x1 and y0 <= pts[i][1] <= y1
+               for x0, y0, x1, y1 in protect):
+            continue
         idx = _win(st, n, i, L)
         if len(idx) < 6:
             continue
