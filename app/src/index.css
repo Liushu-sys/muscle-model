@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* ── Body Map · 海洋青蓝 × iOS 极简 ─────────────────────────── */
+@theme {
+  /* 主色：取自配色卡 #4198AC 青蓝 */
+  --color-brand: #4198ac;
+  --color-brand-deep: #337f92;
+  --color-brand-tint: #e8f3f4;
+  --color-mint: #bfdfd2;
+
+  /* 过劳 = 红 / 过弱 = 蓝 */
+  --color-tight: #f0584f;
+  --color-tight-deep: #d8403a;
+  --color-tight-tint: #fdeceb;
+  --color-weak: #3d7de8;
+  --color-weak-deep: #2e66c8;
+  --color-weak-tint: #ebf1fe;
+
+  /* 未判定（用户选了、但模式没覆盖） */
+  --color-idle-state: #c9d3d4;
+  --color-idle-state-deep: #a9bbbe;
+
+  /* 文字 / 线条 */
+  --color-ink: #1d2122;
+  --color-ink-2: #6e7778;
+  --color-ink-3: #a2abac;
+  --color-hairline: #edf0ef;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+
+  --shadow-card: 0 10px 30px -12px rgba(31, 68, 77, 0.12);
+  --shadow-bar: 0 -8px 30px -18px rgba(31, 68, 77, 0.25);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #e9f0ef;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 肌肉库组件的 svg 根节点 */
+.bm-svg {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+/* 肌肉图交互反馈——对齐 assets/body_preview.html 的手感：
+   悬停即亮、按下微沉。filter 无过渡、即时响应，避免拖泥带水。
+   仅精确指针（鼠标/触控板）启用悬停，触摸屏不吃 hover。
+   选择器限定 <g> 内的 path：轮廓剪影（svg 直接子节点）不吃 hover。 */
+@media (hover: hover) and (pointer: fine) {
+  .bm-svg g path:hover {
+    filter: brightness(0.96) saturate(1.05);
+  }
+}
+.bm-svg g path:active {
+  filter: brightness(0.92);
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* iOS 式隐藏滚动条但保留滚动 */
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scroll-hidden {
+  scrollbar-width: none;
+}
+
+input {
+  outline: none;
+}
+input::placeholder {
+  color: var(--color-ink-3);
+}

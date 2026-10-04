@@ -208,7 +208,7 @@ export function matchPatternsBySense(input: string): string[] {
 export function dedupeConflict(
   tight: string[],
   weak: string[],
-  patternId: string,
+  _patternId: string,
   treatmentHint: 'prefer_weak' | 'prefer_tight' = 'prefer_weak'
 ): { tight: string[]; weak: string[] } {
   const dup = tight.filter((id) => weak.includes(id))
