@@ -83,8 +83,8 @@ def main():
     rows = []
     for view in ("front", "back"):
         for gid, node in b[view].items():
-            if gid in ("body", "guides"):
-                continue
+            if gid == "guides":
+                continue          # body 也算进来：人体外形线也做修缮
             if only and gid not in only:
                 continue
             if a[view][gid]["d"] == b[view][gid]["d"]:

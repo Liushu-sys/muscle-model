@@ -22,6 +22,8 @@ HTML = os.path.join(ROOT, "assets", "body_preview.html")
 
 PATH_RE = re.compile(r'<path class="m" data-id="([^"]+)"([^>]*?)d="[^"]*"')
 H3_RE = re.compile(r"<h3>([^<]*)</h3>")
+# 每个 SVG 里紧跟 <svg> 的第一个 <path>（无 class）就是人体外形线
+BODY_RE = re.compile(r'(<svg[^>]*>\s*<path )d="[^"]*"')
 
 
 def view_of(html, pos):
@@ -58,13 +60,22 @@ def main():
             return '<path class="m" data-id="%s"%sd="%s"' % (gid, m.group(2), node["d"])
 
         out.append(html[prev:s])
-        out.append(PATH_RE.sub(rep, seg))
+        seg = PATH_RE.sub(rep, seg)
+        nb = [0]
+
+        def rep_body(m):
+            nb[0] += 1
+            return '%sd="%s"' % (m.group(1), data[view]["body"]["d"])
+
+        seg = BODY_RE.sub(rep_body, seg)
+        stat["body"] = stat.get("body", 0) + nb[0]
+        out.append(seg)
         prev = e
     out.append(html[prev:])
 
     open(HTML, "w", encoding="utf-8").write("".join(out))
-    print("已刷新 %s：正面 %d 条 / 背面 %d 条"
-          % (os.path.relpath(HTML, ROOT), stat["front"], stat["back"]))
+    print("已刷新 %s：肌肉 正面 %d 条 / 背面 %d 条，人体外形线 %d 条"
+          % (os.path.relpath(HTML, ROOT), stat["front"], stat["back"], stat.get("body", 0)))
     if missing:
         print("！未在 JSON 中找到：%s" % ", ".join(missing))
 

@@ -104,23 +104,30 @@ npm run gen:sides      # 改了矢量图后重建左右分离数据
 npm run gen:table      # 重建 docs/02-47组肌肉映射清单.md
 ```
 
-### 轮廓有毛刺 / 细丝（不用碰 3D 模型）
+### 轮廓有毛刺 / 细丝 / 曲里拐弯（不用碰 3D 模型）
 
-`body_paths.json` 是从 3D 模型投影提取的，少数肌肉末端会拖出一条零点几单位宽、
-来回折返的"细丝"——填充看不出来，一描边就是一撮歪扭的锯齿。这类问题**不需要重新
-投影**，跑一遍后处理就行：
+`body_paths.json` 是从 3D 模型投影提取的，有两类提取噪声，**都不需要重新投影**，
+跑后处理就行：
+
+- **肌肉末端细丝**：零点几单位宽、来回折返的窄带。填充看不出来，一描边就是一撮
+  歪扭的锯齿（正面髋内收肌靠膝那段）。
+- **人体外形线的摆动**：腿部这种「上下走向的长边缘」被采样成来回摆（膝内侧 15 单位
+  高度里摆了三次）。这个不能靠加大平滑解决——手指、脚趾和它的尺度太接近，一刀切会
+  把手指标磨没。
 
 ```bash
-npm run check:paths        # 1. 先诊断（红=必修 / 黄=顺手修 / 绿=不动）
-npm run fix:paths          # 2. 修缮并写回（自动备份原件到 body_paths.raw.json）
-npm run gen:sides          # 3. 刷下游：左右分离数据
-npm run gen:preview-html   #    刷下游：预览页里的矢量路径
+npm run check:paths        # 1. 先诊断（肌肉分级 + 外形线摆动段位置；只读）
+npm run fix:paths          # 2. 修肌肉轮廓（红/黄档），自动备份原件
+npm run fix:body           #    修人体外形线（只动竖直长边上的摆动段）
+npm run gen:sides          # 3. 刷下游：左右分离数据（含 outline）
+npm run gen:preview-html   #    刷下游：预览页里的矢量路径（肌肉 + 外形线）
 npm run gen:look-png       #    刷下游：静态样张
 npm run fix:compare        # 4. 出前后对比图，肉眼验收（左=修缮前，右=修缮后）
 ```
 
 只修某一块：`python3 tools/fix_body_paths.py --apply --ids hip_adductors`。
-原理、判据、参数选择和 16 组的逐条结果见 `docs/06-轮廓修缮说明.md`。
+看局部放大：`python3 tools/build_fix_compare.py --ids body --bbox 55,290,145,455`。
+原理、判据、参数选择和逐条结果见 `docs/06-轮廓修缮说明.md`。
 
 只有**改了 3D 源模型**才需要往下走这条链（平时不用碰）：
 

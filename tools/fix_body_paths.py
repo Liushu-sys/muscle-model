@@ -78,6 +78,12 @@ def area(pts):
     return abs(s) / 2.0
 
 
+def _bbox(pts):
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
 # ---------------------------------------------------------------- 诊断
 def thickness_profile(pts, arc=3.0):
     """
@@ -324,6 +330,114 @@ def _refine(c, ss, r):
     return pts
 
 
+# ------------------------------------------------- 人体轮廓（body）专用修缮
+#
+# 肌肉那套（栅格开运算）不能用在 body 上：body 是整条人体外形线，含手指、脚趾
+# 这类细节，开运算会把它们一起削掉。
+#
+# body 的问题是另一种：腿部这类「上下走向的长边缘」上，轮廓会来回摆（例如正面
+# 膝内侧：15 单位高度里 x 摆了三次，幅度 3~4 单位），看着就是曲里拐弯。它既不是
+# 高频抖动（中值/高斯滤不掉），也不能整体简化（弦高简化只会把摆动压成硬折角）。
+#
+# 所以按「局部特征」定点处理，只动满足两个条件的点：
+#   ① 跨弦摆动：窗口内轮廓跑到端点连线的两侧（直线段不会）
+#   ② 竖直长边：窗口内 |Δy| / 弧长 ≥ 0.65
+# ② 是关键——手指缝、耳后这类地方也满足 ①，但它们的方向杂乱（实测 |Δy|/弧长
+# 只有 0.01~0.38），加上 ② 就能只命中腿部这种"长直边被采样成锯齿"的情形，
+# 手指、脚趾一根都不碰。
+BODY_L = 10.0        # 检测窗口（弧长）
+BODY_CROSS = 0.6     # 跨弦幅度阈值
+BODY_VERT = 0.65     # 竖直度阈值
+BODY_SIGMA = 7.0     # 平滑尺度
+BODY_GROW = 3        # 命中点前后各扩展几个点一起平滑
+
+
+def _arc_steps(pts):
+    n = len(pts)
+    return [math.dist(pts[i], pts[(i + 1) % n]) for i in range(n)]
+
+
+def _win(st, n, i, L):
+    """以 i 为中心、弧长 ±L 的环形窗口索引（按沿路径顺序）。"""
+    idx = [i]
+    s, k = 0.0, i
+    while True:
+        nx = (k + 1) % n
+        if nx == i or s + st[k] > L:
+            break
+        s += st[k]
+        idx.append(nx)
+        k = nx
+    s, k = 0.0, i
+    while True:
+        pv = (k - 1) % n
+        if pv == i or pv in idx or s + st[pv] > L:
+            break
+        s += st[pv]
+        idx.insert(0, pv)
+        k = pv
+    return idx
+
+
+def body_wobble_flags(pts, L=BODY_L, cross=BODY_CROSS, vert=BODY_VERT):
+    """标出「竖直长边上来回摆」的点。"""
+    n = len(pts)
+    st = _arc_steps(pts)
+    flags = [False] * n
+    for i in range(n):
+        idx = _win(st, n, i, L)
+        if len(idx) < 6:
+            continue
+        a, b = pts[idx[0]], pts[idx[-1]]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        chord = math.hypot(dx, dy)
+        if chord < 1e-9:
+            continue
+        ds = [(dx * (pts[k][1] - a[1]) - dy * (pts[k][0] - a[0])) / chord for k in idx]
+        if not (min(ds) < -cross and max(ds) > cross):
+            continue                      # 只在一侧 → 正常凸起，不动
+        arc = sum(st[k] for k in idx[:-1]) or 1e-9
+        if abs(dy) / arc >= vert:         # 竖直长边 → 是腿/臂那种锯齿
+            flags[i] = True
+    return flags
+
+
+def smooth_body(pts, rounds=3, sigma=BODY_SIGMA, grow=BODY_GROW):
+    """只对摆动段做定向平滑，其余点原样不动。返回 (新点列, 处理过的点号集合)。"""
+    p = [tuple(q) for q in pts]
+    n = len(p)
+    touched = set()
+    for _ in range(rounds):
+        flags = body_wobble_flags(p)
+        if not any(flags):
+            break
+        sel = set()
+        for i in range(n):
+            if flags[i]:
+                for k in range(-grow, grow + 1):
+                    sel.add((i + k) % n)
+        touched |= sel
+        st = _arc_steps(p)
+        cum = [0.0]
+        for i in range(n):
+            cum.append(cum[-1] + st[i])
+        total = cum[-1]
+        new = list(p)
+        for i in sel:
+            idx = _win(st, n, i, 2.5 * sigma)
+            wsum = sx = sy = 0.0
+            for k in idx:
+                d = abs(cum[i] - cum[k])
+                d = min(d, total - d)
+                w = math.exp(-d * d / (2 * sigma * sigma))
+                sx += w * p[k][0]
+                sy += w * p[k][1]
+                wsum += w
+            new[i] = (sx / wsum, sy / wsum)
+        p = new
+    return p, touched
+
+
 # ---------------------------------------------------------------- 修复主流程
 def rebuild(subs, vbox, r):
     """栅格重建一组子路径。返回 (新的 subs, 面积变化率)。"""
@@ -365,11 +479,39 @@ def main():
     ap.add_argument("--ids", default="", help="只处理这些肌肉 id（逗号分隔）")
     ap.add_argument("--force", default="", help="强制处理这些 id（即使诊断是绿档）")
     ap.add_argument("--max-loss", type=float, default=0.20, help="面积损失上限，超过则跳过")
+    ap.add_argument("--what", choices=["muscles", "body", "both"], default="muscles",
+                    help="修肌肉轮廓（默认）/ 人体外形线 body / 两者")
     args = ap.parse_args()
 
     if not (args.report or args.apply):
         ap.print_help()
         sys.exit(1)
+
+    # ---- 人体外形线（body）：先诊断，--apply 时再动手 ----
+    def body_report():
+        print("\n人体外形线（body）—— 竖直长边上的来回摆：")
+        for view in ("front", "back"):
+            pts = subpaths(data[view]["body"]["d"])[0]
+            flags = body_wobble_flags(pts)
+            n = sum(flags)
+            spots = []
+            cur = None
+            for i in range(len(pts)):
+                if flags[i]:
+                    if cur is None:
+                        cur = [i, i]
+                    else:
+                        cur[1] = i
+                elif cur:
+                    spots.append(cur)
+                    cur = None
+            if cur:
+                spots.append(cur)
+            pos = "、".join("(%d,%d)~(%d,%d)" % (pts[a][0], pts[a][1], pts[b][0], pts[b][1])
+                            for a, b in spots[:6])
+            print("  %-5s %d 点 / 命中 %d 点 / %d 段  %s"
+                  % (view, len(pts), n, len(spots), pos if spots else "—"))
+        print()
 
     data = json.load(open(SRC, encoding="utf-8"))
     vbox = data["viewBox"]
@@ -403,39 +545,66 @@ def main():
     print("红 %d / 黄 %d / 绿 %d （共 %d 组）" % (n["red"], n["yellow"], n["green"], len(rows)))
 
     if args.report:
+        if args.what in ("body", "both"):
+            body_report()
         return
 
-    for view, gid, g, d in rows:
-        if g == "green":
-            continue
-        if only and gid not in only:
-            continue
-        node = data[view][gid]
-        subs = subpaths(node["d"])
-        r = 3 if g == "red" else 2
-        new, loss = rebuild(subs, vbox, r)
-        if not new:
-            skipped.append("%s/%s 重建后为空" % (view, gid))
-            continue
-        if abs(loss) > args.max_loss:
-            skipped.append("%s/%s 面积变化 %+.0f%% 超上限" % (view, gid, loss * 100))
-            continue
-        a0 = sum(area(p) for p in subs)
-        a1 = sum(area(p) for p in new)
-        # 复检：细丝是不是真没了
-        nd = diagnose(new)
-        print("  · %-6s %-22s r=%d  面积 %7.1f→%7.1f (%+5.1f%%)  顶点 %3d→%3d  "
-              "细丝 %.1f→%.1f  最细 %.2f→%.2f"
-              % (view, gid, r, a0, a1, loss * 100, d["pts"],
-                 sum(len(p) for p in new), d["run"], nd["run"], d["min"], nd["min"]))
-        node["d"] = to_d(new)
-        touched += 1
+    n_body = 0
+
+    if args.what in ("muscles", "both"):
+        for view, gid, g, d in rows:
+            if g == "green":
+                continue
+            if only and gid not in only:
+                continue
+            node = data[view][gid]
+            subs = subpaths(node["d"])
+            r = 3 if g == "red" else 2
+            new, loss = rebuild(subs, vbox, r)
+            if not new:
+                skipped.append("%s/%s 重建后为空" % (view, gid))
+                continue
+            if abs(loss) > args.max_loss:
+                skipped.append("%s/%s 面积变化 %+.0f%% 超上限" % (view, gid, loss * 100))
+                continue
+            a0 = sum(area(p) for p in subs)
+            a1 = sum(area(p) for p in new)
+            # 复检：细丝是不是真没了
+            nd = diagnose(new)
+            print("  · %-6s %-22s r=%d  面积 %7.1f→%7.1f (%+5.1f%%)  顶点 %3d→%3d  "
+                  "细丝 %.1f→%.1f  最细 %.2f→%.2f"
+                  % (view, gid, r, a0, a1, loss * 100, d["pts"],
+                     sum(len(p) for p in new), d["run"], nd["run"], d["min"], nd["min"]))
+            node["d"] = to_d(new)
+            touched += 1
+    else:
+        touched = 0
+
+    if args.what in ("body", "both"):
+        for view in ("front", "back"):
+            node = data[view]["body"]
+            pts = subpaths(node["d"])[0]
+            before = list(pts)
+            new, sel = smooth_body(pts)
+            if not sel:
+                print("  · %-5s body  未发现竖直长边摆动，保持原样" % view)
+                continue
+            move = max(math.dist(before[i], new[i]) for i in sel)
+            if move > 8.0:
+                skipped.append("%s/body 最大位移 %.1f 单位，超安全阈值" % (view, move))
+                continue
+            b0, b1 = _bbox(before), _bbox(new)
+            print("  · %-5s body  移动 %3d/%d 点  最大位移 %.2f 单位  "
+                  "包围盒 y %.0f~%.0f → %.0f~%.0f"
+                  % (view, len(sel), len(pts), move, b0[1], b0[3], b1[1], b1[3]))
+            node["d"] = to_d([new])
+            n_body += 1
 
     for s in skipped:
         print("  ! 跳过：%s" % s)
-    print("\n共修缮 %d 组" % touched)
+    print("\n共修缮：肌肉 %d 组，人体外形线 %d 条" % (touched, n_body))
 
-    if args.dry or touched == 0:
+    if args.dry or (touched + n_body) == 0:
         print("（--dry，未写入）" if args.dry else "（无改动）")
         return
 

@@ -32,7 +32,7 @@
     "check:data": "python3 tools/check_data.py",
     "check:engine": "node tools/smoke_local.mjs",
     "check:actions": "node tools/smoke_actions.mjs",
-    "check:paths": "python3 tools/fix_body_paths.py --report",
+    "check:paths": "python3 tools/fix_body_paths.py --report --what both",
     "typecheck": "tsc --noEmit",
     "gen:sides": "python3 tools/gen_body_sides.py",
     "gen:table": "python3 tools/gen_muscle_table.py",
@@ -40,6 +40,7 @@
     "gen:preview-html": "python3 tools/build_preview_html.py",
     "gen:look-png": "python3 tools/build_body_preview.py",
     "fix:paths": "python3 tools/fix_body_paths.py --apply",
+    "fix:body": "python3 tools/fix_body_paths.py --apply --what body",
     "fix:compare": "python3 tools/build_fix_compare.py",
     "example": "node tools/run-example.mjs",
     "build": "tsc -p tsconfig.build.json"
