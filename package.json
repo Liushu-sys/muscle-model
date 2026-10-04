@@ -35,7 +35,8 @@
     "typecheck": "tsc --noEmit",
     "gen:sides": "python3 tools/gen_body_sides.py",
     "gen:table": "python3 tools/gen_muscle_table.py",
-    "gen:preview": "python3 tools/build_body_preview.py",
+    "gen:preview": "python3 tools/extract_body_svg.py",
+    "gen:look-png": "python3 tools/build_body_preview.py",
     "example": "node tools/run-example.mjs",
     "build": "tsc -p tsconfig.build.json"
   },

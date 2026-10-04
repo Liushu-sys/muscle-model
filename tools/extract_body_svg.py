@@ -11,12 +11,19 @@
   4. 每块肌肉：三角面光栅化 -> 连通域 -> Moore 邻域追踪 -> Chaikin 平滑 -> RDP 简化
   5. 背面视图做一次镜像（左右对调），才是「从背后看」的正确朝向
 
-产物：
+产物（两个都会**覆盖**已有文件）：
   assets/body_paths.json    {viewBox, front:{body,guides,<id>}, back:{...}}
   assets/body_preview.html  可直接双击打开的预览（悬停高亮 / 点击高亮）
 
 用法：
   python3 tools/extract_body_svg.py
+
+⚠️ 前置：需要 assets/anatomy.glb（约 25MB，原始 3D 模型）。它体积太大没有入库，
+   跑本脚本前先从 Bodymap-App 仓库的 assets/ 手动拷过来，否则会 FileNotFoundError。
+
+⚠️ 重跑之后必须跟着跑一次下游，否则左右分离的数据会跟新图对不上：
+    python3 tools/gen_body_sides.py      # 重新生成 body_sides.json（会自动同步到 src/assets/）
+    python3 tools/check_data.py          # 校验 id 三方一致
 """
 import json
 import os

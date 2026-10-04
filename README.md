@@ -60,6 +60,18 @@ npm run example -- examples/03-按场景给动作.ts
 
 只做后端诊断或非 React 前端，**别 import `/react`**，能省掉 React 和 100KB 图数据。
 
+## 先肉眼看一眼
+
+在装依赖、读代码之前，直接双击打开：
+
+```
+assets/body_preview.html
+```
+
+一个自包含的静态页（无外链、无需起服务），正面 / 背面两幅线稿，47 组肌肉**悬停高亮、点击会显示中文名和 id**。想确认某块肌肉在图上的位置、想核对左右口径，用它比读代码快。
+
+`assets/body_look.png` 是同一套图的静态样张（正面/背面并排，演示颈椎模式的过劳/过弱着色），适合直接贴到文档或对外介绍里。
+
 ## 目录
 
 ```
@@ -71,7 +83,11 @@ src/
   lib/explain.ts     四段式解释卡组装（是什么 / 问题 / 为什么 / 建议方向）
   components/BodyMap.tsx  可左右分别着色点亮的 SVG 人体图
   assets/body_sides.json  左右分离后的矢量路径（组件直接读这个）
-assets/             矢量图源数据（body_paths.json 是未拆左右的原图）
+assets/
+  body_paths.json    未拆左右的矢量原图（组件不读它，是下面两个的上游）
+  body_sides.json    左右分离后（同上，给工具链用）
+  body_preview.html  可交互预览页，双击即开，无外链
+  body_look.png      静态样张，贴文档用
 tools/              生成与自检脚本（下面「改数据后必跑」）
 docs/               设计说明 / 映射清单 / 书籍依据
 examples/           4 个可运行示例
@@ -86,10 +102,23 @@ npm run gen:sides      # 改了矢量图后重建左右分离数据
 npm run gen:table      # 重建 docs/02-47组肌肉映射清单.md
 ```
 
+只有**改了 3D 源模型**才需要往下走这条链（平时不用碰）：
+
+```bash
+cp ../Bodymap-App/assets/anatomy.glb assets/   # 25MB，太大没入库，手动拷
+python3 tools/extract_body_svg.py    # glb → body_paths.json + body_preview.html（会覆盖！需 numpy+PIL）
+python3 tools/gen_body_sides.py      # body_paths.json → body_sides.json（自动同步到 src/assets/）
+python3 tools/check_data.py
+```
+
+⚠️ `extract_body_svg.py` 会**覆盖** `body_paths.json` 和 `body_preview.html`，且跳过后续两步会让左右分离数据和新图对不上。
+
 ## ⚠️ 复用前必读的五条
 
 **1. 三张表的 id 必须完全一致**
 `muscles.ts` × `body_paths.json` × `patterns.ts`。任一处不一致就会出现「诊断说这块肌紧、图上这块不亮」。改完跑 `npm run check:data`。
+
+（`body_preview.html` 和 `src/assets/body_sides.json` 是生成产物，id 跟着 `body_paths.json` 走，不用单独维护——但改完图要记得重跑生成脚本，否则它会是旧数据。）
 
 **2. 正面图上的左右是反的**
 正面图：屏幕左边 = 身体的**右**侧。背面图：屏幕左边 = 身体的**左**侧。
