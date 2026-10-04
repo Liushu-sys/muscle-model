@@ -27,6 +27,19 @@
   python3 tools/fix_body_paths.py --apply             # 诊断 + 写回（自动备份原件）
   python3 tools/fix_body_paths.py --apply --ids hip_adductors,tensor_fasciae_latae
   python3 tools/fix_body_paths.py --apply --dry       # 演练，不落盘
+  python3 tools/fix_body_paths.py --restore           # 全量退回原件
+  python3 tools/fix_body_paths.py --report --what body    # 另一类问题：人体外形线
+  python3 tools/fix_body_paths.py --apply  --what body
+
+输入取原件（body_paths.raw.json）而不是当前文件，所以重复跑结果一致；想接着
+当前结果继续动手时加 --inplace。
+
+哪些地方不动
+------------
+  · 手部区域（PROTECT）：前臂肌肉连到手指的那几束线宽仅 1.75~2.56 单位，正好会
+    被 r=3 的腐蚀吃掉——第一版就是这么把"手指的肌肉线"削没的，详见 docs/06 第八节。
+  · 人体外形线 body：不能走开运算（手指脚趾会一起没），改用跨弦 + 竖直长边的
+    定点判据，见 smooth_body / body_wobble_flags。
 """
 import argparse
 import json
@@ -46,6 +59,14 @@ SS = 4          # 栅格超采样倍数（1 单位 = SS 像素）
 THIN_RED = 1.0  # 局部厚度 < 1.0 → 红档，必须修
 THIN_YEL = 2.0  # 局部厚度 < 2.0 → 黄档，顺手修
 
+# 手部保护区（单元坐标，viewBox 0 0 200 460 下的固定区域）。
+# 前臂屈肌群 / 伸肌群会一直延伸到手掌并分出几束细线指向手指，它们是人体图上
+# 「前臂肌肉连到手」的视觉表达（中位宽 1.75~2.56 单位，栅格下只有 7~10 px）。
+# 开运算 r=3 会把这么细的结构整个吃掉——上一版就是这么把手部弄空的。所以
+# 手部这一带不做开运算，原图像素原样并回。左右两个框，y 上限取 274，避免
+# 波及大腿（腿从 y≈270 开始）。
+PROTECT = [(0, 208, 52, 274), (148, 208, 200, 274)]
+
 NUM = re.compile(r"-?\d+\.?\d*")
 
 
@@ -62,8 +83,11 @@ def subpaths(dstr):
 
 
 def to_d(subs):
+    # 保留 2 位小数：这些点是从栅格轮廓重采样出来的，按 1 位小数写回会引入
+    # 0.05 单位的坐标误差——对宽仅 1~2 单位的窄结构（手指束、肌腱）足以让
+    # 「局部厚度」判定翻转，出现「内存里已修好、落盘后又报细丝」的假象。
     return "".join(
-        "M" + "L".join("%s,%s" % (round(x, 1), round(y, 1)) for x, y in pts) + "Z"
+        "M" + "L".join("%s,%s" % (round(x, 2), round(y, 2)) for x, y in pts) + "Z"
         for pts in subs
     )
 
@@ -439,8 +463,11 @@ def smooth_body(pts, rounds=3, sigma=BODY_SIGMA, grow=BODY_GROW):
 
 
 # ---------------------------------------------------------------- 修复主流程
-def rebuild(subs, vbox, r):
-    """栅格重建一组子路径。返回 (新的 subs, 面积变化率)。"""
+def rebuild(subs, vbox, r, protect=PROTECT):
+    """栅格重建一组子路径。返回 (新的 subs, 面积变化率)。
+
+    protect 里的矩形区域不做开运算，原样并回（见 PROTECT 注释）。
+    """
     W, H = vbox
     w, h = int(W * SS), int(H * SS)
     img = Image.new("L", (w, h), 0)
@@ -450,6 +477,12 @@ def rebuild(subs, vbox, r):
 
     before = sum(1 for p in img.getdata() if p)
     opened = _dilate(_erode(img, r), r)          # 开运算：腐蚀 r 再膨胀 r，等量还原
+    if protect:
+        keep = Image.new("L", (w, h), 0)
+        kd = ImageDraw.Draw(keep)
+        for x0, y0, x1, y1 in protect:
+            kd.rectangle([x0 * SS, y0 * SS, x1 * SS, y1 * SS], fill=255)
+        opened = ImageChops.lighter(opened, ImageChops.multiply(img, keep))
     after = sum(1 for p in opened.getdata() if p)
 
     out = []
@@ -481,7 +514,19 @@ def main():
     ap.add_argument("--max-loss", type=float, default=0.20, help="面积损失上限，超过则跳过")
     ap.add_argument("--what", choices=["muscles", "body", "both"], default="muscles",
                     help="修肌肉轮廓（默认）/ 人体外形线 body / 两者")
+    ap.add_argument("--inplace", action="store_true",
+                    help="以当前 body_paths.json 为输入（默认以原件 body_paths.raw.json 为输入，保证可重复跑）")
+    ap.add_argument("--restore", action="store_true",
+                    help="把 body_paths.json 全量恢复成原件（肌肉 + 外形线），不做修缮")
     args = ap.parse_args()
+
+    if args.restore:
+        if not os.path.exists(BAK):
+            print("找不到原件 %s，无法恢复" % os.path.relpath(BAK, ROOT))
+            sys.exit(1)
+        shutil.copyfile(BAK, SRC)
+        print("已恢复 %s ← %s" % (os.path.relpath(SRC, ROOT), os.path.relpath(BAK, ROOT)))
+        return
 
     if not (args.report or args.apply):
         ap.print_help()
@@ -514,6 +559,18 @@ def main():
         print()
 
     data = json.load(open(SRC, encoding="utf-8"))
+    # 输入一律取原件（body_paths.raw.json），而不是当前文件——这样重复跑结果
+    # 完全一致，不会把已经修好的组再过一轮开运算（骨骼细的部位经不起一轮轮削）。
+    # 需要「在当前结果上继续」时用 --inplace。
+    if os.path.exists(BAK) and not args.inplace:
+        raw = json.load(open(BAK, encoding="utf-8"))
+        for view in ("front", "back"):
+            for k in raw[view]:
+                is_body = k in ("body", "guides")
+                if (args.what == "both"
+                        or (args.what == "body" and is_body)
+                        or (args.what == "muscles" and not is_body)):
+                    data[view][k] = raw[view][k]
     vbox = data["viewBox"]
     only = {s for s in args.ids.split(",") if s}
     force = {s for s in args.force.split(",") if s}

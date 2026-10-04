@@ -115,6 +115,10 @@ npm run gen:table      # 重建 docs/02-47组肌肉映射清单.md
   高度里摆了三次）。这个不能靠加大平滑解决——手指、脚趾和它的尺度太接近，一刀切会
   把手指标磨没。
 
+修的时候有一处**要留住**：前臂肌肉连到手的那几束细线（手指的"肌肉线"，中位宽只有
+1.75~2.56 单位），它们和"该削掉的细丝"尺寸差不多，所以脚本里给手部划了保护区
+（`PROTECT`），那一带的像素一个不动。详见 `docs/06` 第八节。
+
 ```bash
 npm run check:paths        # 1. 先诊断（肌肉分级 + 外形线摆动段位置；只读）
 npm run fix:paths          # 2. 修肌肉轮廓（红/黄档），自动备份原件
@@ -123,7 +127,11 @@ npm run gen:sides          # 3. 刷下游：左右分离数据（含 outline）
 npm run gen:preview-html   #    刷下游：预览页里的矢量路径（肌肉 + 外形线）
 npm run gen:look-png       #    刷下游：静态样张
 npm run fix:compare        # 4. 出前后对比图，肉眼验收（左=修缮前，右=修缮后）
+npm run fix:restore        # 想退回原件时：全量恢复（肌肉 + 外形线）
 ```
+
+输入一律取原件 `assets/body_paths.raw.json`，所以这些命令**重复跑结果完全一样**
+（想在当前结果上继续动手才用 `--inplace`）。
 
 只修某一块：`python3 tools/fix_body_paths.py --apply --ids hip_adductors`。
 看局部放大：`python3 tools/build_fix_compare.py --ids body --bbox 55,290,145,455`。

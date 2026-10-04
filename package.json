@@ -41,6 +41,7 @@
     "gen:look-png": "python3 tools/build_body_preview.py",
     "fix:paths": "python3 tools/fix_body_paths.py --apply",
     "fix:body": "python3 tools/fix_body_paths.py --apply --what body",
+    "fix:restore": "python3 tools/fix_body_paths.py --restore",
     "fix:compare": "python3 tools/build_fix_compare.py",
     "example": "node tools/run-example.mjs",
     "build": "tsc -p tsconfig.build.json"
