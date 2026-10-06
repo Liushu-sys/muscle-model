@@ -330,7 +330,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .fav-region{font-size:11px;font-weight:500;color:var(--home-text-3);margin-bottom:6px}
 .fav-desc{font-size:13px;line-height:1.55;color:var(--home-text-2);display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .fav-dose{margin-top:auto;padding-top:7px;font-size:12.5px;font-weight:600;color:var(--home-accent-dark)}
-.fav-img{flex-shrink:0;align-self:stretch;aspect-ratio:1/1;border-radius:12px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--home-accent-dark)}
+.fav-img{position:relative;flex-shrink:0;width:50%;align-self:stretch;border-radius:12px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--home-accent-dark)}
+.fav-star{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:#F5A623;pointer-events:none}
+.fav-star svg{width:16px;height:16px;fill:currentColor}
 .fav-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:var(--home-text-3)}
 
 /* ── 我的页 ── */
@@ -1658,7 +1660,8 @@ function renderFavList(cat){
        + '<div class="fav-region">' + a.region + '</div>'
        + '<div class="fav-desc">' + a.desc + '</div>'
        + '<div class="fav-dose">' + a.dose + '</div>'
-       + '</div><div class="fav-img"><span>动作示意</span></div></div>';
+       + '</div><div class="fav-img"><span>动作示意</span>'
+       + '<button class="fav-star" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M12 20.2C7.2 16.4 3.8 13.2 3.8 9.7 3.8 7.2 5.8 5.2 8.3 5.2c1.5 0 3 .8 3.7 2 .7-1.2 2.2-2 3.7-2 2.5 0 4.5 2 4.5 4.5 0 3.5-3.4 6.7-8.2 10.5z"/></svg></button></div></div>';
   });
   list.innerHTML = h;
 }
