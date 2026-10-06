@@ -909,16 +909,47 @@ var ADVICE_SECTIONS = [
 
 function renderAdvicePage(){
   refreshRegionGroups();
-  // 受累区域（用于排序和副标题）
+  // 受累区域（用于长期改善建议排序）
   var affected = [];
   Object.keys(REGION_GROUPS).forEach(function(k){
     if(REGION_GROUPS[k].tight.length || REGION_GROUPS[k].weak.length) affected.push(k);
   });
-  var mainRegion = affected.length ? REGION_GROUPS[affected[0]].name : '';
-  var sub = '从日常姿势、行为和环境开始，减少身体不必要的负担。';
-  if(mainRegion) sub = '根据你的身体状态，可以先从减少' + mainRegion + '负担开始。';
 
-  var h = '<p style="margin:0 0 20px;font-size:14px;color:#6E7778;line-height:1.65">' + sub + '</p>';
+  var h = '<p style="margin:0 0 20px;font-size:14px;color:#6E7778;line-height:1.65">先缓解当前的不适，再慢慢改善身体状态。</p>';
+
+  // ── 现在可以做：复用第二页 muscleStates + 引擎 ACTIONS ──
+  // 过劳 → 立即缓解（最多2个）；偏弱 → 长期加强（最多1个，无偏弱不强行生成）
+  var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='tight'; });
+  var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='weak'; });
+  var acts = [];
+  if(typeof ACTIONS !== 'undefined' && ACTIONS){
+    var relief = ACTIONS.filter(function(a){ return a.forState==='tight' && a.muscles.some(function(m){ return tightIds.indexOf(m)!==-1; }); });
+    var strengthen = ACTIONS.filter(function(a){ return a.forState==='weak' && a.muscles.some(function(m){ return weakIds.indexOf(m)!==-1; }); });
+    relief.slice(0,2).forEach(function(a){ acts.push({a:a, kind:'relief'}); });
+    if(strengthen.length) acts.push({a:strengthen[0], kind:'strengthen'});
+  }
+  if(acts.length){
+    h += '<div style="margin-bottom:24px">';
+    h += '<h5 style="margin:0 0 10px;font-size:15px;font-weight:700;color:#1D2122">现在可以做</h5>';
+    acts.forEach(function(x){
+      var a = x.a;
+      var tagBg = x.kind==='relief' ? '#FDECEB' : '#F0E8F5';
+      var tagColor = x.kind==='relief' ? '#D8403A' : '#7B5BA0';
+      var tagTxt = x.kind==='relief' ? '🔴 立即缓解' : '🟣 长期加强';
+      var howto = (a.howto || '').split('。')[0];
+      if(howto) howto += '。';
+      h += '<div style="margin-bottom:10px;padding:14px 16px;background:#F8FAFA;border-radius:14px">';
+      h += '<span style="display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;background:' + tagBg + ';color:' + tagColor + '">' + tagTxt + '</span>';
+      h += '<div style="font-size:14.5px;font-weight:700;color:#1D2122;margin-bottom:3px">' + a.name + '</div>';
+      h += '<div style="font-size:13px;color:#6E7778;line-height:1.55">' + howto + '</div>';
+      if(a.dose) h += '<div style="margin-top:6px;font-size:12.5px;font-weight:600;color:#337F92">' + a.dose + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  // ── 长期改善：姿势 / 行为 / 环境 ──
+  h += '<h5 style="margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122">长期改善</h5>';
   ADVICE_SECTIONS.forEach(function(sec){
     // 区域相关的建议排前面，最多取3条
     var pool = ADVICE_POOL[sec.key].slice();
@@ -929,7 +960,7 @@ function renderAdvicePage(){
     });
     var items = pool.slice(0, 3);
     h += '<div style="margin-bottom:22px">';
-    h += '<h5 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1D2122">' + sec.title + '</h5>';
+    h += '<h5 style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1D2122">' + sec.title + '</h5>';
     h += '<p style="margin:0 0 10px;font-size:12.5px;color:#A2ABAC">' + sec.hint + '</p>';
     items.forEach(function(it){
       h += '<div style="margin-bottom:10px;padding:12px 14px;background:#F8FAFA;border-radius:12px">';
@@ -940,23 +971,33 @@ function renderAdvicePage(){
     h += '</div>';
   });
 
-  // 反馈区
+  // ── 反馈区（localStorage 保存，重进恢复选中态）──
+  var savedFb = null;
+  try{ savedFb = JSON.parse(localStorage.getItem('adviceFeedback')||'null'); }catch(e){}
   h += '<div style="margin-top:28px;padding-top:20px;border-top:1px solid #edf0ef">';
   h += '<h5 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1D2122">调整之后，再感受一次</h5>';
-  h += '<p style="margin:0 0 12px;font-size:12.5px;color:#A2ABAC">完成调整后，再感受一下原来的不适有没有变化。</p>';
+  h += '<p style="margin:0 0 12px;font-size:12.5px;color:#A2ABAC">现在的感觉有没有发生变化？</p>';
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="feedback-btns">';
   ['明显减轻','有所减轻','没有变化','感觉更明显'].forEach(function(label){
-    h += '<button type="button" class="fb-btn" style="padding:12px 0;border:1px solid #E3EAE9;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1D2122;cursor:pointer">' + label + '</button>';
+    h += '<button type="button" class="fb-btn" data-fb="' + label + '" style="padding:12px 0;border:1px solid #E3EAE9;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1D2122;cursor:pointer">' + label + '</button>';
   });
   h += '</div></div>';
 
   document.getElementById('advice-body').innerHTML = h;
+
+  function paintFb(selected){
+    document.querySelectorAll('.fb-btn').forEach(function(b){
+      var on = b.dataset.fb === selected;
+      b.style.background = on ? '#E8F3F4' : '#fff';
+      b.style.color = on ? '#337F92' : '#1D2122';
+      b.style.borderColor = on ? '#4198AC' : '#E3EAE9';
+    });
+  }
+  if(savedFb && savedFb.choice) paintFb(savedFb.choice);
   document.querySelectorAll('.fb-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
-      document.querySelectorAll('.fb-btn').forEach(function(b){
-        b.style.background='#fff'; b.style.color='#1D2122'; b.style.borderColor='#E3EAE9';
-      });
-      btn.style.background='#E8F3F4'; btn.style.color='#337F92'; btn.style.borderColor='#4198AC';
+      paintFb(btn.dataset.fb);
+      try{ localStorage.setItem('adviceFeedback', JSON.stringify({choice:btn.dataset.fb, ts:Date.now()})); }catch(e){}
     });
   });
 }
