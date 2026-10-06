@@ -109,6 +109,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 首页肌肉：只有默认解剖色 + 悬停微亮，永不出现诊断色 */
 .hm{fill:#F6F0E9;stroke:#E3D5C8;stroke-width:.46;cursor:pointer;transition:fill .12s}
 .hm:hover{fill:#EADFD2}
+/* 首页点选透视：复用诊断页层级逻辑（选中强调 + 覆盖层变淡） */
+.hm.hm-sel{fill:#EADFD2;stroke:#C9B6A6;stroke-width:.7}
+.hm.hm-layer-1{opacity:.8}
+.hm.hm-layer-2{opacity:.65}
 .stage-home .flip-hint{color:#9FB8BD}
 
 /* 右侧毛玻璃竖条缩放控件（仅 +/−） */
@@ -135,7 +139,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .bn-label{font-size:11px;line-height:1}
 
 /* 首页肌肉知识浮卡（轻量毛玻璃，只讲知识，无状态标签） */
-.home-know{position:absolute;z-index:30;left:50%;bottom:18px;transform:translate(-50%,8px);width:calc(100% - 36px);max-width:360px;max-height:50%;overflow:auto;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);box-shadow:0 14px 40px -12px rgba(31,68,77,.22);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;scrollbar-width:none}
+.home-know{position:absolute;z-index:30;left:50%;bottom:4px;transform:translate(-50%,8px);width:calc(100% - 36px);max-width:360px;max-height:50%;overflow:auto;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);box-shadow:0 14px 40px -12px rgba(31,68,77,.22);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;scrollbar-width:none}
 .home-know::-webkit-scrollbar{display:none}
 .home-know.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 .home-know h4{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--home-text)}
@@ -195,6 +199,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .adv-dim{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;margin-bottom:14px;padding:14px 16px;background:#F8FAFA;border-radius:16px}
 .adv-dim:last-child{margin-bottom:0}
 .adv-dim h6{margin:0;font-size:14px;font-weight:700;color:#1D2122}
+.adv-dim h6 .dim-chip{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700}
+.dim-chip-posture{background:#E8F3F4;color:#337F92}
+.dim-chip-behavior{background:#FDECEB;color:#D8403A}
+.dim-chip-environment{background:#F0E8F5;color:#7B5BA0}
 .adv-item-t{font-size:14px;font-weight:600;color:#1D2122;margin-bottom:2px}
 .adv-item-d{font-size:13px;color:#6E7778;line-height:1.5}
 .advice-home-bar{flex-shrink:0;padding:8px 16px max(12px,env(safe-area-inset-bottom));border-top:1px solid #edf0ef;background:#fff}
@@ -236,6 +244,89 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .m.layer-2{opacity:.65}
 /* 人物阴影：WPS 参数→颜色#000 透明度39% 模糊25px 距离8px 角度220° */
 .zoom-wrap{filter:drop-shadow(-4px 5px 14px rgba(0,0,0,0.39))}
+
+/* ============ 记录 / 收藏 / 我的（底栏子页面） ============ */
+.app-header{position:relative;z-index:10;padding:max(14px,env(safe-area-inset-top)) 22px 10px;flex-shrink:0}
+.app-title{font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--home-text)}
+.app-subtitle{margin-top:3px;font-size:12.5px;font-weight:450;color:var(--home-text-3)}
+.app-body{flex:1;min-height:0;overflow-y:auto;padding:6px 18px 18px;scrollbar-width:none}
+.app-body::-webkit-scrollbar{display:none}
+#page-record,#page-fav,#page-me{background:linear-gradient(180deg,#F2F8F7 0%,#FAFDFD 55%,#FFFFFF 100%)}
+
+/* ── 记录页：身体记录热力日历 ── */
+.record-calendar{background:#fff;border-radius:20px;padding:16px 14px 14px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
+.cal-month{font-size:15px;font-weight:700;color:var(--home-text);margin:0 4px 12px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-wd{font-size:11px;font-weight:500;color:var(--home-text-3);text-align:center;padding:2px 0 4px}
+.cal-day{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--home-text);border-radius:11px;cursor:pointer;transition:transform .12s}
+.cal-day:active{transform:scale(.93)}
+.cal-day.empty{background:transparent;cursor:default}
+.cal-day.heat-1{background:linear-gradient(135deg,rgba(65,152,172,.1) 0%,rgba(51,127,146,.14) 100%)}
+.cal-day.heat-2{background:linear-gradient(135deg,rgba(65,152,172,.2) 0%,rgba(51,127,146,.26) 100%)}
+.cal-day.heat-3{background:linear-gradient(135deg,rgba(65,152,172,.34) 0%,rgba(51,127,146,.42) 100%);color:#fff}
+.cal-day.heat-4{background:linear-gradient(135deg,rgba(65,152,172,.52) 0%,rgba(51,127,146,.62) 100%);color:#fff}
+.cal-day.sel{box-shadow:0 0 0 2px var(--home-accent),0 6px 14px -6px rgba(65,152,172,.45)}
+.cal-count{position:absolute;right:4px;bottom:3px;font-size:8.5px;font-weight:600;opacity:.75}
+
+/* 当日记录 */
+.rec-day-head{display:flex;align-items:baseline;justify-content:space-between;margin:18px 2px 10px}
+.rec-day-title{font-size:17px;font-weight:700;color:var(--home-text)}
+.rec-day-count{font-size:12.5px;font-weight:500;color:var(--home-accent-dark)}
+.rec-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 12px}
+.rec-chip{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:600;color:var(--home-accent-dark);background:rgba(65,152,172,.12)}
+.rec-state{background:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);margin-bottom:8px}
+.rec-state-title{font-size:13.5px;font-weight:700;color:var(--home-text);margin-bottom:10px}
+.rec-state-row{display:flex;gap:10px;margin-bottom:8px}
+.rec-state-row:last-child{margin-bottom:0}
+.rec-state-k{flex-shrink:0;width:60px;font-size:12px;font-weight:500;color:var(--home-text-3);padding-top:1px}
+.rec-state-v{flex:1;font-size:13px;line-height:1.55;color:var(--home-text-2)}
+.rec-state-v strong{color:var(--home-accent-dark);font-weight:650}
+.rec-note{margin:12px 4px 16px;font-size:12px;line-height:1.6;color:var(--home-text-3)}
+.rec-item{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:13px 15px;box-shadow:0 6px 18px -10px rgba(31,68,77,.08);margin-bottom:9px}
+.rec-time{font-size:13px;font-weight:650;color:var(--home-text);font-variant-numeric:tabular-nums}
+.rec-mid{flex:1;min-width:0}
+.rec-region{font-size:13.5px;font-weight:600;color:var(--home-text)}
+.rec-feel{font-size:11.5px;color:var(--home-text-3);margin-top:1px}
+.rec-go{font-size:12px;font-weight:600;color:var(--home-accent);white-space:nowrap}
+
+/* ── 收藏页 ── */
+.fav-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none}
+.fav-tabs::-webkit-scrollbar{display:none}
+.fav-tab{flex-shrink:0;padding:7px 16px;border:0;border-radius:99px;background:rgba(65,152,172,.1);color:var(--home-text-2);font:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .16s,color .16s}
+.fav-tab.active{background:var(--home-accent);color:#fff;font-weight:600;box-shadow:0 4px 12px -4px rgba(65,152,172,.4)}
+.fav-list{display:flex;flex-direction:column;gap:10px}
+.fav-card{display:flex;align-items:stretch;gap:12px;background:#fff;border-radius:18px;padding:14px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
+.fav-card-text{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.fav-tag{padding:3px 9px;border-radius:8px;font-size:10.5px;font-weight:600;margin-bottom:7px}
+.fav-tag.relief{background:#FDECEB;color:#D8403A}
+.fav-tag.strengthen{background:#F0E8F5;color:#7B5BA0}
+.fav-name{font-size:15px;font-weight:700;color:var(--home-text);margin-bottom:3px}
+.fav-region{font-size:11px;font-weight:500;color:var(--home-text-3);margin-bottom:6px}
+.fav-desc{font-size:12px;line-height:1.5;color:var(--home-text-2);display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fav-dose{margin-top:auto;padding-top:7px;font-size:11.5px;font-weight:600;color:var(--home-accent-dark)}
+.fav-img{flex-shrink:0;width:96px;aspect-ratio:1;align-self:center;border-radius:14px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--home-accent-dark)}
+.fav-empty{padding:44px 0;text-align:center;font-size:13px;color:var(--home-text-3)}
+
+/* ── 我的页 ── */
+.me-profile{display:flex;align-items:center;gap:14px;background:#fff;border-radius:20px;padding:18px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);margin-top:4px}
+.me-avatar{flex-shrink:0;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,rgba(65,152,172,.24) 0%,rgba(51,127,146,.34) 100%)}
+.me-info{flex:1;min-width:0}
+.me-name{font-size:17px;font-weight:700;color:var(--home-text)}
+.me-email{margin-top:2px;font-size:12px;color:var(--home-text-3)}
+.me-edit{flex-shrink:0;padding:7px 14px;border:0;border-radius:99px;background:rgba(65,152,172,.12);color:var(--home-accent-dark);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.me-edit:active{background:rgba(65,152,172,.2)}
+.me-group{margin-top:18px}
+.me-group-title{margin:0 4px 8px;font-size:12px;font-weight:600;color:var(--home-text-3)}
+.me-group .me-item:first-of-type{border-radius:16px 16px 0 0}
+.me-group .me-item:last-of-type{border-radius:0 0 16px 16px}
+.me-group .me-item:only-of-type{border-radius:16px}
+.me-item{display:flex;align-items:center;gap:12px;background:#fff;padding:14px 16px;box-shadow:0 4px 14px -10px rgba(31,68,77,.06);cursor:pointer}
+.me-item:active{background:#F7FBFB}
+.me-icon{font-size:16px;line-height:1}
+.me-text{flex:1;font-size:14.5px;font-weight:500;color:var(--home-text)}
+.me-arrow{font-size:15px;color:var(--home-text-3)}
+.me-footer{margin:26px 0 8px;text-align:center}
+.me-footer p{margin:0 0 5px;font-size:11.5px;line-height:1.6;color:var(--home-text-3)}
 </style></head><body>
 <!-- ===== 首页（自由肌肉探索，默认入口） ===== -->
 <div id="page-home" class="page">
@@ -390,6 +481,98 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   <div class="advice-home-bar">
     <button type="button" id="advice-home-btn">完成，返回首页</button>
   </div>
+</div>
+
+<!-- ===== 记录页 ===== -->
+<div id="page-record" class="page" style="display:none">
+  <header class="app-header">
+    <div class="app-title">记录</div>
+    <div class="app-subtitle">回顾你的身体状态</div>
+  </header>
+  <div class="app-body" id="record-body">
+    <div class="record-calendar">
+      <div class="cal-month">2026年10月</div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <div id="record-summary"></div>
+  </div>
+  <nav class="bottom-nav">
+    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+  </nav>
+</div>
+
+<!-- ===== 收藏页 ===== -->
+<div id="page-fav" class="page" style="display:none">
+  <header class="app-header">
+    <div class="app-title">收藏</div>
+    <div class="app-subtitle">把适合你的动作留在这里</div>
+  </header>
+  <div class="app-body" id="fav-body">
+    <div class="fav-tabs" id="fav-tabs">
+      <button class="fav-tab active" data-cat="all">全部</button>
+      <button class="fav-tab" data-cat="neck_shoulder">肩颈</button>
+      <button class="fav-tab" data-cat="low_back_hip">腰背</button>
+      <button class="fav-tab" data-cat="leg">臀腿</button>
+      <button class="fav-tab" data-cat="other">其他</button>
+    </div>
+    <div class="fav-list" id="fav-list"></div>
+  </div>
+  <nav class="bottom-nav">
+    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+  </nav>
+</div>
+
+<!-- ===== 我的页 ===== -->
+<div id="page-me" class="page" style="display:none">
+  <header class="app-header">
+    <div class="app-title">我的</div>
+  </header>
+  <div class="app-body" id="me-body">
+    <div class="me-profile">
+      <div class="me-avatar"></div>
+      <div class="me-info">
+        <div class="me-name">Shujun</div>
+        <div class="me-email">shujun@example.com</div>
+      </div>
+      <button class="me-edit">编辑资料</button>
+    </div>
+    <div class="me-groups">
+      <div class="me-group">
+        <div class="me-group-title">基本信息</div>
+        <div class="me-item"><span class="me-icon">🧍</span><span class="me-text">身体信息</span><span class="me-arrow">›</span></div>
+        <div class="me-item"><span class="me-icon">⚙️</span><span class="me-text">使用偏好</span><span class="me-arrow">›</span></div>
+        <div class="me-item"><span class="me-icon">💾</span><span class="me-text">数据管理</span><span class="me-arrow">›</span></div>
+      </div>
+      <div class="me-group">
+        <div class="me-group-title">设置</div>
+        <div class="me-item"><span class="me-icon">🔔</span><span class="me-text">通知设置</span><span class="me-arrow">›</span></div>
+        <div class="me-item"><span class="me-icon">🔒</span><span class="me-text">隐私设置</span><span class="me-arrow">›</span></div>
+        <div class="me-item"><span class="me-icon">🎨</span><span class="me-text">外观显示</span><span class="me-arrow">›</span></div>
+      </div>
+      <div class="me-group">
+        <div class="me-group-title">关于</div>
+        <div class="me-item"><span class="me-icon">ℹ️</span><span class="me-text">关于我们</span><span class="me-arrow">›</span></div>
+        <div class="me-item"><span class="me-icon">❓</span><span class="me-text">帮助与反馈</span><span class="me-arrow">›</span></div>
+        <div class="me-item"><span class="me-icon">📦</span><span class="me-text">当前版本</span><span class="me-arrow">1.0.0</span></div>
+      </div>
+    </div>
+    <div class="me-footer">
+      <p>身体记录与分析数据仅用于帮助你更好地了解自己。</p>
+      <p>版本 1.0.0</p>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+  </nav>
 </div>
 
 <!-- ===== iOS Sheet ===== -->
@@ -921,6 +1104,32 @@ function hideHomeKnow(){
   homeKnow.classList.remove('show');
   homeKnow.dataset.id = '';
 }
+/* 首页肌肉透视：复用诊断页层级表（MUSCLE_LAYERS + isOverlapping），
+   选中肌肉加深描边，遮盖它的浅层肌肉按层差变淡 */
+function clearHomePerspective(){
+  stageHome.querySelectorAll('.hm-sel,.hm-layer-1,.hm-layer-2').forEach(function(m){
+    m.classList.remove('hm-sel','hm-layer-1','hm-layer-2');
+  });
+}
+function applyHomePerspective(clickedEl){
+  clearHomePerspective();
+  var card = clickedEl.closest('.card');
+  var view = (card && card.classList.contains('back')) ? 'back' : 'front';
+  var layers = MUSCLE_LAYERS[view] || {};
+  var clickedLayer = layers[clickedEl.dataset.id] || 1;
+  clickedEl.classList.add('hm-sel');
+  if(clickedLayer === 3) return; // 浅层只强调自身，无需透视
+  var svg = clickedEl.closest('svg');
+  var clickedBBox;
+  try{ clickedBBox = clickedEl.getBBox(); }catch(e){ return; }
+  Array.from(svg.querySelectorAll('.hm')).forEach(function(m){
+    if(m === clickedEl) return;
+    var mLayer = layers[m.dataset.id] || 1;
+    if(mLayer > clickedLayer && isOverlapping(clickedBBox, m.getBBox())){
+      m.classList.add('hm-layer-' + (mLayer - clickedLayer));
+    }
+  });
+}
 function showHomeKnow(id){
   var m = MUSCLE_MAP ? MUSCLE_MAP[id] : null;
   var regionName = (m && REGION_LABEL && REGION_LABEL[m.region]) || '相关';
@@ -952,7 +1161,14 @@ function cloneHomeSvgs(){
   stageHome.querySelectorAll('.hm').forEach(function(el){
     el.addEventListener('click', function(){
       if(zoomHome && zoomHome.suppressTap) return;
+      // 再点同一块肌肉：收起知识卡并取消透视
+      if(homeKnow.dataset.id === el.dataset.id && homeKnow.classList.contains('show')){
+        hideHomeKnow();
+        clearHomePerspective();
+        return;
+      }
       showHomeKnow(el.dataset.id);
+      applyHomePerspective(el);
     });
   });
 }
@@ -969,11 +1185,13 @@ stageHome.addEventListener('click', function(ev){
   if(ev.target.closest('.hm') || ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
   if(zoomHome && zoomHome.suppressTap) return;
   hideHomeKnow();
+  clearHomePerspective();
 });
 // 翻转时收起知识卡（点控件/卡片内的双击除外）
 stageHome.addEventListener('dblclick', function(ev){
   if(ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
   hideHomeKnow();
+  clearHomePerspective();
 });
 
 /* ── 身体状态分析页（第二页） ─────────────────────────── */
@@ -1228,14 +1446,148 @@ document.getElementById('advice-home-btn').addEventListener('click', function(){
   zoomHome.reset();
   showHomeBubble('已完成本次诊断');
 });
-// 底栏：仅首页可用，其余功能占位
-document.querySelectorAll('.bottom-nav-item').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    var tab = btn.dataset.tab;
-    if(tab === 'home'){ hideHomeKnow(); return; }
-    showHomeBubble('「' + btn.querySelector('.bn-label').textContent + '」即将上线');
+// 底栏：四页路由切换（首页/记录/收藏/我的）
+var NAV_PAGES = {home:'page-home', record:'page-record', fav:'page-fav', me:'page-me'};
+function switchTab(tab){
+  Object.keys(NAV_PAGES).forEach(function(k){
+    document.getElementById(NAV_PAGES[k]).style.display = (k === tab) ? 'flex' : 'none';
   });
+  document.querySelectorAll('.bottom-nav-item').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  if(tab !== 'home'){ hideHomeKnow(); clearHomePerspective(); }
+}
+document.querySelectorAll('.bottom-nav-item').forEach(function(btn){
+  btn.addEventListener('click', function(){ switchTab(btn.dataset.tab); });
 });
+
+/* ── 记录页：2026年10月身体记录热力日历（mock data） ── */
+var RECORD_MOCK = {
+  // 日期: {count, regions:{区域:次数}, focus, times:[{time, region, feel}]}
+  7: {count:3, regions:{'肩颈':2, '腰背':1}, focus:'肩颈',
+      summary:'今天主要关注肩颈不适，共进行了 2 次身体分析。',
+      times:[{time:'09:42', region:'肩颈', feel:'酸痛'}, {time:'14:18', region:'腰背', feel:'僵硬'}, {time:'18:35', region:'肩颈', feel:'酸痛'}]},
+  2: {count:1, regions:{'腰背':1}, focus:'腰背', summary:'今天主要关注腰背不适，共进行了 1 次身体分析。',
+      times:[{time:'10:15', region:'腰背', feel:'僵硬'}]},
+  4: {count:2, regions:{'肩颈':1, '手臂':1}, focus:'肩颈', summary:'今天主要关注肩颈与手臂，共进行了 2 次身体分析。',
+      times:[{time:'08:50', region:'肩颈', feel:'酸痛'}, {time:'21:06', region:'手臂', feel:'无力'}]},
+  9: {count:1, regions:{'臀腿':1}, focus:'臀腿', summary:'今天主要关注臀腿不适，共进行了 1 次身体分析。',
+      times:[{time:'19:22', region:'臀腿', feel:'酸痛'}]},
+  12: {count:4, regions:{'肩颈':2, '腰背':2}, focus:'肩颈', summary:'今天主要关注肩颈与腰背，共进行了 4 次身体分析。',
+      times:[{time:'07:58', region:'肩颈', feel:'僵硬'}, {time:'12:40', region:'腰背', feel:'酸痛'}, {time:'16:05', region:'肩颈', feel:'酸痛'}, {time:'22:11', region:'腰背', feel:'僵硬'}]},
+  13: {count:2, regions:{'腰背':2}, focus:'腰背', summary:'今天主要关注腰背不适，共进行了 2 次身体分析。',
+      times:[{time:'09:30', region:'腰背', feel:'酸痛'}, {time:'20:14', region:'腰背', feel:'僵硬'}]},
+  15: {count:1, regions:{'肩颈':1}, focus:'肩颈', summary:'今天主要关注肩颈不适，共进行了 1 次身体分析。',
+      times:[{time:'18:02', region:'肩颈', feel:'酸痛'}]},
+  18: {count:2, regions:{'手臂':1, '肩颈':1}, focus:'肩颈', summary:'今天主要关注手臂与肩颈，共进行了 2 次身体分析。',
+      times:[{time:'11:26', region:'手臂', feel:'无力'}, {time:'19:47', region:'肩颈', feel:'酸痛'}]},
+  20: {count:3, regions:{'腰背':2, '臀腿':1}, focus:'腰背', summary:'今天主要关注腰背与臀腿，共进行了 3 次身体分析。',
+      times:[{time:'08:36', region:'腰背', feel:'僵硬'}, {time:'15:52', region:'腰背', feel:'酸痛'}, {time:'21:29', region:'臀腿', feel:'酸痛'}]},
+  21: {count:1, regions:{'肩颈':1}, focus:'肩颈', summary:'今天主要关注肩颈不适，共进行了 1 次身体分析。',
+      times:[{time:'17:08', region:'肩颈', feel:'僵硬'}]},
+  23: {count:2, regions:{'臀腿':2}, focus:'臀腿', summary:'今天主要关注臀腿不适，共进行了 2 次身体分析。',
+      times:[{time:'10:44', region:'臀腿', feel:'酸痛'}, {time:'20:31', region:'臀腿', feel:'无力'}]},
+  26: {count:1, regions:{'腰背':1}, focus:'腰背', summary:'今天主要关注腰背不适，共进行了 1 次身体分析。',
+      times:[{time:'16:19', region:'腰背', feel:'酸痛'}]},
+  28: {count:2, regions:{'肩颈':1, '腰背':1}, focus:'肩颈', summary:'今天主要关注肩颈与腰背，共进行了 2 次身体分析。',
+      times:[{time:'09:12', region:'肩颈', feel:'酸痛'}, {time:'19:55', region:'腰背', feel:'僵硬'}]},
+  30: {count:1, regions:{'肩颈':1}, focus:'肩颈', summary:'今天主要关注肩颈不适，共进行了 1 次身体分析。',
+      times:[{time:'18:40', region:'肩颈', feel:'酸痛'}]}
+};
+var recSelectedDay = 7;
+
+function renderCalendar(){
+  var grid = document.getElementById('cal-grid');
+  if(!grid) return;
+  var h = '';
+  ['一','二','三','四','五','六','日'].forEach(function(w){ h += '<div class="cal-wd">' + w + '</div>'; });
+  // 2026年10月1日是周四，周一开头则前面空 3 格
+  for(var i = 0; i < 3; i++) h += '<div class="cal-day empty"></div>';
+  for(var d = 1; d <= 31; d++){
+    var rec = RECORD_MOCK[d];
+    var heat = rec ? Math.min(rec.count, 4) : 0;
+    var cls = 'cal-day' + (heat ? ' heat-' + heat : '') + (d === recSelectedDay ? ' sel' : '');
+    h += '<div class="' + cls + '" data-day="' + d + '">' + d
+       + (heat ? '<span class="cal-count">' + rec.count + '</span>' : '')
+       + '</div>';
+  }
+  // 10月31日是周六，末尾补 1 个空格（周日位）
+  h += '<div class="cal-day empty"></div>';
+  grid.innerHTML = h;
+  grid.querySelectorAll('.cal-day[data-day]').forEach(function(cell){
+    cell.addEventListener('click', function(){
+      recSelectedDay = parseInt(cell.dataset.day, 10);
+      renderCalendar();
+      renderRecordSummary();
+    });
+  });
+}
+
+function renderRecordSummary(){
+  var box = document.getElementById('record-summary');
+  if(!box) return;
+  var rec = RECORD_MOCK[recSelectedDay];
+  var h = '<div class="rec-day-head"><span class="rec-day-title">10月' + recSelectedDay + '日</span>';
+  h += rec ? '<span class="rec-day-count">今天共咨询 ' + rec.count + ' 次</span>' : '<span class="rec-day-count">这一天没有记录</span>';
+  h += '</div>';
+  if(rec){
+    h += '<div class="rec-chips">';
+    Object.keys(rec.regions).forEach(function(r){
+      h += '<span class="rec-chip">' + r + ' × ' + rec.regions[r] + '</span>';
+    });
+    h += '</div>';
+    h += '<div class="rec-state"><div class="rec-state-title">今日身体状态</div>'
+       + '<div class="rec-state-row"><span class="rec-state-k">主要关注</span><span class="rec-state-v"><strong>' + rec.focus + '</strong></span></div>'
+       + '<div class="rec-state-row"><span class="rec-state-k">记录摘要</span><span class="rec-state-v">' + rec.summary + '</span></div>'
+       + '</div>';
+    h += '<div class="rec-note">持续记录，帮助你更好地了解身体变化。</div>';
+    rec.times.forEach(function(t){
+      h += '<div class="rec-item"><span class="rec-time">' + t.time + '</span>'
+         + '<div class="rec-mid"><div class="rec-region">' + t.region + '</div><div class="rec-feel">' + t.feel + '</div></div>'
+         + '<span class="rec-go">查看分析 →</span></div>';
+    });
+  }else{
+    h += '<div class="rec-note" style="margin-top:4px">这一天还没有身体记录。持续记录，帮助你更好地了解身体变化。</div>';
+  }
+  box.innerHTML = h;
+}
+renderCalendar();
+renderRecordSummary();
+
+/* ── 收藏页：分类过滤（mock data） ── */
+var FAV_MOCK = [
+  {name:'颈部侧向拉伸', region:'肩颈', cat:'neck_shoulder', kind:'relief',     desc:'帮助放松颈部紧张区域。', dose:'20–30秒 × 2'},
+  {name:'肩胛稳定训练', region:'肩颈', cat:'neck_shoulder', kind:'strengthen', desc:'帮助提升肩胛区域的参与程度。', dose:'8–10次 × 2'},
+  {name:'胸椎伸展',     region:'腰背', cat:'low_back_hip',  kind:'relief',     desc:'帮助缓解长时间保持固定姿势后的紧张感。', dose:'20秒 × 2'}
+];
+function renderFavList(cat){
+  var list = document.getElementById('fav-list');
+  if(!list) return;
+  var items = FAV_MOCK.filter(function(a){ return cat === 'all' || a.cat === cat; });
+  if(!items.length){
+    list.innerHTML = '<div class="fav-empty">这个分类下还没有收藏的动作</div>';
+    return;
+  }
+  var h = '';
+  items.forEach(function(a){
+    var tagTxt = a.kind === 'relief' ? '🔴 立即缓解' : '🟣 长期加强';
+    h += '<div class="fav-card"><div class="fav-card-text">'
+       + '<span class="fav-tag ' + a.kind + '">' + tagTxt + '</span>'
+       + '<div class="fav-name">' + a.name + '</div>'
+       + '<div class="fav-region">' + a.region + '</div>'
+       + '<div class="fav-desc">' + a.desc + '</div>'
+       + '<div class="fav-dose">' + a.dose + '</div>'
+       + '</div><div class="fav-img"><span>动作示意</span></div></div>';
+  });
+  list.innerHTML = h;
+}
+document.getElementById('fav-tabs').addEventListener('click', function(ev){
+  var tab = ev.target.closest('.fav-tab');
+  if(!tab) return;
+  document.querySelectorAll('#fav-tabs .fav-tab').forEach(function(t){ t.classList.toggle('active', t === tab); });
+  renderFavList(tab.dataset.cat);
+});
+renderFavList('all');
 
 
 /* ── 第三页：改善建议 ─────────────────────────────────── */
@@ -1328,7 +1680,7 @@ function renderAdvicePage(){
       return aHit - bHit;
     });
     var items = pool.slice(0, 2);
-    h2 += '<div class="adv-dim"><h6>' + sec.title + '</h6>';
+    h2 += '<div class="adv-dim"><h6><span class="dim-chip dim-chip-' + sec.key + '">' + sec.title + '</span></h6>';
     items.forEach(function(it){
       h2 += '<div class="adv-item">';
       h2 += '<div class="adv-item-t">' + it.t + '</div>';
