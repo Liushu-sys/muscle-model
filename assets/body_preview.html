@@ -5,10 +5,9 @@
 html,body{height:100%;height:100dvh}
 body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC",sans-serif;-webkit-font-smoothing:antialiased;color:#1D2122}
 
-/* 顶部标题区 */
-.app-header{padding:max(20px, calc(env(safe-area-inset-top) + 8px)) 26px 2px}
-.app-header h1{font-size:34px;font-weight:700;margin:0;letter-spacing:-0.01em}
-.app-header p.sub{margin:7px 0 0;font-size:14.5px;color:#6E7778;line-height:1.65}
+/* 诊断页 1/2 统一顶部栏：圆形返回按钮（+页1说明文字），按钮在栏内垂直居中 */
+.diag-header{height:55px;padding:0 14px;display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid #edf0ef;flex-shrink:0}
+.diag-header-sub{margin:0;font-size:14px;color:#6E7778;line-height:1.4}
 
 /* 肌肉图容器：撑满中间 */
 .stage{position:relative;margin:0 16px;flex:1;min-height:0;border-radius:28px;overflow:hidden;background:#F2F8F7;box-shadow:0 10px 30px -12px rgba(31,68,77,.12);}
@@ -73,7 +72,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .stage .zoom-scroller::-webkit-scrollbar{display:none}
 .stage .zoom-scroller{scrollbar-width:none}
 .stage .zoom-wrap{display:flex;align-items:center;justify-content:center}
-.stage .zoom-wrap svg{display:block;width:100%;height:100%}
+.stage .zoom-wrap svg{display:block;width:calc(100% - 48px);height:calc(100% - 48px)}
 .stage .zoom-wrap svg path{pointer-events:visiblePainted}
 .stage .zoom-wrap svg line{pointer-events:none}
 
@@ -156,7 +155,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .lg-weak{background:#9B7CB8}
 .lg-inferred{background:#fff;border:1.5px dashed #A2ABAC;box-sizing:border-box}
 
-.result-ai{position:absolute;top:56px;left:16px;right:16px;z-index:25;max-height:42vh;overflow:auto;border-radius:16px;background:#fff;box-shadow:0 16px 40px -12px rgba(31,68,77,.18);padding:16px 18px;font-size:13.5px;line-height:1.7;color:#1D2122}
+/* 整体分析：底部弹出卡片，最终停在「查看身体整体分析」按钮上方 */
+.result-ai{position:absolute;left:16px;right:16px;bottom:66px;z-index:25;max-height:46%;overflow:auto;border-radius:20px;background:#fff;box-shadow:0 -10px 40px -12px rgba(31,68,77,.22);padding:16px 18px;font-size:13.5px;line-height:1.7;color:#1D2122;opacity:0;transform:translateY(20px);pointer-events:none;transition:opacity .24s ease,transform .26s cubic-bezier(.2,.8,.2,1)}
+.result-ai.open{opacity:1;transform:translateY(0);pointer-events:auto}
 .ai-card h4{margin:0 0 8px;font-size:14px;font-weight:700;color:#337F92}
 .ai-card p{margin:0 0 6px}
 .ai-card .ai-tag{display:inline-block;margin-right:6px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#E8F3F4;color:#337F92}
@@ -204,7 +205,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 
 /* flex 竖向布局 */
-.app-wrap{display:flex;flex-direction:column;height:100%}
+.app-wrap{position:relative;display:flex;flex-direction:column;height:100%}
 
 /* 解剖层级透视：点击深层肌肉时，遮盖它的浅层按层差变淡 */
 .m.layer-1{opacity:.8}
@@ -245,9 +246,11 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 </div>
 
 <div id="page-select" class="page" style="display:none">
-<header class="app-header">
-  <h1>Body Map</h1>
-  <p class="sub">点击你感到不适的肌肉区域（可多选、可取消选择）</p>
+<header class="diag-header">
+  <button class="back-btn" id="select-back-btn" aria-label="返回">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <p class="diag-header-sub">点击你觉得不适的肌肉区域</p>
 </header>
 <div class="app-wrap">
 <div class="stage" id="stage">
@@ -300,7 +303,6 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 <path class="m" data-id="deltoid" data-cn="三角肌" d="M64.8,70.5L67.5,71.0L69.5,72.1L73.6,73.2L75.4,74.2L75.6,74.5L75.5,74.8L74.8,75.4L72.8,76.1L71.2,76.9L69.6,78.0L69.4,78.4L69.5,78.8L70.9,79.7L71.2,80.4L73.1,82.0L74.8,83.0L76.4,83.6L76.8,83.9L76.8,84.1L74.0,84.8L73.1,85.2L71.4,85.4L69.8,86.0L67.7,86.9L65.2,88.5L63.8,89.5L60.6,92.2L56.9,96.0L53.4,99.2L48.4,102.9L47.7,103.5L47.0,104.9L46.5,106.8L46.2,109.6L45.7,110.8L45.5,110.4L45.2,110.3L45.1,110.6L44.9,114.3L44.6,115.0L44.3,115.0L43.6,114.3L42.6,112.9L41.3,110.2L40.8,107.7L40.5,102.4L39.3,99.3L38.9,97.2L38.8,93.9L39.1,89.8L40.1,85.8L42.2,80.7L43.5,78.5L44.8,76.7L46.4,75.1L48.3,73.9L53.2,72.1L58.1,71.9L60.6,71.4L62.8,70.7Z M134.7,70.3L136.1,70.4L139.0,71.4L141.5,71.9L146.4,72.1L147.9,72.8L150.2,73.3L151.5,73.8L152.7,74.6L154.5,76.1L156.2,78.5L157.4,80.7L159.5,85.8L160.5,89.8L160.9,93.9L160.8,97.2L160.4,99.3L159.2,102.4L158.9,107.7L158.4,110.2L157.1,112.9L156.1,114.3L155.3,115.0L155.1,115.0L154.8,114.3L154.5,110.2L154.4,110.1L154.0,110.7L153.6,110.2L152.7,104.9L152.0,103.5L151.3,102.9L146.2,99.2L142.8,96.0L139.1,92.2L137.4,90.8L134.5,88.5L131.9,86.9L129.8,86.0L128.3,85.4L126.6,85.2L125.6,84.8L122.9,84.1L122.9,83.9L123.2,83.6L125.4,82.8L127.1,81.4L127.9,81.0L128.7,79.8L130.1,78.8L130.3,78.4L130.1,78.0L128.5,76.9L126.9,76.1L124.9,75.4L124.2,74.8L124.1,74.5L124.2,74.2L126.1,73.2L130.2,72.1L132.8,70.5Z"/>
 <path class="m" data-id="iliotibial_tract" data-cn="髂胫束" d="M68.7,187.1L69.0,187.2L68.9,187.5L68.6,188.1L65.6,191.5L64.4,193.8L64.4,194.8L65.1,196.1L65.3,197.0L64.2,200.0L62.6,207.2L61.4,210.6L61.1,212.4L61.1,214.9L61.2,216.4L61.9,220.0L63.8,226.5L64.6,229.8L65.3,239.1L66.4,243.4L66.9,247.5L68.5,252.7L69.0,255.0L69.3,257.5L69.3,260.4L68.6,266.9L68.0,270.4L65.7,281.5L65.2,284.7L64.8,290.3L64.9,295.6L65.6,303.0L66.2,306.2L67.0,309.4L67.4,312.0L68.0,325.5L68.4,328.6L69.1,330.3L69.6,333.1L70.5,336.0L71.6,337.9L73.3,339.8L73.9,340.8L74.3,341.8L74.4,342.8L74.2,344.8L74.4,345.7L75.2,348.1L75.2,348.7L74.9,349.2L73.3,350.0L72.7,349.8L71.7,349.0L69.9,346.9L68.6,344.5L67.9,342.3L67.0,332.2L66.5,328.2L65.5,323.9L64.3,319.3L61.4,309.8L60.2,305.5L58.7,298.0L57.2,287.5L56.4,277.4L56.3,270.9L56.6,263.2L57.5,256.3L59.2,246.0L59.7,240.7L59.5,235.4L58.5,229.7L57.9,222.5L57.9,214.2L58.5,207.1L58.8,205.2L60.0,200.9L61.8,196.1L64.2,190.7L66.0,188.7L67.7,187.5Z M131.3,187.1L132.2,187.4L133.8,188.6L134.8,189.6L135.5,190.8L137.6,195.7L139.6,200.8L140.3,203.1L141.2,207.1L141.8,214.1L141.9,221.8L141.4,227.9L140.2,235.2L140.0,240.8L140.5,246.0L142.2,256.3L143.1,263.2L143.3,270.9L143.3,277.3L142.7,286.3L141.2,296.8L139.5,305.2L137.0,314.4L135.4,319.3L134.1,324.0L133.1,328.4L132.5,332.7L132.2,336.7L131.4,342.5L130.9,344.4L129.3,347.5L127.4,349.5L126.4,350.0L125.2,349.4L124.8,349.0L124.5,348.5L124.4,347.9L125.3,345.6L125.4,344.8L125.2,342.8L125.3,341.9L125.7,341.0L127.8,338.4L129.0,336.4L130.0,333.2L130.8,329.6L131.3,328.6L131.7,325.5L132.2,312.0L132.6,309.4L133.5,306.2L134.1,303.0L134.9,293.7L135.0,288.3L134.6,284.0L132.2,273.5L131.0,266.9L130.4,260.6L130.4,257.8L130.6,255.2L131.1,252.9L132.8,247.6L133.3,243.4L134.4,239.1L135.1,229.8L135.9,226.5L137.8,220.0L138.2,218.1L138.5,214.9L138.5,212.4L138.2,210.6L137.1,207.2L135.5,200.0L134.3,197.0L134.5,196.1L135.3,194.8L135.2,193.8L134.0,191.5L130.5,187.2Z"/>
 <g id="head-back" pointer-events="none"><path d="M100,48.5C94.2,48.5 89.8,46.9 86.5,44.2C83.5,41.7 81.8,38.9 80.9,36.3C80.1,36.2 79.4,35.9 79,35.4C77,33.2 75.8,29.5 76.1,26C76.5,22.8 78.4,21.2 80.3,20.5C80.6,18 81.9,15.2 84.4,12C88.1,7.7 93.3,5.5 100,5.5C106.7,5.5 111.9,7.7 115.6,12C118.1,15.2 119.4,18 119.7,20.5C121.6,21.2 123.5,22.8 123.9,26C124.2,29.5 123,33.2 121,35.4C120.6,35.9 119.9,36.2 119.1,36.3C118.2,38.9 116.5,41.7 113.5,44.2C110.2,46.9 105.8,48.5 100,48.5Z" fill="#F6F0E9" stroke="#E3D5C8" stroke-width="0.46"/><path d="M122.6,26C123.4,27.5 123.4,30 122.4,31.8" fill="none" stroke="#E3D5C8" stroke-width="0.46"/><path d="M77.4,26C76.6,27.5 76.6,30 77.6,31.8" fill="none" stroke="#E3D5C8" stroke-width="0.46"/></svg></div></div></div>
-</div>
   <div class="zoomer">
     <button type="button" id="z-in" aria-label="放大">+</button>
     <button type="button" id="z-out" aria-label="缩小">&minus;</button>
@@ -309,6 +311,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   <div class="tap-bubble" id="bubble"></div>
   <div class="feel-card" id="feelCard" hidden></div>
 </div>
+</div>
 <footer class="bottom-bar">
   <button class="go-wide" id="go" type="button" disabled>查看身体状态 →</button>
 </footer>
@@ -316,20 +319,11 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 </div>
 <!-- ===== 诊断结果页 ===== -->
 <div id="page-result" class="page" style="display:none">
-  <header class="result-header">
+  <header class="diag-header">
     <button class="back-btn" id="back-btn" aria-label="返回">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <div class="result-title" id="result-title">了解你的身体</div>
-    <div class="result-legend">
-      <span class="lg-item"><span class="lg-dot lg-tight"></span>过劳</span>
-      <span class="lg-item"><span class="lg-dot lg-weak"></span>偏弱</span>
-      <span class="lg-item"><span class="lg-dot lg-inferred"></span>推断</span>
-    </div>
   </header>
-  <div class="result-ai" id="result-ai" style="display:none">
-    <div class="ai-card" id="ai-card"></div>
-  </div>
   <div class="app-wrap">
     <div class="stage" id="stage-result">
       <div class="flip-hint">双击空白处翻转模型</div>
@@ -341,6 +335,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
         <button type="button" id="z-reset-result" class="z-reset" aria-label="重置">1x</button>
       </div>
       <div class="tap-bubble" id="bubble-result"></div>
+    </div>
+    <div class="result-ai" id="result-ai" style="display:none">
+      <div class="ai-card" id="ai-card"></div>
     </div>
     <div class="overview-bar">
       <button type="button" class="overview-btn" id="overview-btn">查看身体整体分析</button>
@@ -1124,10 +1121,27 @@ function buildAiSummary(res){
   aiCard.innerHTML = html;
 }
 
-// 整体分析入口
+// 整体分析入口：底部滑入/滑出
+var resultAiTimer = null;
+function showResultAi(){
+  clearTimeout(resultAiTimer);
+  resultAi.style.display = 'block';
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ resultAi.classList.add('open'); }); });
+}
+function hideResultAi(){
+  if(!resultAi.classList.contains('open')){ resultAi.style.display = 'none'; return; }
+  resultAi.classList.remove('open');
+  clearTimeout(resultAiTimer);
+  resultAiTimer = setTimeout(function(){ if(!resultAi.classList.contains('open')) resultAi.style.display = 'none'; }, 260);
+}
 document.getElementById('overview-btn').addEventListener('click', function(){
-  var open = resultAi.style.display !== 'none';
-  resultAi.style.display = open ? 'none' : 'block';
+  if(resultAi.classList.contains('open')) hideResultAi(); else showResultAi();
+});
+
+// 第一页返回首页
+document.getElementById('select-back-btn').addEventListener('click', function(){
+  pageSelect.style.display = 'none';
+  pageHome.style.display = 'flex';
 });
 
 // 返回首页
@@ -1135,13 +1149,13 @@ document.getElementById('back-btn').addEventListener('click', function(){
   clearLayerPerspective();
   pageResult.style.display = 'none';
   pageSelect.style.display = 'flex';
-  resultAi.style.display = 'none';
+  hideResultAi();
 });
 
 /* ── 第二页 → 第三页 ─────────────────────────────────── */
 var pageAdvice = document.getElementById('page-advice');
 document.getElementById('to-advice').addEventListener('click', function(){
-  resultAi.style.display = 'none';
+  hideResultAi();
   pageResult.style.display = 'none';
   pageAdvice.style.display = 'flex';
   renderAdvicePage();
@@ -1162,7 +1176,7 @@ function resetFlow(){
   refresh();
   hideFeelCard(true);
   clearLayerPerspective();
-  resultAi.style.display = 'none';
+  hideResultAi();
   sheetMask.classList.remove('show');
   sheet.classList.remove('show');
   sheetMask.style.display = 'none';
