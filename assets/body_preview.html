@@ -1,5 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#E8F3F4">
 <title>Body Map</title><style>
 *{box-sizing:border-box}
 html,body{height:100%;height:100dvh}
@@ -1468,6 +1469,23 @@ document.getElementById('advice-home-btn').addEventListener('click', function(){
 });
 // 底栏：四页路由切换（首页/记录/收藏/我的）
 var NAV_PAGES = {home:'page-home', record:'page-record', fav:'page-fav', me:'page-me'};
+// iOS Safari 状态栏染色：随当前页面顶部颜色更新，让背景视觉铺满状态栏
+var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+var PAGE_THEME = {'page-home':'#E8F3F4','page-select':'#FFFFFF','page-result':'#FFFFFF','page-advice':'#FFFFFF','page-record':'#F2F8F7','page-fav':'#F2F8F7','page-me':'#F2F8F7'};
+function syncThemeColor(){
+  var pages = document.querySelectorAll('.page');
+  for(var i = 0; i < pages.length; i++){
+    if(pages[i].style.display !== 'none'){
+      var c = PAGE_THEME[pages[i].id];
+      if(c && themeColorMeta && themeColorMeta.getAttribute('content') !== c) themeColorMeta.setAttribute('content', c);
+      return;
+    }
+  }
+}
+var pageThemeObserver = new MutationObserver(syncThemeColor);
+document.querySelectorAll('.page').forEach(function(p){ pageThemeObserver.observe(p, {attributes:true, attributeFilter:['style']}); });
+syncThemeColor();
+
 function switchTab(tab){
   Object.keys(NAV_PAGES).forEach(function(k){
     document.getElementById(NAV_PAGES[k]).style.display = (k === tab) ? 'flex' : 'none';
