@@ -596,7 +596,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
 var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null, REGION_LABEL = null;
 var pickActions = null, SCENE_LABEL = null, SCENE_HINT = null, PATTERNS = null, ACTIONS = null;
-var engineReady = import('./mm-engine.js').then(function(m){
+var engineReady = import('./mm-engine.js?v=251').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
   MUSCLE_MAP = m.MUSCLE_MAP;
