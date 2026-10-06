@@ -21,14 +21,11 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .tap-bubble{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;padding:6px 14px;border-radius:99px;font-size:12.5px;font-weight:500;color:#fff;background:rgba(29,33,34,.82);backdrop-filter:blur(4px);pointer-events:none;opacity:0;transition:opacity .16s}
 .tap-bubble.show{opacity:1}
 
-/* 底部输入栏 */
+/* 底部主按钮（第一页：进入身体状态页） */
 .bottom-bar{padding:10px 16px max(12px, calc(env(safe-area-inset-bottom) + 8px));background:#fff;box-shadow:0 -8px 30px -18px rgba(31,68,77,.25)}
-.bottom-bar .row{display:flex;align-items:center;gap:8px;padding:5px 5px 5px 16px;border-radius:99px;background:#F1F4F4}
-.bottom-bar input{flex:1;border:0;background:transparent;font:inherit;font-size:15px;color:#1D2122;outline:none}
-.bottom-bar input::placeholder{color:#A2ABAC}
-.bottom-bar .go{flex-shrink:0;width:36px;height:36px;border-radius:50%;border:0;background:#4198AC;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.4);transition:transform .12s,background .12s}
-.bottom-bar .go:active{transform:scale(.95);background:#337F92}
-.bottom-bar .go:disabled{background:#DDE4E3;color:#AFB9B8;cursor:default;box-shadow:none}
+.bottom-bar .go-wide{display:block;width:100%;padding:13px 0;border:0;border-radius:99px;background:#4198AC;color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.4);transition:transform .12s,background .12s}
+.bottom-bar .go-wide:active{transform:scale(.98);background:#337F92}
+.bottom-bar .go-wide:disabled{background:#DDE4E3;color:#AFB9B8;cursor:default;box-shadow:none}
 
 /* 网格虚线不拦截点击，让点击穿透到肌肉 */
 .stage svg line{pointer-events:none}
@@ -45,6 +42,21 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 小红点标记（SVG circle 元素） */
 .dot-mark{fill:#E0584F;stroke:#fff;stroke-width:1.5;cursor:pointer;animation:dotBlink 1.2s ease-in-out infinite}
 @keyframes dotBlink{0%,100%{opacity:1;r:6}50%{opacity:.6;r:7}}
+/* 红点放置瞬间的 Dock 式轻微回弹放大（先 pop 一次，再交给闪烁循环） */
+@keyframes dotPop{0%{r:6}40%{r:9.5}70%{r:5.6}100%{r:6}}
+
+/* 感觉选择浮动卡片（贴在刚点的红点附近弹出） */
+.feel-card{position:absolute;z-index:30;width:210px;padding:12px;background:#fff;border-radius:14px;box-shadow:0 12px 32px -10px rgba(31,68,77,.28);opacity:0;transform:scale(.85);pointer-events:none;transition:opacity .16s ease-out,transform .16s ease-out}
+.feel-card.show{opacity:1;transform:scale(1);pointer-events:auto}
+.feel-card .fc-title{margin:0 0 8px;font-size:13.5px;font-weight:600;color:#1D2122}
+.feel-card .fc-opt{display:block;width:100%;padding:10px 12px;margin:0 0 4px;border:0;border-radius:10px;background:#F4F7F7;font:inherit;font-size:14px;font-weight:500;color:#1D2122;text-align:left;cursor:pointer;transition:background .12s}
+.feel-card .fc-opt:last-child{margin-bottom:0}
+.feel-card .fc-opt:hover{background:#E8F3F4}
+.feel-card .fc-opt:active{background:#DCEEEF}
+.feel-card .fc-input{width:100%;box-sizing:border-box;padding:9px 12px;margin:0 0 8px;border:1px solid #E3EAE9;border-radius:10px;font:inherit;font-size:14px;color:#1D2122;outline:none}
+.feel-card .fc-input:focus{border-color:#4198AC}
+.feel-card .fc-confirm{display:block;width:100%;padding:9px 0;border:0;border-radius:10px;background:#4198AC;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.feel-card .fc-confirm:active{background:#337F92}
 /* 结果页：过劳=橘 / 过弱=淡紫 */
 #page-result .m.tight{fill:#F0A35E;stroke:#D97B2B;stroke-width:.55}
 #page-result .m.weak{fill:#C9B6E8;stroke:#9B7CB8;stroke-width:.55}
@@ -198,14 +210,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <button type="button" id="z-reset" class="z-reset" aria-label="重置">1x</button>
   </div>
   <div class="tap-bubble" id="bubble"></div>
+  <div class="feel-card" id="feelCard" hidden></div>
 </div>
 <footer class="bottom-bar">
-  <div class="row">
-    <input id="desc" type="text" placeholder="添加描述：感到酸痛" maxlength="80" autocomplete="off">
-    <button class="go" id="go" type="button" disabled aria-label="开始诊断">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
-    </button>
-  </div>
+  <button class="go-wide" id="go" type="button" disabled>查看身体状态 →</button>
 </footer>
 </div>
 </div>
@@ -400,7 +408,6 @@ function raise(e){ /* 已禁用：不再置顶，保持解剖层级 */ }
 var sel = {};            // data-id -> true
 var badge = document.getElementById('badge');
 var go = document.getElementById('go');
-var desc = document.getElementById('desc');
 var bubbleEl = document.getElementById('bubble');
 var bubbleTimer = null;
 
@@ -421,7 +428,7 @@ function bubble(text){
 
 // 小红点涂抹模式：点击肌肉上任意位置，在该位置放置/移除小红点
 // 红点作为 SVG circle 放在 SVG 内部，自动跟随缩放和正反面切换
-var dotMarks = [];  // [{el, muscleId, svgX, svgY, view}]
+var dotMarks = [];  // [{el, muscleId, muscleCn, svgX, svgY, view, feel}]
 var dotIdCounter = 0;
 
 function addDotMark(svgX, svgY, muscleId, muscleCn, view){
@@ -429,21 +436,22 @@ function addDotMark(svgX, svgY, muscleId, muscleCn, view){
   var stageEl = document.getElementById('stage');
   var activeCard = stageEl.querySelector('.card:not([style*="none"])');
   var svg = activeCard ? activeCard.querySelector('svg') : null;
-  if(!svg) return;
+  if(!svg) return null;
 
   var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   dot.setAttribute('class', 'dot-mark');
   dot.setAttribute('cx', svgX);
   dot.setAttribute('cy', svgY);
   dot.setAttribute('r', '6');
+  // 放置瞬间的 Dock 式回弹放大：pop 跑完后交给 dotBlink 循环
+  dot.style.animation = 'dotPop .34s ease-out, dotBlink 1.2s ease-in-out .34s infinite';
   dot.dataset.dotId = 'dot-' + (dotIdCounter++);
   dot.dataset.muscleId = muscleId;
   dot.dataset.view = view;
   svg.appendChild(dot);
 
-  dotMarks.push({el: dot, muscleId: muscleId, svgX: svgX, svgY: svgY, view: view});
+  dotMarks.push({el: dot, muscleId: muscleId, muscleCn: muscleCn, svgX: svgX, svgY: svgY, view: view, feel: null});
   sel[muscleId] = true;
-  bubble(muscleCn + ' · 已标记');
   refresh();
 
   // 点击红点本身取消
@@ -451,6 +459,7 @@ function addDotMark(svgX, svgY, muscleId, muscleCn, view){
     ev.stopPropagation();
     removeDotMark(dot.dataset.dotId);
   });
+  return dot.dataset.dotId;
 }
 
 function removeDotMark(dotId){
@@ -462,12 +471,100 @@ function removeDotMark(dotId){
   dotMarks.splice(idx, 1);
   var stillHas = dotMarks.some(function(d){ return d.muscleId === muscleId; });
   if(!stillHas) delete sel[muscleId];
+  if(feelState.dotId === dotId) hideFeelCard(true);
   clearLayerPerspective();
   bubble('已取消标记');
   refresh();
 }
 
-// 点击肌肉：在该位置放置小红点
+/* ── 感觉选择浮动卡片 ─────────────────────────────── */
+var feelCardEl = document.getElementById('feelCard');
+var feelState = {dotId: null};   // 当前卡片在为哪个红点服务
+var FEEL_OPTIONS = ['酸痛', '僵硬', '无力', '其他'];
+var FEEL_CARD_W = 210, FEEL_CARD_H = 236;  // 估算尺寸用于边界避让
+
+function showFeelCard(dotId, clientX, clientY){
+  feelState.dotId = dotId;
+  renderFeelOptions();
+  var stageEl = document.getElementById('stage');
+  var rect = stageEl.getBoundingClientRect();
+  var x = clientX - rect.left;
+  var y = clientY - rect.top;
+  // 默认放圆点右侧；放不下就翻到左侧；再放不下就水平居中
+  var left = x + 16;
+  if(left + FEEL_CARD_W > rect.width - 8) left = x - 16 - FEEL_CARD_W;
+  if(left < 8) left = Math.max(8, (rect.width - FEEL_CARD_W) / 2);
+  // 垂直方向以圆点为中心，超出则贴边
+  var top = y - FEEL_CARD_H / 2;
+  if(top < 8) top = 8;
+  if(top + FEEL_CARD_H > rect.height - 8) top = rect.height - 8 - FEEL_CARD_H;
+  feelCardEl.style.left = left + 'px';
+  feelCardEl.style.top = Math.max(8, top) + 'px';
+  // 从靠近圆点的那个角展开
+  feelCardEl.style.transformOrigin = (left > x ? 'left' : 'right') + ' ' + (y < top + FEEL_CARD_H / 2 ? 'top' : 'bottom');
+  feelCardEl.hidden = false;
+  requestAnimationFrame(function(){ feelCardEl.classList.add('show'); });
+}
+
+function hideFeelCard(instant){
+  feelState.dotId = null;
+  feelCardEl.classList.remove('show');
+  if(instant){ feelCardEl.hidden = true; return; }
+  setTimeout(function(){ if(!feelState.dotId) feelCardEl.hidden = true; }, 170);
+}
+
+// 选中感觉（或点外部放弃）：写入红点，卡片缩回
+function pickFeel(feel){
+  var d = dotMarks.find(function(x){ return x.el.dataset.dotId === feelState.dotId; });
+  if(d) d.feel = feel;
+  var cn = d ? d.muscleCn : '';
+  hideFeelCard();
+  if(cn) bubble(cn + ' · ' + feel);
+}
+
+function renderFeelOptions(){
+  var h = '<p class="fc-title">你这里是什么感觉？</p>';
+  FEEL_OPTIONS.forEach(function(f){
+    h += '<button type="button" class="fc-opt" data-feel="' + f + '">' + f + '</button>';
+  });
+  feelCardEl.innerHTML = h;
+  feelCardEl.querySelectorAll('.fc-opt').forEach(function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      if(btn.dataset.feel === '其他'){ renderFeelOther(); return; }
+      pickFeel(btn.dataset.feel);
+    });
+  });
+}
+
+function renderFeelOther(){
+  feelCardEl.innerHTML =
+    '<p class="fc-title">你这里是什么感觉？</p>' +
+    '<input class="fc-input" id="fcInput" type="text" placeholder="请输入你的感觉…" maxlength="30" autocomplete="off">' +
+    '<button type="button" class="fc-confirm">确定</button>';
+  var input = feelCardEl.querySelector('#fcInput');
+  feelCardEl.querySelector('.fc-confirm').addEventListener('click', function(ev){
+    ev.stopPropagation();
+    pickFeel(input.value.trim() || '其他');
+  });
+  input.addEventListener('keydown', function(ev){
+    if(ev.key === 'Enter'){ ev.preventDefault(); pickFeel(input.value.trim() || '其他'); }
+  });
+  setTimeout(function(){ input.focus(); }, 180);
+}
+
+// 点卡片外部：关闭卡片；若该红点还没选感觉，连红点一起取消（保证有红点必有感觉）
+// 用捕获阶段 click：先于肌肉/红点的 click 处理器执行，且兼容只发 mouse 事件的环境
+document.addEventListener('click', function(ev){
+  if(!feelState.dotId) return;
+  if(ev.target.closest('.feel-card')) return;
+  var dotId = feelState.dotId;
+  var d = dotMarks.find(function(x){ return x.el.dataset.dotId === dotId; });
+  hideFeelCard();
+  if(d && !d.feel) removeDotMark(dotId);
+}, true);
+
+// 点击肌肉：在该位置放置小红点 + 弹出感觉卡片
 all().forEach(function(e){
   e.addEventListener('click', function(ev){
     if(zoom && zoom.suppressTap){ return; }
@@ -484,7 +581,8 @@ all().forEach(function(e){
     pt.x = ev.clientX;
     pt.y = ev.clientY;
     var svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-    addDotMark(svgP.x, svgP.y, id, cn, view);
+    var dotId = addDotMark(svgP.x, svgP.y, id, cn, view);
+    if(dotId) showFeelCard(dotId, ev.clientX, ev.clientY);
     applyLayeredPerspective(e, view);
   });
 });
@@ -525,15 +623,14 @@ function flipStage(stage){
 }
 document.querySelectorAll('.stage').forEach(function(stage){
   stage.addEventListener('dblclick', function(ev){
-    if(ev.target.closest('.m') || ev.target.closest('.dot-mark')) return;
+    if(ev.target.closest('.m') || ev.target.closest('.dot-mark') || ev.target.closest('.feel-card')) return;
     flipStage(stage);
   });
 });
 
 go.addEventListener('click', function(){
   clearLayerPerspective();
-  var d = desc.value.trim();
-  runDiagnosis(d);
+  runDiagnosis();
 });
 
 refresh();
@@ -690,18 +787,20 @@ var sheetBody = document.getElementById('sheet-body');
 var currentResult = null;
 var muscleStates = {};
 
-function runDiagnosis(descText){
+function runDiagnosis(){
   var ids = Object.keys(sel);
   if(ids.length === 0) return;
   if(!parseLocal || !MUSCLE_MAP){
     bubble('诊断引擎还没加载好，请稍等一秒再试');
     return;
   }
+  // 每个红点选的感觉（酸痛/僵硬/无力/自定义）拼成感受文本，交给诊断引擎
+  var feels = dotMarks.map(function(d){ return d.feel; }).filter(Boolean).join('，');
   var senses = ids.map(function(id){
     var m = MUSCLE_MAP[id];
     return m ? (m.senses && m.senses[0] ? m.senses[0] : m.name + '酸痛') : '';
   }).filter(Boolean).join('，');
-  var input = descText ? descText + '；' + senses : senses;
+  var input = feels ? feels + '；' + senses : senses;
   var res = parseLocal(input, '', undefined);
   currentResult = res;
 
