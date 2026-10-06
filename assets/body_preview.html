@@ -75,9 +75,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .result-header{position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;background:#fff;border-bottom:1px solid #edf0ef;flex-shrink:0}
 .back-btn{width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:#1D2122;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .back-btn:active{background:#F2F8F7}
-.result-title{flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;padding:6px 0;font-size:15px;font-weight:600;color:#1D2122}
-.rt-chevron{font-size:10px;color:#A2ABAC;transition:transform .2s}
-.result-title.open .rt-chevron{transform:rotate(180deg)}
+.result-title{flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 0;font-size:16px;font-weight:700;color:#1D2122}
 .result-legend{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:#6E7778}
 .lg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px}
 .lg-tight{background:#E0703F}
@@ -89,6 +87,17 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .ai-card p{margin:0 0 6px}
 .ai-card .ai-tag{display:inline-block;margin-right:6px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#E8F3F4;color:#337F92}
 .ai-card .ai-red{background:#FDECEB;color:#D8403A}
+
+/* 第二页：整体分析入口 + 底部 CTA */
+.overview-bar{padding:10px 16px 0;flex-shrink:0}
+.overview-btn{width:100%;padding:13px 16px;border:1px solid #E3EAE9;border-radius:16px;background:#fff;font:inherit;font-size:15px;font-weight:600;color:#337F92;cursor:pointer;box-shadow:0 2px 8px rgba(31,68,77,.06)}
+.overview-btn:active{background:#F2F8F7}
+.result-cta-bar{padding:10px 16px max(12px, calc(env(safe-area-inset-bottom) + 8px));background:#fff;box-shadow:0 -8px 30px -18px rgba(31,68,77,.25);flex-shrink:0}
+.cta-primary{width:100%;padding:14px 16px;border:0;border-radius:16px;background:#4198AC;color:#fff;font:inherit;font-size:15.5px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.4);transition:transform .12s,background .12s}
+.cta-primary:active{transform:scale(.98);background:#337F92}
+
+/* 第三页：改善建议 */
+.advice-body{flex:1;min-height:0;overflow:auto;padding:16px 20px 28px}
 
 /* ── iOS Sheet ─────────────────────── */
 .sheet-mask{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0);transition:background .25s;pointer-events:none}
@@ -206,13 +215,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <button class="back-btn" id="back-btn" aria-label="返回">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <div class="result-title" id="result-title">
-      <span class="rt-text">点击查看诊断结果</span>
-      <span class="rt-chevron" id="rt-chevron">▼</span>
-    </div>
+    <div class="result-title" id="result-title">了解你的身体</div>
     <div class="result-legend">
       <span class="lg-item"><span class="lg-dot lg-tight"></span>过劳</span>
-      <span class="lg-item"><span class="lg-dot lg-weak"></span>过弱</span>
+      <span class="lg-item"><span class="lg-dot lg-weak"></span>偏弱</span>
       <span class="lg-item"><span class="lg-dot lg-inferred"></span>推断</span>
     </div>
   </header>
@@ -224,16 +230,34 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
       <div class="flip-hint">双击空白处翻转模型</div>
       <div class="card front" id="card-front-result"><div class="zoom-scroller"><div class="zoom-wrap"><!-- SVG cloned by JS --></div></div></div>
       <div class="card back" id="card-back-result" style="display:none"><div class="zoom-scroller"><div class="zoom-wrap"><!-- SVG cloned by JS --></div></div></div>
+      <div class="zoomer">
+        <button type="button" id="z-in-result" aria-label="放大">+</button>
+        <button type="button" id="z-out-result" aria-label="缩小">&minus;</button>
+        <button type="button" id="z-reset-result" class="z-reset" aria-label="重置">1x</button>
+      </div>
+      <div class="tap-bubble" id="bubble-result"></div>
     </div>
-    <div class="zoomer">
-      <button type="button" id="z-in-result" aria-label="放大">+</button>
-      <button type="button" id="z-out-result" aria-label="缩小">&minus;</button>
-      <button type="button" id="z-reset-result" class="z-reset" aria-label="重置">1x</button>
+    <div class="overview-bar">
+      <button type="button" class="overview-btn" id="overview-btn">查看身体整体分析</button>
     </div>
-    <div class="tap-bubble" id="bubble-result"></div>
   </div>
+  <footer class="result-cta-bar">
+    <button type="button" class="cta-primary" id="to-advice">下一步：改善这些问题 →</button>
+  </footer>
 </div>
 
+
+<!-- ===== 改善建议页（第三页）===== -->
+<div id="page-advice" class="page" style="display:none">
+  <header class="result-header">
+    <button class="back-btn" id="advice-back-btn" aria-label="返回">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="result-title">改善建议</div>
+    <div style="width:34px;flex-shrink:0"></div>
+  </header>
+  <div class="advice-body" id="advice-body"><!-- 阶段5填充 --></div>
+</div>
 
 <!-- ===== iOS Sheet ===== -->
 <div class="sheet-mask" id="sheet-mask" style="display:none">
@@ -245,12 +269,13 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 <script type="module">
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
-var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null;
+var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null, REGION_LABEL = null;
 var pickActions = null, SCENE_LABEL = null, SCENE_HINT = null, PATTERNS = null, ACTIONS = null;
 var engineReady = import('./mm-engine.js').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
   MUSCLE_MAP = m.MUSCLE_MAP;
+  REGION_LABEL = m.REGION_LABEL;
   pickActions = m.pickActions;
   SCENE_LABEL = m.SCENE_LABEL;
   SCENE_HINT = m.SCENE_HINT;
@@ -654,10 +679,9 @@ var zoomResult = initZoom(
   document.getElementById('z-reset-result')
 );
 
-/* ── 诊断结果页 ─────────────────────────────────────── */
+/* ── 身体状态分析页（第二页） ─────────────────────────── */
 var pageSelect = document.getElementById('page-select');
 var pageResult = document.getElementById('page-result');
-var resultTitle = document.getElementById('result-title');
 var resultAi = document.getElementById('result-ai');
 var aiCard = document.getElementById('ai-card');
 var sheetMask = document.getElementById('sheet-mask');
@@ -765,110 +789,196 @@ function applyResultColors(){
   });
 }
 
+/* 按区域统计受累肌肉，用于身体模式文案和第三页建议排序 */
+var REGION_GROUPS = {
+  neck_shoulder: {name:'颈肩', tight:[], weak:[]},
+  upper_back:    {name:'胸背', tight:[], weak:[]},
+  low_back_hip:  {name:'腰背', tight:[], weak:[]},
+  leg:           {name:'下肢', tight:[], weak:[]},
+  arm:           {name:'上肢', tight:[], weak:[]}
+};
+function refreshRegionGroups(){
+  Object.keys(REGION_GROUPS).forEach(function(k){ REGION_GROUPS[k].tight=[]; REGION_GROUPS[k].weak=[]; });
+  Object.keys(muscleStates).forEach(function(id){
+    var m = MUSCLE_MAP[id]; if(!m) return;
+    var g = REGION_GROUPS[m.region]; if(!g) return;
+    if(muscleStates[id]==='tight') g.tight.push(id);
+    else if(muscleStates[id]==='weak') g.weak.push(id);
+  });
+}
+function buildBodyPatternText(){
+  refreshRegionGroups();
+  var busy = [], slack = [];
+  Object.keys(REGION_GROUPS).forEach(function(k){
+    var g = REGION_GROUPS[k];
+    if(g.tight.length) busy.push({k:k, name:g.name, n:g.tight.length});
+    if(g.weak.length)  slack.push({k:k, name:g.name, n:g.weak.length});
+  });
+  if(!busy.length && !slack.length) return '';
+  var t = '';
+  if(busy.length){
+    t += '你的' + busy.map(function(x){ return x.name + '区域'; }).join('、') + '目前负担偏高';
+    if(slack.length) t += '，而' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群参与不足';
+    t += '，可能使其他肌肉承担更多代偿工作，从而导致相关区域出现酸痛和紧张。';
+  } else if(slack.length){
+    t += '你的' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群参与不足，可能影响相关区域的稳定，使其他肌肉承担更多代偿工作。';
+  }
+  return t;
+}
+
 function buildAiSummary(res){
   var html = '';
-  if(res.redFlag) html += '<span class="ai-tag ai-red">⚠ 需要注意</span>';
-  // outOfScope 只在"连兜底都给不出任何结果"时才报警；
-  // 只要选中的肌肉有结论（含推断），就换成中性说明，不吓人。
-  var anyVerdict = Object.keys(muscleStates).length > 0;
-  if(res.outOfScope && !anyVerdict) html += '<span class="ai-tag ai-red">超出肌肉范围</span>';
-  html += '<h4>诊断摘要</h4>';
-  // 计数口径 = muscleStates 里的不同肌肉名称数：
-  // 三角肌左右两片 path 共用一个 id，只计一处。
+  // 结果：计数
   var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id] === 'tight'; });
   var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id] === 'weak'; });
   var inferredN = Object.keys(inferredIds).length;
-  if(res.outOfScope && anyVerdict){
-    html += '<p>你的描述没有命中典型的关节受限模式，以下结果是对你选中的肌肉<b>逐块判断</b>得出的。</p>';
+  html += '<h4>身体整体分析</h4>';
+  html += '<div style="display:flex;gap:24px;margin:12px 0 16px">';
+  html += '<div><div style="font-size:32px;font-weight:800;color:#E0703F;line-height:1">' + tightIds.length + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块肌肉过劳</div></div>';
+  html += '<div><div style="font-size:32px;font-weight:800;color:#9B7CB8;line-height:1">' + weakIds.length + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块肌肉偏弱</div></div>';
+  html += '</div>';
+  if(inferredN > 0) html += '<p style="color:#A2ABAC;font-size:12.5px;margin-bottom:12px">其中 ' + inferredN + ' 处按肌肉常见倾向推断（图上虚线描边标记）。</p>';
+  // 身体模式
+  var pattern = buildBodyPatternText();
+  if(pattern){
+    html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #edf0ef">';
+    html += '<h5 style="margin:0 0 6px;font-size:13px;font-weight:700;color:#6E7778;text-transform:uppercase;letter-spacing:.3px">身体模式</h5>';
+    html += '<p style="margin:0;font-size:14px;line-height:1.7;color:#1D2122">' + pattern + '</p>';
+    html += '</div>';
   }
-  html += '<p><b>判定：</b>' + tightIds.length + ' 处过劳（橙）、' + weakIds.length + ' 处过弱（紫）。同名肌肉左右两侧只计一处。</p>';
-  if(inferredN > 0) html += '<p style="color:#A2ABAC;font-size:12.5px">其中 ' + inferredN + ' 处按肌肉常见倾向推断（图上虚线描边标记）。</p>';
-  if(res.reason) html += '<p><b>分析：</b>' + res.reason + '</p>';
-  if(res.impact) html += '<p><b>影响：</b>' + res.impact + '</p>';
-  if(res.treatment) html += '<p><b>方向：</b>' + res.treatment + '</p>';
-  if(res.note) html += '<p style="color:#A2ABAC;font-size:12.5px">' + res.note + '</p>';
-  if(res.citation) html += '<p style="color:#A2ABAC;font-size:12.5px">依据：' + res.citation + '</p>';
+  html += '<p style="color:#A2ABAC;font-size:12.5px;margin-top:14px">如想详细了解肌肉功能，点击对应肌肉进行了解。</p>';
   aiCard.innerHTML = html;
 }
 
-resultTitle.addEventListener('click', function(){
+// 整体分析入口
+document.getElementById('overview-btn').addEventListener('click', function(){
   var open = resultAi.style.display !== 'none';
   resultAi.style.display = open ? 'none' : 'block';
-  resultTitle.classList.toggle('open', !open);
 });
 
+// 返回首页
 document.getElementById('back-btn').addEventListener('click', function(){
   clearLayerPerspective();
   pageResult.style.display = 'none';
   pageSelect.style.display = 'flex';
   resultAi.style.display = 'none';
-  resultTitle.classList.remove('open');
 });
+
+/* ── 第二页 → 第三页 ─────────────────────────────────── */
+var pageAdvice = document.getElementById('page-advice');
+document.getElementById('to-advice').addEventListener('click', function(){
+  resultAi.style.display = 'none';
+  pageResult.style.display = 'none';
+  pageAdvice.style.display = 'flex';
+  renderAdvicePage();
+});
+document.getElementById('advice-back-btn').addEventListener('click', function(){
+  pageAdvice.style.display = 'none';
+  pageResult.style.display = 'flex';
+});
+
+/* ── 第三页：改善建议 ─────────────────────────────────── */
+// 通用建议池：每条可绑定区域（regions 为空表示通用）
+var ADVICE_POOL = {
+  posture: [
+    {t:'减少头部前伸', d:'长时间头前伸可能增加颈肩区域负担。', regions:['neck_shoulder','upper_back']},
+    {t:'减少肩膀长期内扣', d:'肩膀前扣可能增加颈肩区域负担。', regions:['neck_shoulder','upper_back']},
+    {t:'不要长时间保持同一种姿势', d:'每隔一段时间改变一下姿势，让身体不要长时间维持同一种状态。', regions:[]},
+    {t:'站立时均匀承重', d:'避免长期单侧站立或跷二郎腿，减少腰背与下肢的额外负担。', regions:['low_back_hip','leg']},
+    {t:'避免弯腰驼背久坐', d:'弯腰时腰背区域负担会明显增加。', regions:['low_back_hip']}
+  ],
+  behavior: [
+    {t:'避免长时间连续久坐', d:'每隔一段时间起身活动一下。', regions:['low_back_hip','leg']},
+    {t:'使用电脑一段时间后起身活动', d:'让身体不要长时间维持同一种状态。', regions:['neck_shoulder','upper_back','arm']},
+    {t:'减少长时间低头使用手机', d:'低头时颈肩区域负担会明显增加。', regions:['neck_shoulder']},
+    {t:'减少单侧背包或提重物', d:'长期单侧负重可能增加上肢与腰背负担。', regions:['arm','low_back_hip']},
+    {t:'增加日常活动变化', d:'走路、伸展、变换姿势，让身体不要长期处于同一种状态。', regions:[]}
+  ],
+  environment: [
+    {t:'检查电脑屏幕是否过低', d:'可以尝试调整电脑屏幕高度，减少头部前伸。', regions:['neck_shoulder']},
+    {t:'调整桌椅高度', d:'让头部不需要长期前伸。', regions:['neck_shoulder','upper_back']},
+    {t:'让常用设备处于更自然的视线和操作范围', d:'减少不必要的低头和伸手。', regions:[]},
+    {t:'选择合适的枕头高度', d:'让颈部在休息时保持自然位置。', regions:['neck_shoulder']}
+  ]
+};
+var ADVICE_SECTIONS = [
+  {key:'posture',    title:'姿势', hint:'减少让相关肌肉长期处于负担状态的姿势。'},
+  {key:'behavior',   title:'行为', hint:'改变容易让身体长期处于负担状态的日常习惯。'},
+  {key:'environment',title:'环境', hint:'调整每天使用的设备和空间。'}
+];
+
+function renderAdvicePage(){
+  refreshRegionGroups();
+  // 受累区域（用于排序和副标题）
+  var affected = [];
+  Object.keys(REGION_GROUPS).forEach(function(k){
+    if(REGION_GROUPS[k].tight.length || REGION_GROUPS[k].weak.length) affected.push(k);
+  });
+  var mainRegion = affected.length ? REGION_GROUPS[affected[0]].name : '';
+  var sub = '从日常姿势、行为和环境开始，减少身体不必要的负担。';
+  if(mainRegion) sub = '根据你的身体状态，可以先从减少' + mainRegion + '负担开始。';
+
+  var h = '<p style="margin:0 0 20px;font-size:14px;color:#6E7778;line-height:1.65">' + sub + '</p>';
+  ADVICE_SECTIONS.forEach(function(sec){
+    // 区域相关的建议排前面，最多取3条
+    var pool = ADVICE_POOL[sec.key].slice();
+    pool.sort(function(a,b){
+      var aHit = a.regions.some(function(r){ return affected.indexOf(r) !== -1; }) ? 0 : 1;
+      var bHit = b.regions.some(function(r){ return affected.indexOf(r) !== -1; }) ? 0 : 1;
+      return aHit - bHit;
+    });
+    var items = pool.slice(0, 3);
+    h += '<div style="margin-bottom:22px">';
+    h += '<h5 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1D2122">' + sec.title + '</h5>';
+    h += '<p style="margin:0 0 10px;font-size:12.5px;color:#A2ABAC">' + sec.hint + '</p>';
+    items.forEach(function(it){
+      h += '<div style="margin-bottom:10px;padding:12px 14px;background:#F8FAFA;border-radius:12px">';
+      h += '<div style="font-size:14px;font-weight:600;color:#1D2122;margin-bottom:2px">' + it.t + '</div>';
+      h += '<div style="font-size:13px;color:#6E7778;line-height:1.5">' + it.d + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+
+  // 反馈区
+  h += '<div style="margin-top:28px;padding-top:20px;border-top:1px solid #edf0ef">';
+  h += '<h5 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1D2122">调整之后，再感受一次</h5>';
+  h += '<p style="margin:0 0 12px;font-size:12.5px;color:#A2ABAC">完成调整后，再感受一下原来的不适有没有变化。</p>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="feedback-btns">';
+  ['明显减轻','有所减轻','没有变化','感觉更明显'].forEach(function(label){
+    h += '<button type="button" class="fb-btn" style="padding:12px 0;border:1px solid #E3EAE9;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1D2122;cursor:pointer">' + label + '</button>';
+  });
+  h += '</div></div>';
+
+  document.getElementById('advice-body').innerHTML = h;
+  document.querySelectorAll('.fb-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.fb-btn').forEach(function(b){
+        b.style.background='#fff'; b.style.color='#1D2122'; b.style.borderColor='#E3EAE9';
+      });
+      btn.style.background='#E8F3F4'; btn.style.color='#337F92'; btn.style.borderColor='#4198AC';
+    });
+  });
+}
 
 function openSheet(id){
   var m = MUSCLE_MAP[id];
   if(!m) return;
   var st = muscleStates[id] || 'neutral';
-  var card = buildExplainCard(m, st, currentResult && currentResult.pattern ? currentResult.pattern : null);
   var tagCls = st === 'tight' ? 'tight' : st === 'weak' ? 'weak' : '';
-  var tagTxt = st === 'tight' ? '过劳' : st === 'weak' ? '过弱' : '已标记';
-  // 「当前问题」把因果链写清：这块肌肉怎么了 → 所以你点的位置为什么不适。
-  // 过劳：它自己绷着受累；过弱：它使不上力、别人代偿，两边一起酸。
-  var problem = card.problem;
-  if(st === 'tight'){
-    problem = m.name + '当前处于过劳状态：它长时间缩短、绷着，得不到放松，局部血流变差、代谢产物堆积。' +
-      '所以你标记的这个位置会发酸、发胀、发紧，活动到某些角度时会觉得"被卡住"或"扯着"。';
-  } else if(st === 'weak'){
-    problem = m.name + '当前处于过弱状态：它本该承担的「' + (m.desc || '') + '」这份活使不上力，' +
-      '周围的肌肉被迫替它顶班，替班的累了会酸，它自己也因为长期用进废退而更无力。' +
-      '所以你标记的这个位置会出现酸软、乏力，甚至隐隐的痛感。';
-  }
-  var h = '<h3>' + card.name + '</h3>';
-  h += '<span class="sheet-tag ' + tagCls + '">' + tagTxt + '</span>';
-  if(inferredIds[id]) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">推断</span>';
-  h += '<div class="sec"><h5>是什么</h5><p>' + card.func + '</p></div>';
-  h += '<div class="sec"><h5>当前问题</h5><p>' + problem + '</p>';
-  if(card.cause) h += '<p class="hint">成因：' + card.cause + '</p></div>';
-  // 建议方向：方向文字 + 动作库里的具体动作名（过劳配放松/拉伸，过弱配激活/强化）
-  var adviceHtml = '<p>' + card.advice + '</p>';
-  if(st === 'tight' || st === 'weak'){
-    var pool = (typeof ACTIONS !== 'undefined' && ACTIONS)
-      ? ACTIONS.filter(function(a){ return a.muscles.indexOf(id) !== -1; })
-      : [];
-    // 优先当前状态的动作；该状态没有就放宽到这块肌肉的所有动作
-    var acts = pool.filter(function(a){ return a.forState === st; });
-    if(acts.length === 0) acts = pool;
-    acts = acts.slice(0, 3);
-    if(acts.length > 0){
-      adviceHtml += '<p style="margin-top:6px"><b>可以做：</b>' + acts.map(function(a){ return a.name; }).join('、') + '</p>';
-    }
-  }
-  h += '<div class="sec"><h5>建议方向</h5>' + adviceHtml + '</div>';
-  if(card.citation) h += '<p class="hint" style="margin-top:4px">依据：' + card.citation + '</p>';
+  var tagTxt = st === 'tight' ? '过劳' : st === 'weak' ? '偏弱' : '';
+  var regionName = (REGION_LABEL && REGION_LABEL[m.region]) || '相关';
 
-  // ── 动作推荐卡片（嵌入 Sheet，上滑可见）────────────────
-  if(st === 'tight' || st === 'weak'){
-    var actionPool = (typeof ACTIONS !== 'undefined' && ACTIONS)
-      ? ACTIONS.filter(function(a){ return a.muscles.indexOf(id) !== -1; })
-      : [];
-    // 优先当前状态的动作；该状态没有就放宽到这块肌肉的所有动作
-    var actionActs = actionPool.filter(function(a){ return a.forState === st; });
-    if(actionActs.length === 0) actionActs = actionPool;
-    actionActs = actionActs.slice(0, 3);
-    if(actionActs.length > 0){
-      h += '<div class="sec" style="margin-top:20px;padding-top:16px;border-top:1px solid #edf0ef">' +
-           '<h5 style="color:#337F92">推荐动作（上滑查看）</h5>';
-      actionActs.forEach(function(a){
-        var tagCls = a.forState === 'tight' ? 'tight' : a.forState === 'weak' ? 'weak' : '';
-        var tagTxt = a.forState === 'tight' ? '过劳' : a.forState === 'weak' ? '过弱' : '通用';
-        h += '<div class="sheet-action-card">' +
-             '<div class="sa-head"><h4>' + a.name + '</h4><span class="sa-tag ' + tagCls + '">' + tagTxt + '</span></div>' +
-             '<p>' + a.howto + '</p>' +
-             '</div>';
-      });
-      h += '</div>';
-    }
-  }
+  var h = '<h3>' + m.name + '</h3>';
+  if(tagTxt) h += '<span class="sheet-tag ' + tagCls + '">' + tagTxt + '</span>';
+  if(inferredIds[id]) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">推断</span>';
+
+  // 主要功能（复用引擎里的一句话科普描述）
+  h += '<div class="sec"><h5>主要功能</h5><p>' + (m.desc || '参与' + regionName + '区域的活动与稳定。') + '</p></div>';
+
+  // 固定结构：无论当前状态都显示「如果过劳 / 如果偏弱」
+  h += '<div class="sec"><h5>如果过劳</h5><p>可能使' + regionName + '区域持续紧张，更容易出现酸胀和不适。</p></div>';
+  h += '<div class="sec"><h5>如果偏弱</h5><p>可能影响' + regionName + '区域的稳定，使其他肌肉承担更多代偿工作。</p></div>';
 
   sheetBody.innerHTML = h;
   sheetMask.style.display = 'block';
