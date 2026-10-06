@@ -6,7 +6,7 @@ html,body{height:100%;height:100dvh}
 body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC",sans-serif;-webkit-font-smoothing:antialiased;color:#1D2122}
 
 /* 诊断页 1/2 统一顶部栏：圆形返回按钮（+页1说明文字），按钮在栏内垂直居中 */
-.diag-header{height:55px;padding:0 14px;display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid #edf0ef;flex-shrink:0}
+.diag-header{height:55px;padding:0 14px;display:flex;align-items:center;gap:12px;background:#fff;flex-shrink:0}
 .diag-header-sub{margin:0;font-size:14px;color:#6E7778;line-height:1.4}
 .diag-legend{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;font-weight:500;color:#6E7778}
 
@@ -132,11 +132,20 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 /* 悬浮胶囊底栏 */
 .bottom-nav{position:relative;z-index:20;flex-shrink:0;margin:0 18px max(14px,env(safe-area-inset-bottom));height:66px;border-radius:34px;background:rgba(255,255,255,.82);backdrop-filter:blur(22px);box-shadow:0 12px 36px rgba(31,68,77,.1);display:grid;grid-template-columns:repeat(4,1fr);align-items:center;padding:5px}
-.bottom-nav-item{height:56px;border:0;background:transparent;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--home-text-3);font:inherit;cursor:pointer;transition:color .18s,transform .18s}
+.bottom-nav-item{height:56px;border:0;background:transparent;border-radius:28px;display:flex;align-items:center;justify-content:center;color:var(--home-text-3);font:inherit;cursor:pointer;transition:color .18s}
 .bottom-nav-item.active{color:var(--home-accent)}
-.bottom-nav-item:active{transform:scale(.95)}
-.bn-icon{font-size:19px;line-height:1}
-.bn-label{font-size:11px;line-height:1}
+.bn-icon{display:block;line-height:0}
+.bn-icon svg{width:23px;height:23px;display:block}
+/* 未选中=线性轮廓；选中=正确实心（钟表保留指针结构，不为实心圆） */
+.bn-icon .ic-f{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.bn-icon .ic-face{fill:none;stroke:currentColor;stroke-width:1.7}
+.bn-icon .ic-hands{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.bottom-nav-item.active .ic-f{fill:currentColor}
+.bottom-nav-item.active .ic-face{fill:currentColor}
+.bottom-nav-item.active .ic-hands{stroke:#fff}
+/* 点击轻微放大→回缩（无弹跳无位移） */
+@keyframes bnPop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
+.bottom-nav-item.bn-pop .bn-icon{animation:bnPop .2s ease-out}
 
 /* 首页肌肉知识浮卡（轻量毛玻璃，只讲知识，无状态标签） */
 .home-know{position:absolute;z-index:30;left:50%;bottom:4px;transform:translate(-50%,8px);width:calc(100% - 36px);max-width:360px;max-height:50%;overflow:auto;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);box-shadow:0 14px 40px -12px rgba(31,68,77,.22);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;scrollbar-width:none}
@@ -150,9 +159,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 #stage-result{flex:1;min-height:0;margin:0 16px;border-radius:28px;overflow:hidden;background:#F2F8F7;box-shadow:0 10px 30px -12px rgba(31,68,77,.12)}
 
 
-.result-header{position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;background:#fff;border-bottom:1px solid #edf0ef;flex-shrink:0}
-.back-btn{width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:#1D2122;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.back-btn:active{background:#F2F8F7}
+.result-header{position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;background:#fff;flex-shrink:0}
+.back-btn{width:34px;height:34px;border-radius:50%;border:0;background:#F2F8F7;color:#1D2122;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.back-btn:active{background:#E8F3F4}
 .result-title{flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 0;font-size:16px;font-weight:700;color:#1D2122}
 .result-legend{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:#6E7778}
 .lg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px}
@@ -181,7 +190,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .advice-body::-webkit-scrollbar{display:none}
 .adv-page{height:100%;scroll-snap-align:start;display:flex;flex-direction:column;padding:18px 20px 22px}
 .adv-sub{margin:0;font-size:14px;color:#6E7778;line-height:1.65}
-.adv-actions{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;margin-top:14px}
+/* 第三页两屏共用标题样式（当下即做的缓解动作 / 长期坚持的改善方向） */
+.adv-page-title{margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122}
+.adv-actions{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
 .adv-card{flex:1;min-height:0;display:flex;align-items:center;gap:14px;padding:12px 12px 12px 16px;background:#F8FAFA;border-radius:16px}
 .adv-card-text{flex:1;min-width:0}
 .adv-tag{display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
@@ -353,10 +364,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <span class="start-diagnosis-subtitle">3 个步骤 · 了解身体 · 获得建议</span>
   </button>
   <nav class="bottom-nav">
-    <button type="button" class="bottom-nav-item active" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-face" cx="12" cy="12" r="8.2"/><path class="ic-hands" d="M12 7.4v4.8l3.1 1.9"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M12 20.2C7.2 16.4 3.8 13.2 3.8 9.7 3.8 7.2 5.8 5.2 8.3 5.2c1.5 0 3 .8 3.7 2 .7-1.2 2.2-2 3.7-2 2.5 0 4.5 2 4.5 4.5 0 3.5-3.4 6.7-8.2 10.5z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-f" cx="12" cy="8.2" r="3.7"/><path class="ic-f" d="M5 19.6c.9-3.5 3.7-5.3 7-5.3s6.1 1.8 7 5.3z"/></svg></span></button>
   </nav>
 </div>
 
@@ -474,8 +485,6 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <button class="back-btn" id="advice-back-btn" aria-label="返回">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <div class="result-title">改善建议</div>
-    <div style="width:34px;flex-shrink:0"></div>
   </header>
   <div class="advice-body" id="advice-body"><!-- 阶段5填充 --></div>
   <div class="advice-home-bar">
@@ -497,10 +506,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <div id="record-summary"></div>
   </div>
   <nav class="bottom-nav">
-    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
-    <button type="button" class="bottom-nav-item active" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="record"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-face" cx="12" cy="12" r="8.2"/><path class="ic-hands" d="M12 7.4v4.8l3.1 1.9"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M12 20.2C7.2 16.4 3.8 13.2 3.8 9.7 3.8 7.2 5.8 5.2 8.3 5.2c1.5 0 3 .8 3.7 2 .7-1.2 2.2-2 3.7-2 2.5 0 4.5 2 4.5 4.5 0 3.5-3.4 6.7-8.2 10.5z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-f" cx="12" cy="8.2" r="3.7"/><path class="ic-f" d="M5 19.6c.9-3.5 3.7-5.3 7-5.3s6.1 1.8 7 5.3z"/></svg></span></button>
   </nav>
 </div>
 
@@ -521,10 +530,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <div class="fav-list" id="fav-list"></div>
   </div>
   <nav class="bottom-nav">
-    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
-    <button type="button" class="bottom-nav-item active" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-face" cx="12" cy="12" r="8.2"/><path class="ic-hands" d="M12 7.4v4.8l3.1 1.9"/></svg></span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="fav"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M12 20.2C7.2 16.4 3.8 13.2 3.8 9.7 3.8 7.2 5.8 5.2 8.3 5.2c1.5 0 3 .8 3.7 2 .7-1.2 2.2-2 3.7-2 2.5 0 4.5 2 4.5 4.5 0 3.5-3.4 6.7-8.2 10.5z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-f" cx="12" cy="8.2" r="3.7"/><path class="ic-f" d="M5 19.6c.9-3.5 3.7-5.3 7-5.3s6.1 1.8 7 5.3z"/></svg></span></button>
   </nav>
 </div>
 
@@ -568,10 +577,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     </div>
   </div>
   <nav class="bottom-nav">
-    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
-    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
-    <button type="button" class="bottom-nav-item active" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-face" cx="12" cy="12" r="8.2"/><path class="ic-hands" d="M12 7.4v4.8l3.1 1.9"/></svg></span></button>
+    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M12 20.2C7.2 16.4 3.8 13.2 3.8 9.7 3.8 7.2 5.8 5.2 8.3 5.2c1.5 0 3 .8 3.7 2 .7-1.2 2.2-2 3.7-2 2.5 0 4.5 2 4.5 4.5 0 3.5-3.4 6.7-8.2 10.5z"/></svg></span></button>
+    <button type="button" class="bottom-nav-item active" data-tab="me"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-f" cx="12" cy="8.2" r="3.7"/><path class="ic-f" d="M5 19.6c.9-3.5 3.7-5.3 7-5.3s6.1 1.8 7 5.3z"/></svg></span></button>
   </nav>
 </div>
 
@@ -1383,6 +1392,13 @@ function hideResultAi(){
 document.getElementById('overview-btn').addEventListener('click', function(){
   if(resultAi.classList.contains('open')) hideResultAi(); else showResultAi();
 });
+// 整体分析卡片打开时，点卡片外区域收回；点卡片内部不关
+document.getElementById('page-result').addEventListener('click', function(ev){
+  if(!resultAi.classList.contains('open')) return;
+  if(ev.target.closest('#result-ai') || ev.target.closest('#overview-btn')) return;
+  if(zoomResult && zoomResult.suppressTap) return; // 拖动/缩放后的点击不算
+  hideResultAi();
+});
 
 // 第一页返回首页
 document.getElementById('select-back-btn').addEventListener('click', function(){
@@ -1458,7 +1474,13 @@ function switchTab(tab){
   if(tab !== 'home'){ hideHomeKnow(); clearHomePerspective(); }
 }
 document.querySelectorAll('.bottom-nav-item').forEach(function(btn){
-  btn.addEventListener('click', function(){ switchTab(btn.dataset.tab); });
+  btn.addEventListener('click', function(){
+    // 轻微放大→回缩动画（重触发：先移除再强制回流）
+    btn.classList.remove('bn-pop');
+    void btn.offsetWidth;
+    btn.classList.add('bn-pop');
+    switchTab(btn.dataset.tab);
+  });
 });
 
 /* ── 记录页：2026年10月身体记录热力日历（mock data） ── */
@@ -1629,7 +1651,7 @@ function renderAdvicePage(){
   });
 
   // ── 第 1 页：现在可以做 ──
-  var h1 = '<p class="adv-sub">先缓解当前的不适，再慢慢改善身体状态。</p>';
+  var h1 = '<div class="adv-page-title">当下即做的缓解动作</div>';
 
   // 固定 3 个动作：过劳 → 缓解（优先2个）；偏弱 → 强化（1个）；不足则用剩余动作补齐
   var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='tight'; });
@@ -1670,7 +1692,7 @@ function renderAdvicePage(){
   h1 += '</div>';
 
   // ── 第 2 页：长期改善（姿势/行为/环境 × 各2条）──
-  var h2 = '<div class="adv-lt-title">长期改善</div>';
+  var h2 = '<div class="adv-page-title">长期坚持的改善方向</div>';
   ADVICE_SECTIONS.forEach(function(sec){
     // 区域相关的建议排前面，固定取2条
     var pool = ADVICE_POOL[sec.key].slice();
