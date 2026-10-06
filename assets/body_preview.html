@@ -8,6 +8,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 诊断页 1/2 统一顶部栏：圆形返回按钮（+页1说明文字），按钮在栏内垂直居中 */
 .diag-header{height:55px;padding:0 14px;display:flex;align-items:center;gap:12px;background:#fff;border-bottom:1px solid #edf0ef;flex-shrink:0}
 .diag-header-sub{margin:0;font-size:14px;color:#6E7778;line-height:1.4}
+.diag-legend{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;font-weight:500;color:#6E7778}
 
 /* 肌肉图容器：撑满中间 */
 .stage{position:relative;margin:0 16px;flex:1;min-height:0;border-radius:28px;overflow:hidden;background:#F2F8F7;box-shadow:0 10px 30px -12px rgba(31,68,77,.12);}
@@ -171,8 +172,26 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .cta-primary{width:100%;padding:14px 16px;border:0;border-radius:16px;background:#4198AC;color:#fff;font:inherit;font-size:15.5px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.4);transition:transform .12s,background .12s}
 .cta-primary:active{transform:scale(.98);background:#337F92}
 
-/* 第三页：改善建议 */
-.advice-body{flex:1;min-height:0;overflow:auto;padding:16px 20px 28px}
+/* 第三页：上下分页（snap），每页撑满可视区域 */
+.advice-body{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none}
+.advice-body::-webkit-scrollbar{display:none}
+.adv-page{height:100%;scroll-snap-align:start;display:flex;flex-direction:column;padding:18px 20px 22px}
+.adv-sub{margin:0;font-size:14px;color:#6E7778;line-height:1.65}
+.adv-actions{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.adv-card{flex:1;min-height:0;display:flex;align-items:center;gap:14px;padding:14px 16px;background:#F8FAFA;border-radius:16px}
+.adv-card-text{flex:1;min-width:0}
+.adv-tag{display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
+.adv-name{font-size:14.5px;font-weight:700;color:#1D2122;margin-bottom:3px}
+.adv-desc{font-size:13px;color:#6E7778;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.adv-dose{margin-top:6px;font-size:12.5px;font-weight:600;color:#337F92}
+.adv-img{flex-shrink:0;width:min(26%,96px);aspect-ratio:1/1;border-radius:14px;background:#E8F0F0;display:grid;place-items:center}
+.adv-img span{font-size:11px;color:#A2ABAC}
+.adv-lt-title{margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122}
+.adv-dim{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;margin-bottom:14px;padding:14px 16px;background:#F8FAFA;border-radius:16px}
+.adv-dim:last-child{margin-bottom:0}
+.adv-dim h6{margin:0;font-size:14px;font-weight:700;color:#1D2122}
+.adv-item-t{font-size:14px;font-weight:600;color:#1D2122;margin-bottom:2px}
+.adv-item-d{font-size:13px;color:#6E7778;line-height:1.5}
 .advice-home-bar{flex-shrink:0;padding:8px 16px max(12px,env(safe-area-inset-bottom));border-top:1px solid #edf0ef;background:#fff}
 #advice-home-btn{width:100%;min-height:48px;border:1.5px solid #CFE2E5;border-radius:14px;background:#fff;color:#337F92;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:background .16s}
 #advice-home-btn:active{background:#F2F8F7}
@@ -323,6 +342,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <button class="back-btn" id="back-btn" aria-label="返回">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
+    <div class="diag-legend">
+      <span class="lg-item"><span class="lg-dot lg-tight"></span>过劳</span>
+      <span class="lg-item"><span class="lg-dot lg-weak"></span>偏弱</span>
+    </div>
   </header>
   <div class="app-wrap">
     <div class="stage" id="stage-result">
@@ -1248,10 +1271,10 @@ function renderAdvicePage(){
     if(REGION_GROUPS[k].tight.length || REGION_GROUPS[k].weak.length) affected.push(k);
   });
 
-  var h = '<p style="margin:0 0 20px;font-size:14px;color:#6E7778;line-height:1.65">先缓解当前的不适，再慢慢改善身体状态。</p>';
+  // ── 第 1 页：现在可以做 ──
+  var h1 = '<p class="adv-sub">先缓解当前的不适，再慢慢改善身体状态。</p>';
 
-  // ── 现在可以做：复用第二页 muscleStates + 引擎 ACTIONS ──
-  // 过劳 → 立即缓解（最多2个）；偏弱 → 长期加强（最多1个，无偏弱不强行生成）
+  // 固定 3 个动作：过劳 → 缓解（优先2个）；偏弱 → 强化（1个）；不足则用剩余动作补齐
   var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='tight'; });
   var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='weak'; });
   var acts = [];
@@ -1260,79 +1283,57 @@ function renderAdvicePage(){
     var strengthen = ACTIONS.filter(function(a){ return a.forState==='weak' && a.muscles.some(function(m){ return weakIds.indexOf(m)!==-1; }); });
     relief.slice(0,2).forEach(function(a){ acts.push({a:a, kind:'relief'}); });
     if(strengthen.length) acts.push({a:strengthen[0], kind:'strengthen'});
+    var rest = relief.slice(2).concat(strengthen.slice(1));
+    while(acts.length < 3 && rest.length){
+      var r = rest.shift();
+      acts.push({a:r, kind: r.forState==='tight' ? 'relief' : 'strengthen'});
+    }
   }
-  if(acts.length){
-    h += '<div style="margin-bottom:24px">';
-    h += '<h5 style="margin:0 0 10px;font-size:15px;font-weight:700;color:#1D2122">现在可以做</h5>';
-    acts.forEach(function(x){
-      var a = x.a;
-      var tagBg = x.kind==='relief' ? '#FDECEB' : '#F0E8F5';
-      var tagColor = x.kind==='relief' ? '#D8403A' : '#7B5BA0';
-      var tagTxt = x.kind==='relief' ? '🔴 缓解过劳肌肉' : '🟣 强化偏弱肌肉';
-      var howto = (a.howto || '').split('。')[0];
-      if(howto) howto += '。';
-      h += '<div style="margin-bottom:10px;padding:14px 16px;background:#F8FAFA;border-radius:14px">';
-      h += '<span style="display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;background:' + tagBg + ';color:' + tagColor + '">' + tagTxt + '</span>';
-      h += '<div style="font-size:14.5px;font-weight:700;color:#1D2122;margin-bottom:3px">' + a.name + '</div>';
-      h += '<div style="font-size:13px;color:#6E7778;line-height:1.55">' + howto + '</div>';
-      if(a.dose) h += '<div style="margin-top:6px;font-size:12.5px;font-weight:600;color:#337F92">' + a.dose + '</div>';
-      h += '</div>';
-    });
-    h += '</div>';
-  }
+  h1 += '<div class="adv-actions">';
+  acts.forEach(function(x){
+    var a = x.a;
+    var tagBg = x.kind==='relief' ? '#FDECEB' : '#F0E8F5';
+    var tagColor = x.kind==='relief' ? '#D8403A' : '#7B5BA0';
+    var tagTxt = x.kind==='relief' ? '🔴 立即缓解' : '🟣 长期强化';
+    var howto = (a.howto || '').split('。')[0];
+    if(howto) howto += '。';
+    h1 += '<div class="adv-card">';
+    h1 += '<div class="adv-card-text">';
+    h1 += '<span class="adv-tag" style="background:' + tagBg + ';color:' + tagColor + '">' + tagTxt + '</span>';
+    h1 += '<div class="adv-name">' + a.name + '</div>';
+    h1 += '<div class="adv-desc">' + howto + '</div>';
+    if(a.dose) h1 += '<div class="adv-dose">' + a.dose + '</div>';
+    h1 += '</div>';
+    h1 += '<div class="adv-img"><span>动作示意</span></div>';
+    h1 += '</div>';
+  });
+  h1 += '</div>';
 
-  // ── 长期改善：姿势 / 行为 / 环境 ──
-  h += '<h5 style="margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122">长期改善</h5>';
+  // ── 第 2 页：长期改善（姿势/行为/环境 × 各2条）──
+  var h2 = '<div class="adv-lt-title">长期改善</div>';
   ADVICE_SECTIONS.forEach(function(sec){
-    // 区域相关的建议排前面，最多取3条
+    // 区域相关的建议排前面，固定取2条
     var pool = ADVICE_POOL[sec.key].slice();
     pool.sort(function(a,b){
       var aHit = a.regions.some(function(r){ return affected.indexOf(r) !== -1; }) ? 0 : 1;
       var bHit = b.regions.some(function(r){ return affected.indexOf(r) !== -1; }) ? 0 : 1;
       return aHit - bHit;
     });
-    var items = pool.slice(0, 3);
-    h += '<div style="margin-bottom:22px">';
-    h += '<h5 style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1D2122">' + sec.title + '</h5>';
-    h += '<p style="margin:0 0 10px;font-size:12.5px;color:#A2ABAC">' + sec.hint + '</p>';
+    var items = pool.slice(0, 2);
+    h2 += '<div class="adv-dim"><h6>' + sec.title + '</h6>';
     items.forEach(function(it){
-      h += '<div style="margin-bottom:10px;padding:12px 14px;background:#F8FAFA;border-radius:12px">';
-      h += '<div style="font-size:14px;font-weight:600;color:#1D2122;margin-bottom:2px">' + it.t + '</div>';
-      h += '<div style="font-size:13px;color:#6E7778;line-height:1.5">' + it.d + '</div>';
-      h += '</div>';
+      h2 += '<div class="adv-item">';
+      h2 += '<div class="adv-item-t">' + it.t + '</div>';
+      h2 += '<div class="adv-item-d">' + it.d + '</div>';
+      h2 += '</div>';
     });
-    h += '</div>';
+    h2 += '</div>';
   });
 
-  // ── 反馈区（localStorage 保存，重进恢复选中态）──
-  var savedFb = null;
-  try{ savedFb = JSON.parse(localStorage.getItem('adviceFeedback')||'null'); }catch(e){}
-  h += '<div style="margin-top:28px;padding-top:20px;border-top:1px solid #edf0ef">';
-  h += '<h5 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#1D2122">调整之后，再感受一次</h5>';
-  h += '<p style="margin:0 0 12px;font-size:12.5px;color:#A2ABAC">现在的感觉有没有发生变化？</p>';
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="feedback-btns">';
-  ['明显减轻','有所减轻','没有变化','感觉更明显'].forEach(function(label){
-    h += '<button type="button" class="fb-btn" data-fb="' + label + '" style="padding:12px 0;border:1px solid #E3EAE9;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1D2122;cursor:pointer">' + label + '</button>';
-  });
-  h += '</div></div>';
-
-  document.getElementById('advice-body').innerHTML = h;
-
-  function paintFb(selected){
-    document.querySelectorAll('.fb-btn').forEach(function(b){
-      var on = b.dataset.fb === selected;
-      b.style.background = on ? '#E8F3F4' : '#fff';
-      b.style.color = on ? '#337F92' : '#1D2122';
-      b.style.borderColor = on ? '#4198AC' : '#E3EAE9';
-    });
-  }
-  if(savedFb && savedFb.choice) paintFb(savedFb.choice);
-  document.querySelectorAll('.fb-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      paintFb(btn.dataset.fb);
-      try{ localStorage.setItem('adviceFeedback', JSON.stringify({choice:btn.dataset.fb, ts:Date.now()})); }catch(e){}
-    });
-  });
+  document.getElementById('advice-body').innerHTML =
+    '<section class="adv-page">' + h1 + '</section>' +
+    '<section class="adv-page">' + h2 + '</section>';
+  document.getElementById('advice-body').scrollTop = 0;
 }
 
 function openSheet(id){
