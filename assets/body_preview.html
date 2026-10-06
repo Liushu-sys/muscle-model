@@ -184,8 +184,13 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .adv-name{font-size:14.5px;font-weight:700;color:#1D2122;margin-bottom:3px}
 .adv-desc{font-size:13px;color:#6E7778;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .adv-dose{margin-top:6px;font-size:12.5px;font-weight:600;color:#337F92}
-.adv-img{flex-shrink:0;align-self:stretch;aspect-ratio:1/1;border-radius:12px;background:#E8F0F0;display:grid;place-items:center}
+.adv-img{position:relative;flex-shrink:0;width:50%;align-self:stretch;border-radius:12px;background:#E8F0F0;display:grid;place-items:center}
 .adv-img span{font-size:11px;color:#A2ABAC}
+.adv-fav{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;cursor:pointer;color:#B7BFC0;transition:transform .15s ease,color .15s ease}
+.adv-fav:active{transform:scale(.88)}
+.adv-fav svg{width:16px;height:16px}
+.adv-fav.on{color:#F5A623}
+.adv-fav.on svg{fill:currentColor}
 .adv-lt-title{margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122}
 .adv-dim{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;margin-bottom:14px;padding:14px 16px;background:#F8FAFA;border-radius:16px}
 .adv-dim:last-child{margin-bottom:0}
@@ -1304,7 +1309,10 @@ function renderAdvicePage(){
     h1 += '<div class="adv-desc">' + howto + '</div>';
     if(a.dose) h1 += '<div class="adv-dose">' + a.dose + '</div>';
     h1 += '</div>';
-    h1 += '<div class="adv-img"><span>动作示意</span></div>';
+    h1 += '<div class="adv-img"><span>动作示意</span>'
+      + '<button type="button" class="adv-fav" data-favid="' + (a.id || a.name) + '" aria-label="收藏">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg>'
+      + '</button></div>';
     h1 += '</div>';
   });
   h1 += '</div>';
@@ -1334,6 +1342,22 @@ function renderAdvicePage(){
     '<section class="adv-page">' + h1 + '</section>' +
     '<section class="adv-page">' + h2 + '</section>';
   document.getElementById('advice-body').scrollTop = 0;
+
+  // 收藏：点亮/取消，localStorage 持久化
+  var favs = [];
+  try{ favs = JSON.parse(localStorage.getItem('favActions')||'[]'); }catch(e){}
+  document.querySelectorAll('.adv-fav').forEach(function(btn){
+    if(favs.indexOf(btn.dataset.favid) !== -1) btn.classList.add('on');
+    btn.addEventListener('click', function(){
+      var on = btn.classList.toggle('on');
+      var arr = [];
+      try{ arr = JSON.parse(localStorage.getItem('favActions')||'[]'); }catch(e){}
+      var i = arr.indexOf(btn.dataset.favid);
+      if(on && i === -1) arr.push(btn.dataset.favid);
+      if(!on && i !== -1) arr.splice(i, 1);
+      try{ localStorage.setItem('favActions', JSON.stringify(arr)); }catch(e){}
+    });
+  });
 }
 
 function openSheet(id){
