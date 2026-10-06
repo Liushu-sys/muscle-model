@@ -43,8 +43,6 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .m.weak{fill:#5578A8;stroke:#3D5E88;stroke-width:.55}
 /* 选择页：不再整块肌肉变色，改为小红点标记 */
 .m.sel{fill:#F6F0E9;stroke:#E3D5C8}
-/* 选中状态：颜色加深+加亮边框，不改变解剖层级（不置顶） */
-.m.sel-active{fill:#4198AC;stroke:#337F92;stroke-width:.85;filter:brightness(1.1)}
 
 /* 小红点标记（SVG circle 元素） */
 .dot-mark{fill:#E0584F;stroke:#fff;stroke-width:1.5;cursor:pointer;animation:dotBlink 1.2s ease-in-out infinite}
@@ -389,10 +387,6 @@ function addDotMark(svgX, svgY, muscleId, muscleCn, view){
 
   dotMarks.push({el: dot, muscleId: muscleId, svgX: svgX, svgY: svgY, view: view});
   sel[muscleId] = true;
-  // 给肌肉路径添加选中样式（不改变层级）
-  document.querySelectorAll('.m[data-id="'+muscleId+'"]').forEach(function(pathEl){
-    pathEl.classList.add('sel-active');
-  });
   bubble(muscleCn + ' · 已标记');
   refresh();
 
@@ -411,13 +405,7 @@ function removeDotMark(dotId){
   dot.el.remove();
   dotMarks.splice(idx, 1);
   var stillHas = dotMarks.some(function(d){ return d.muscleId === muscleId; });
-  if(!stillHas) {
-    delete sel[muscleId];
-    // 移除肌肉路径的选中样式
-    document.querySelectorAll('.m[data-id="'+muscleId+'"]').forEach(function(pathEl){
-      pathEl.classList.remove('sel-active');
-    });
-  }
+  if(!stillHas) delete sel[muscleId];
   clearLayerPerspective();
   bubble('已取消标记');
   refresh();
@@ -700,6 +688,9 @@ function cloneResultSvgs(){
     el.parentNode.replaceChild(newEl, el);
     newEl.addEventListener('click', function(){
       if(zoomResult.suppressTap) return;
+      var card = newEl.closest('.card');
+      var view = card && card.classList.contains('front') ? 'front' : 'back';
+      applyLayeredPerspective(newEl, view);
       openSheet(newEl.dataset.id);
     });
   });
@@ -753,6 +744,7 @@ resultTitle.addEventListener('click', function(){
 });
 
 document.getElementById('back-btn').addEventListener('click', function(){
+  clearLayerPerspective();
   pageResult.style.display = 'none';
   pageSelect.style.display = 'flex';
   resultAi.style.display = 'none';
