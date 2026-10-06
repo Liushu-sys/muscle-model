@@ -81,6 +81,69 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .stage .card{position:absolute;inset:0;}
 /* ── 诊断结果页 ─────────────────────── */
 .page{position:absolute;inset:0;display:flex;flex-direction:column}
+
+/* ================= 首页（自由探索） ================= */
+:root{
+  --home-accent:#FF8A68;
+  --home-accent-dark:#F47759;
+  --home-text:#202020;
+  --home-text-2:rgba(32,32,32,.56);
+  --home-text-3:rgba(32,32,32,.38);
+}
+#page-home{
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255,190,150,.42), rgba(255,235,216,.22) 36%, rgba(255,249,243,.08) 65%),
+    linear-gradient(180deg,#FFE0C9 0%,#FFF0E3 30%,#FFF8F1 63%,#FFFFFF 100%);
+}
+.home-header{position:relative;z-index:10;height:56px;padding:max(6px,env(safe-area-inset-top)) 22px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.home-logo{font-size:17px;font-weight:600;letter-spacing:-.02em;color:var(--home-text)}
+.header-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;border:0;background:rgba(255,255,255,.62);backdrop-filter:blur(16px);color:var(--home-text);cursor:pointer;transition:transform .18s ease}
+.header-icon:active{transform:scale(.95)}
+.header-icon svg{width:19px;height:19px}
+
+/* 模型主区域：去掉现有 .stage 的边框/底色/阴影，从顶栏一直延伸到 CTA 上方 */
+.stage-home{margin:0;border-radius:0;background:transparent;box-shadow:none}
+.stage-home::before{content:"";position:absolute;z-index:0;top:50%;left:50%;transform:translate(-50%,-50%);width:min(78vw,460px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.82) 0%,rgba(255,255,255,.32) 50%,transparent 72%);pointer-events:none}
+.stage-home .card{z-index:1}
+.stage-home .zoom-wrap svg{filter:none;animation:homeBodyIn .52s cubic-bezier(.2,.8,.2,1) both}
+@keyframes homeBodyIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+/* 首页肌肉：只有默认解剖色 + 悬停微亮，永不出现诊断色 */
+.hm{fill:#F6F0E9;stroke:#E3D5C8;stroke-width:.46;cursor:pointer;transition:fill .12s}
+.hm:hover{fill:#EADFD2}
+.stage-home .flip-hint{color:#C9A893}
+
+/* 右侧毛玻璃竖条缩放控件（仅 +/−） */
+.stage-home .zoom-control{position:absolute;z-index:5;top:50%;right:18px;transform:translateY(-50%);display:flex;flex-direction:column;border-radius:20px;background:rgba(255,255,255,.72);backdrop-filter:blur(18px);box-shadow:0 8px 30px rgba(80,55,35,.08);overflow:hidden}
+.stage-home .zoom-control button{width:42px;height:42px;border:0;background:transparent;font:inherit;font-size:20px;color:var(--home-text);cursor:pointer;display:grid;place-items:center;transition:background .16s,transform .16s}
+.stage-home .zoom-control button:hover{background:rgba(255,255,255,.55)}
+.stage-home .zoom-control button:active{transform:scale(.92)}
+.stage-home .zoom-control button:disabled{color:rgba(32,32,32,.25);cursor:default}
+.stage-home .zoom-divider{height:1px;background:rgba(32,32,32,.08)}
+
+/* 开始诊断 CTA */
+.start-diagnosis{position:relative;z-index:10;flex-shrink:0;margin:8px 22px 12px;min-height:62px;border:0;border-radius:22px;color:#fff;background:linear-gradient(135deg,#FF9B72 0%,#FF8368 100%);box-shadow:0 10px 28px rgba(247,130,95,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font:inherit;transition:transform .18s ease,box-shadow .18s ease}
+.start-diagnosis:hover{transform:translateY(-1px);box-shadow:0 12px 32px rgba(247,130,95,.24)}
+.start-diagnosis:active{transform:scale(.98)}
+.start-diagnosis-title{font-size:18px;font-weight:650;line-height:1.25}
+.start-diagnosis-subtitle{margin-top:4px;font-size:12px;font-weight:450;opacity:.88}
+
+/* 悬浮胶囊底栏 */
+.bottom-nav{position:relative;z-index:20;flex-shrink:0;margin:0 18px max(14px,env(safe-area-inset-bottom));height:66px;border-radius:34px;background:rgba(255,255,255,.82);backdrop-filter:blur(22px);box-shadow:0 12px 36px rgba(70,52,40,.1);display:grid;grid-template-columns:repeat(4,1fr);align-items:center;padding:5px}
+.bottom-nav-item{height:56px;border:0;background:transparent;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--home-text-3);font:inherit;cursor:pointer;transition:color .18s,transform .18s}
+.bottom-nav-item.active{color:var(--home-accent)}
+.bottom-nav-item:active{transform:scale(.95)}
+.bn-icon{font-size:19px;line-height:1}
+.bn-label{font-size:11px;line-height:1}
+
+/* 首页肌肉知识浮卡（轻量毛玻璃，只讲知识，无状态标签） */
+.home-know{position:absolute;z-index:30;left:50%;bottom:18px;transform:translate(-50%,8px);width:calc(100% - 36px);max-width:360px;max-height:50%;overflow:auto;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);box-shadow:0 14px 40px -12px rgba(80,55,35,.22);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;scrollbar-width:none}
+.home-know::-webkit-scrollbar{display:none}
+.home-know.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.home-know h4{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--home-text)}
+.home-know .hk-sec{margin:0 0 8px}
+.home-know .hk-sec:last-child{margin-bottom:0}
+.home-know h5{margin:0 0 2px;font-size:12.5px;font-weight:600;color:var(--home-accent-dark)}
+.home-know p{margin:0;font-size:13px;line-height:1.6;color:var(--home-text-2)}
 #stage-result{flex:1;min-height:0;margin:0 16px;border-radius:28px;overflow:hidden;background:#F2F8F7;box-shadow:0 10px 30px -12px rgba(31,68,77,.12)}
 
 
@@ -110,6 +173,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 /* 第三页：改善建议 */
 .advice-body{flex:1;min-height:0;overflow:auto;padding:16px 20px 28px}
+.advice-home-bar{flex-shrink:0;padding:8px 16px max(12px,env(safe-area-inset-bottom));border-top:1px solid #edf0ef;background:#fff}
+#advice-home-btn{width:100%;min-height:48px;border:1.5px solid #CFE2E5;border-radius:14px;background:#fff;color:#337F92;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:background .16s}
+#advice-home-btn:active{background:#F2F8F7}
 
 /* ── iOS Sheet ─────────────────────── */
 .sheet-mask{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0);transition:background .25s;pointer-events:none}
@@ -147,7 +213,39 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 人物阴影：WPS 参数→颜色#000 透明度39% 模糊25px 距离8px 角度220° */
 .zoom-wrap svg{filter:drop-shadow(-4px 5px 14px rgba(0,0,0,0.39))}
 </style></head><body>
-<div id="page-select" class="page">
+<!-- ===== 首页（自由肌肉探索，默认入口） ===== -->
+<div id="page-home" class="page">
+  <header class="home-header">
+    <div class="home-logo">BodyCare</div>
+    <button type="button" class="header-icon" id="home-me-entry" aria-label="个人">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+    </button>
+  </header>
+  <div class="stage stage-home" id="stage-home">
+    <div class="flip-hint">双击空白处翻转模型</div>
+    <div class="card front" id="card-front-home"><div class="zoom-scroller"><div class="zoom-wrap"></div></div></div>
+    <div class="card back" id="card-back-home" style="display:none"><div class="zoom-scroller"><div class="zoom-wrap"></div></div></div>
+    <div class="zoom-control">
+      <button type="button" id="z-in-home" aria-label="放大">+</button>
+      <div class="zoom-divider"></div>
+      <button type="button" id="z-out-home" aria-label="缩小">&minus;</button>
+    </div>
+    <div class="home-know" id="home-know"></div>
+    <div class="tap-bubble" id="bubble-home"></div>
+  </div>
+  <button type="button" class="start-diagnosis" id="start-diagnosis">
+    <span class="start-diagnosis-title">开始诊断 →</span>
+    <span class="start-diagnosis-subtitle">3 个步骤 · 了解身体 · 获得建议</span>
+  </button>
+  <nav class="bottom-nav">
+    <button type="button" class="bottom-nav-item active" data-tab="home"><span class="bn-icon">⌂</span><span class="bn-label">首页</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon">◷</span><span class="bn-label">记录</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="fav"><span class="bn-icon">♡</span><span class="bn-label">收藏</span></button>
+    <button type="button" class="bottom-nav-item" data-tab="me"><span class="bn-icon">◯</span><span class="bn-label">我的</span></button>
+  </nav>
+</div>
+
+<div id="page-select" class="page" style="display:none">
 <header class="app-header">
   <h1>Body Map</h1>
   <p class="sub">点击你感到不适的肌肉区域（可多选、可取消选择）</p>
@@ -265,6 +363,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <div style="width:34px;flex-shrink:0"></div>
   </header>
   <div class="advice-body" id="advice-body"><!-- 阶段5填充 --></div>
+  <div class="advice-home-bar">
+    <button type="button" id="advice-home-btn">完成，返回首页</button>
+  </div>
 </div>
 
 <!-- ===== iOS Sheet ===== -->
@@ -592,7 +693,7 @@ function setStageView(stage, view){
   stage.querySelector('.card.front').style.display = view === 'front' ? 'block' : 'none';
   stage.querySelector('.card.back').style.display  = view === 'back'  ? 'block' : 'none';
   // 给新显示的那面按当前缩放倍数写上尺寸，并保持缩放状态（居中）
-  var z = stage.id === 'stage-result' ? zoomResult : zoom;
+  var z = stage._zoomRef || (stage.id === 'stage-result' ? zoomResult : zoom);
   if(z) z.apply();
   var sc = stage.querySelector('.card.' + view + ' .zoom-scroller');
   if(sc){ sc.scrollLeft = (sc.scrollWidth - sc.clientWidth) / 2; sc.scrollTop = (sc.scrollHeight - sc.clientHeight) / 2; }
@@ -623,7 +724,7 @@ function flipStage(stage){
 }
 document.querySelectorAll('.stage').forEach(function(stage){
   stage.addEventListener('dblclick', function(ev){
-    if(ev.target.closest('.m') || ev.target.closest('.dot-mark') || ev.target.closest('.feel-card')) return;
+    if(ev.target.closest('.m') || ev.target.closest('.dot-mark') || ev.target.closest('.feel-card') || ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
     flipStage(stage);
   });
 });
@@ -660,8 +761,10 @@ function initZoom(stageEl, inBtn, outBtn, resetBtn){
     // 直接撑大内容尺寸，让原生滚动负责平移；SVG 矢量放大不糊
     w.style.width  = (sc.clientWidth  * scale) + 'px';
     w.style.height = (sc.clientHeight * scale) + 'px';
-    resetBtn.textContent = (Math.round(scale * 10) / 10) + 'x';
-    resetBtn.classList.toggle('show', scale > 1);
+    if(resetBtn){
+      resetBtn.textContent = (Math.round(scale * 10) / 10) + 'x';
+      resetBtn.classList.toggle('show', scale > 1);
+    }
     inBtn.disabled = scale >= MAX;
     outBtn.disabled = scale <= MIN;
   }
@@ -751,7 +854,7 @@ function initZoom(stageEl, inBtn, outBtn, resetBtn){
 
   inBtn.addEventListener('click', function(){ setScale(scale + 0.5); });
   outBtn.addEventListener('click', function(){ setScale(scale - 0.5); });
-  resetBtn.addEventListener('click', reset);
+  if(resetBtn) resetBtn.addEventListener('click', reset);
 
   window.addEventListener('resize', function(){ apply(); });
 
@@ -775,6 +878,79 @@ var zoomResult = initZoom(
   document.getElementById('z-out-result'),
   document.getElementById('z-reset-result')
 );
+
+/* ── 首页：自由肌肉探索（与诊断红点/状态完全隔离） ──────── */
+var pageHome = document.getElementById('page-home');
+var stageHome = document.getElementById('stage-home');
+var homeKnow = document.getElementById('home-know');
+var homeBubble = document.getElementById('bubble-home');
+var homeBubbleTimer = null;
+var zoomHome = null;
+
+function showHomeBubble(text){
+  homeBubble.textContent = text;
+  homeBubble.classList.add('show');
+  if(homeBubbleTimer) clearTimeout(homeBubbleTimer);
+  homeBubbleTimer = setTimeout(function(){ homeBubble.classList.remove('show'); }, 1600);
+}
+function hideHomeKnow(){
+  homeKnow.classList.remove('show');
+  homeKnow.dataset.id = '';
+}
+function showHomeKnow(id){
+  var m = MUSCLE_MAP ? MUSCLE_MAP[id] : null;
+  var regionName = (m && REGION_LABEL && REGION_LABEL[m.region]) || '相关';
+  var h = '<h4>' + (m ? m.name : id) + '</h4>';
+  h += '<div class="hk-sec"><h5>主要功能</h5><p>' + ((m && m.desc) ? m.desc : ('参与' + regionName + '区域的活动与稳定。')) + '</p></div>';
+  h += '<div class="hk-sec"><h5>如果过度使用</h5><p>可能使' + regionName + '区域持续紧张，更容易出现酸胀和不适。</p></div>';
+  h += '<div class="hk-sec"><h5>如果参与不足</h5><p>可能影响' + regionName + '区域的稳定，使其他肌肉承担更多代偿工作。</p></div>';
+  homeKnow.innerHTML = h;
+  homeKnow.dataset.id = id;
+  homeKnow.classList.add('show');
+}
+
+// 从诊断页源 SVG 深克隆：去红点、肌肉类 .m→.hm，克隆体不继承任何诊断监听
+function cloneHomeSvgs(){
+  [['card-front','card-front-home'], ['card-back','card-back-home']].forEach(function(pair){
+    var src = document.querySelector('#' + pair[0] + ' svg');
+    var dst = document.querySelector('#' + pair[1] + ' .zoom-wrap');
+    if(!src || !dst) return;
+    dst.innerHTML = '';
+    var clone = src.cloneNode(true);
+    clone.querySelectorAll('.dot-mark').forEach(function(d){ d.remove(); });
+    clone.querySelectorAll('.m').forEach(function(el){
+      el.classList.remove('m');
+      el.classList.add('hm');
+      el.classList.remove('sel','tight','weak','inferred','layer-1','layer-2');
+    });
+    dst.appendChild(clone);
+  });
+  stageHome.querySelectorAll('.hm').forEach(function(el){
+    el.addEventListener('click', function(){
+      if(zoomHome && zoomHome.suppressTap) return;
+      showHomeKnow(el.dataset.id);
+    });
+  });
+}
+cloneHomeSvgs();
+stageHome._zoomRef = zoomHome = initZoom(
+  stageHome,
+  document.getElementById('z-in-home'),
+  document.getElementById('z-out-home'),
+  null
+);
+
+// 点模型区空白关闭知识卡（缩放拖动后的点击被 suppressTap 吞掉）
+stageHome.addEventListener('click', function(ev){
+  if(ev.target.closest('.hm') || ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
+  if(zoomHome && zoomHome.suppressTap) return;
+  hideHomeKnow();
+});
+// 翻转时收起知识卡（点控件/卡片内的双击除外）
+stageHome.addEventListener('dblclick', function(ev){
+  if(ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
+  hideHomeKnow();
+});
 
 /* ── 身体状态分析页（第二页） ─────────────────────────── */
 var pageSelect = document.getElementById('page-select');
@@ -974,6 +1150,53 @@ document.getElementById('to-advice').addEventListener('click', function(){
 document.getElementById('advice-back-btn').addEventListener('click', function(){
   pageAdvice.style.display = 'none';
   pageResult.style.display = 'flex';
+});
+
+/* ── 首页 ↔ 诊断流程导航 ─────────────────────────────── */
+// 清空一次诊断的全部状态（选择/红点/结果/浮层）
+function resetFlow(){
+  document.querySelectorAll('#stage .dot-mark').forEach(function(d){ d.remove(); });
+  dotMarks.length = 0;
+  Object.keys(sel).forEach(function(k){ delete sel[k]; });
+  muscleStates = {};
+  inferredIds = {};
+  refresh();
+  hideFeelCard(true);
+  clearLayerPerspective();
+  resultAi.style.display = 'none';
+  sheetMask.classList.remove('show');
+  sheet.classList.remove('show');
+  sheetMask.style.display = 'none';
+  hideHomeKnow();
+}
+// 首页「开始诊断」→ 进入第1页
+document.getElementById('start-diagnosis').addEventListener('click', function(){
+  hideHomeKnow();
+  pageHome.style.display = 'none';
+  pageSelect.style.display = 'flex';
+  setStageView(document.getElementById('stage'), 'front');
+  zoom.reset();
+});
+// 第三页「完成，返回首页」→ 回首页并清空本次诊断
+document.getElementById('advice-home-btn').addEventListener('click', function(){
+  resetFlow();
+  pageAdvice.style.display = 'none';
+  pageResult.style.display = 'none';
+  pageHome.style.display = 'flex';
+  setStageView(stageHome, 'front');
+  zoomHome.reset();
+  showHomeBubble('已完成本次诊断');
+});
+// 底栏：仅首页可用，其余功能占位
+document.querySelectorAll('.bottom-nav-item').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var tab = btn.dataset.tab;
+    if(tab === 'home'){ hideHomeKnow(); return; }
+    showHomeBubble('「' + btn.querySelector('.bn-label').textContent + '」即将上线');
+  });
+});
+document.getElementById('home-me-entry').addEventListener('click', function(){
+  showHomeBubble('「我的」即将上线');
 });
 
 /* ── 第三页：改善建议 ─────────────────────────────────── */
