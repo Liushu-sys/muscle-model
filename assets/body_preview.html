@@ -1363,6 +1363,10 @@ function buildAiSummary(res){
   html += '<div><div style="font-size:32px;font-weight:800;color:#E0703F;line-height:1">' + tightIds.length + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块肌肉过劳</div></div>';
   html += '<div><div style="font-size:32px;font-weight:800;color:#9B7CB8;line-height:1">' + weakIds.length + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块肌肉偏弱</div></div>';
   html += '</div>';
+  // 计数分层：用户指出的 vs 关联分析发现的
+  var clickedN = Object.keys(sel).length;
+  var assocN = Math.max(0, tightIds.length + weakIds.length - clickedN);
+  html += '<p style="color:#6E7778;font-size:12.5px;margin:-6px 0 12px">你指出的 ' + clickedN + ' 处不适 · 关联分析发现 ' + assocN + ' 块相关肌肉</p>';
   if(inferredN > 0) html += '<p style="color:#A2ABAC;font-size:12.5px;margin-bottom:12px">其中 ' + inferredN + ' 处按肌肉常见倾向推断（图上虚线描边标记）。</p>';
   // 身体模式
   var pattern = buildBodyPatternText();
@@ -1658,15 +1662,15 @@ function renderAdvicePage(){
   var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='weak'; });
   var acts = [];
   if(typeof ACTIONS !== 'undefined' && ACTIONS){
-    var relief = ACTIONS.filter(function(a){ return a.forState==='tight' && a.muscles.some(function(m){ return tightIds.indexOf(m)!==-1; }); });
+    // 当下即做的缓解动作：只保留坐姿/原地站姿/任意姿势，排除躺姿与床上动作
+    var nowOK = function(a){ return a.posture==='sit' || a.posture==='stand' || a.posture==='any'; };
+    var relief = ACTIONS.filter(function(a){ return (a.forState==='tight' || a.forState==='both') && nowOK(a) && a.muscles.some(function(m){ return tightIds.indexOf(m)!==-1; }); });
     var strengthen = ACTIONS.filter(function(a){ return a.forState==='weak' && a.muscles.some(function(m){ return weakIds.indexOf(m)!==-1; }); });
     relief.slice(0,2).forEach(function(a){ acts.push({a:a, kind:'relief'}); });
     if(strengthen.length) acts.push({a:strengthen[0], kind:'strengthen'});
-    var rest = relief.slice(2).concat(strengthen.slice(1));
-    while(acts.length < 3 && rest.length){
-      var r = rest.shift();
-      acts.push({a:r, kind: r.forState==='tight' ? 'relief' : 'strengthen'});
-    }
+    var rest = relief.slice(2).map(function(a){ return {a:a, kind:'relief'}; })
+      .concat(strengthen.slice(1).map(function(a){ return {a:a, kind:'strengthen'}; }));
+    while(acts.length < 3 && rest.length) acts.push(rest.shift());
   }
   h1 += '<div class="adv-actions">';
   acts.forEach(function(x){
