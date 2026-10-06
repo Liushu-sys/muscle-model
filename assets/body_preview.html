@@ -103,6 +103,8 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 /* 模型主区域：去掉现有 .stage 的边框/底色/阴影，从顶栏一直延伸到 CTA 上方 */
 .stage-home{position:absolute;inset:0;z-index:0;margin:0;border-radius:0;background:transparent;box-shadow:none}
+/* 默认显示尺寸=原中间区域：padding 扣掉顶部标题与底部UI，放大时模型自然穿透浮层区 */
+.stage-home .zoom-wrap{padding-top:calc(56px + env(safe-area-inset-top,0px));padding-bottom:calc(162px + env(safe-area-inset-bottom,0px))}
 .stage-home::before{content:"";position:absolute;z-index:0;top:50%;left:50%;transform:translate(-50%,-50%);width:min(78vw,460px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.82) 0%,rgba(255,255,255,.32) 50%,transparent 72%);pointer-events:none}
 .stage-home .card{z-index:1}
 .stage-home .zoom-wrap svg{animation:homeBodyIn .52s cubic-bezier(.2,.8,.2,1) both}
@@ -261,18 +263,26 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .zoom-wrap{filter:drop-shadow(-4px 5px 14px rgba(0,0,0,0.39))}
 
 /* ============ 记录 / 收藏 / 我的（底栏子页面） ============ */
-.app-header{position:relative;z-index:10;padding:max(14px,env(safe-area-inset-top)) 22px 10px;flex-shrink:0}
+/* 记录/收藏/我的：与首页统一的浮动 UI 结构——内容全画布，顶部文字与底部导航悬浮 */
+.app-header{position:absolute;top:0;left:0;right:0;z-index:10;padding:max(14px,env(safe-area-inset-top)) 22px 10px;pointer-events:none}
 .app-title{font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--home-text)}
 .app-subtitle{margin-top:3px;font-size:12.5px;font-weight:450;color:var(--home-text-3)}
-.app-body{flex:1;min-height:0;overflow-y:auto;padding:6px 18px 18px;scrollbar-width:none}
+.app-body{position:absolute;inset:0;overflow-y:auto;padding:calc(68px + env(safe-area-inset-top,0px)) 18px calc(86px + env(safe-area-inset-bottom,0px));scrollbar-width:none}
 .app-body::-webkit-scrollbar{display:none}
+#page-record>.bottom-nav,#page-fav>.bottom-nav,#page-me>.bottom-nav{position:absolute;left:0;right:0;bottom:0;z-index:20}
 #page-record,#page-fav,#page-me{background:linear-gradient(0deg,#F2F8F7 0%,#FAFDFD 70%,#FFFFFF 100%)}
 
 /* ── 记录页：身体记录热力日历 ── */
-.record-calendar{background:#fff;border-radius:20px;padding:16px 14px 14px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
-.cal-month{font-size:15px;font-weight:700;color:var(--home-text);margin:0 4px 12px}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-.cal-wd{font-size:11px;font-weight:500;color:var(--home-text-3);text-align:center;padding:2px 0 4px}
+/* 第一屏：日历+今日状态撑满一屏，历史记录滚动可见（100dvh 避开百分比在 abs 父级失效） */
+.record-screen{min-height:calc(100dvh - 154px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
+.record-calendar{background:#fff;border-radius:20px;padding:8px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);flex-shrink:0}
+#record-today{flex:1;min-height:0;display:flex;flex-direction:column}
+#record-today .rec-state{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;margin-bottom:0}
+#record-history{flex-shrink:0}
+.rec-hist-title{margin:14px 4px 10px;font-size:12px;font-weight:600;color:var(--home-text-3)}
+.cal-month{font-size:15px;font-weight:700;color:var(--home-text);margin:0 4px 6px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-wd{font-size:11px;font-weight:500;color:var(--home-text-3);text-align:center;padding:1px 0 2px}
 .cal-day{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--home-text);border-radius:11px;cursor:pointer;transition:transform .12s}
 .cal-day:active{transform:scale(.93)}
 .cal-day.empty{background:transparent;cursor:default}
@@ -284,17 +294,17 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .cal-count{position:absolute;right:4px;bottom:3px;font-size:8.5px;font-weight:600;opacity:.75}
 
 /* 当日记录 */
-.rec-day-head{display:flex;align-items:baseline;justify-content:space-between;margin:18px 2px 10px}
+.rec-day-head{display:flex;align-items:baseline;justify-content:space-between;margin:6px 2px 4px}
 .rec-day-title{font-size:17px;font-weight:700;color:var(--home-text)}
 .rec-day-count{font-size:12.5px;font-weight:500;color:var(--home-accent-dark)}
-.rec-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 12px}
+.rec-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 4px}
 .rec-chip{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:600;color:var(--home-accent-dark);background:rgba(65,152,172,.12)}
-.rec-state{background:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);margin-bottom:8px}
-.rec-state-title{font-size:13.5px;font-weight:700;color:var(--home-text);margin-bottom:10px}
-.rec-state-row{display:flex;gap:10px;margin-bottom:8px}
+.rec-state{background:#fff;border-radius:18px;padding:10px 12px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);margin-bottom:8px}
+.rec-state-title{font-size:13.5px;font-weight:700;color:var(--home-text);margin-bottom:6px}
+.rec-state-row{display:flex;gap:10px;margin-bottom:5px}
 .rec-state-row:last-child{margin-bottom:0}
-.rec-state-k{flex-shrink:0;width:60px;font-size:12px;font-weight:500;color:var(--home-text-3);padding-top:1px}
-.rec-state-v{flex:1;font-size:13px;line-height:1.55;color:var(--home-text-2)}
+.rec-state-k{flex-shrink:0;width:52px;font-size:12px;font-weight:500;color:var(--home-text-3);padding-top:1px}
+.rec-state-v{flex:1;font-size:13px;line-height:1.5;color:var(--home-text-2)}
 .rec-state-v strong{color:var(--home-accent-dark);font-weight:650}
 .rec-note{margin:12px 4px 16px;font-size:12px;line-height:1.6;color:var(--home-text-3)}
 .rec-item{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:13px 15px;box-shadow:0 6px 18px -10px rgba(31,68,77,.08);margin-bottom:9px}
@@ -304,23 +314,24 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .rec-feel{font-size:11.5px;color:var(--home-text-3);margin-top:1px}
 .rec-go{font-size:12px;font-weight:600;color:var(--home-accent);white-space:nowrap}
 
-/* ── 收藏页 ── */
-.fav-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none}
+/* ── 收藏页：三个动作卡片撑满整页（视觉对齐诊断页第三页动作卡） ── */
+#page-fav .app-body{display:flex;flex-direction:column;overflow:hidden}
+.fav-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none;flex-shrink:0}
 .fav-tabs::-webkit-scrollbar{display:none}
 .fav-tab{flex-shrink:0;padding:7px 16px;border:0;border-radius:99px;background:rgba(65,152,172,.1);color:var(--home-text-2);font:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .16s,color .16s}
 .fav-tab.active{background:var(--home-accent);color:#fff;font-weight:600;box-shadow:0 4px 12px -4px rgba(65,152,172,.4)}
-.fav-list{display:flex;flex-direction:column;gap:10px}
-.fav-card{display:flex;align-items:stretch;gap:12px;background:#fff;border-radius:18px;padding:14px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
-.fav-card-text{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
-.fav-tag{padding:3px 9px;border-radius:8px;font-size:10.5px;font-weight:600;margin-bottom:7px}
+.fav-list{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.fav-card{flex:1;min-height:0;display:flex;align-items:center;gap:14px;background:#fff;border-radius:16px;padding:12px 12px 12px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
+.fav-card-text{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.fav-tag{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;margin-bottom:7px}
 .fav-tag.relief{background:#FDECEB;color:#D8403A}
 .fav-tag.strengthen{background:#F0E8F5;color:#7B5BA0}
-.fav-name{font-size:15px;font-weight:700;color:var(--home-text);margin-bottom:3px}
+.fav-name{font-size:14.5px;font-weight:700;color:var(--home-text);margin-bottom:3px}
 .fav-region{font-size:11px;font-weight:500;color:var(--home-text-3);margin-bottom:6px}
-.fav-desc{font-size:12px;line-height:1.5;color:var(--home-text-2);display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.fav-dose{margin-top:auto;padding-top:7px;font-size:11.5px;font-weight:600;color:var(--home-accent-dark)}
-.fav-img{flex-shrink:0;width:96px;aspect-ratio:1;align-self:center;border-radius:14px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--home-accent-dark)}
-.fav-empty{padding:44px 0;text-align:center;font-size:13px;color:var(--home-text-3)}
+.fav-desc{font-size:13px;line-height:1.55;color:var(--home-text-2);display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fav-dose{margin-top:auto;padding-top:7px;font-size:12.5px;font-weight:600;color:var(--home-accent-dark)}
+.fav-img{flex-shrink:0;align-self:stretch;aspect-ratio:1/1;border-radius:12px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--home-accent-dark)}
+.fav-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:var(--home-text-3)}
 
 /* ── 我的页 ── */
 .me-profile{display:flex;align-items:center;gap:14px;background:#fff;border-radius:20px;padding:18px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);margin-top:4px}
@@ -505,11 +516,14 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <div class="app-subtitle">回顾你的身体状态</div>
   </header>
   <div class="app-body" id="record-body">
-    <div class="record-calendar">
-      <div class="cal-month">2026年10月</div>
-      <div class="cal-grid" id="cal-grid"></div>
+    <div class="record-screen">
+      <div class="record-calendar">
+        <div class="cal-month">2026年10月</div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div id="record-today"></div>
     </div>
-    <div id="record-summary"></div>
+    <div id="record-history"></div>
   </div>
   <nav class="bottom-nav">
     <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
@@ -547,6 +561,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 <div id="page-me" class="page" style="display:none">
   <header class="app-header">
     <div class="app-title">我的</div>
+    <div class="app-subtitle">管理你的个人信息与使用偏好</div>
   </header>
   <div class="app-body" id="me-body">
     <div class="me-profile">
@@ -1572,9 +1587,18 @@ function renderCalendar(){
   });
 }
 
+// 生活化日常建议（mock data，按主要关注区域给出）
+var REGION_ADVICE = {
+  '肩颈':'日常尽量避免长时间低头或固定坐姿，用电脑一段时间后可以起身活动，让肩颈放松。',
+  '腰背':'久坐时给腰部一点支撑，每隔一段时间站起来舒展一下，让腰背放松。',
+  '臀腿':'避免一坐太久，适当起身走动或做简单拉伸，让臀腿保持活力。',
+  '手臂':'用手较多的一天，结束后可以适当放松手臂，避免长时间保持同一姿势。'
+};
+
 function renderRecordSummary(){
-  var box = document.getElementById('record-summary');
-  if(!box) return;
+  var todayBox = document.getElementById('record-today');
+  var histBox = document.getElementById('record-history');
+  if(!todayBox || !histBox) return;
   var rec = RECORD_MOCK[recSelectedDay];
   var h = '<div class="rec-day-head"><span class="rec-day-title">10月' + recSelectedDay + '日</span>';
   h += rec ? '<span class="rec-day-count">今天共咨询 ' + rec.count + ' 次</span>' : '<span class="rec-day-count">这一天没有记录</span>';
@@ -1588,17 +1612,25 @@ function renderRecordSummary(){
     h += '<div class="rec-state"><div class="rec-state-title">今日身体状态</div>'
        + '<div class="rec-state-row"><span class="rec-state-k">主要关注</span><span class="rec-state-v"><strong>' + rec.focus + '</strong></span></div>'
        + '<div class="rec-state-row"><span class="rec-state-k">记录摘要</span><span class="rec-state-v">' + rec.summary + '</span></div>'
+       + '<div class="rec-state-row"><span class="rec-state-k">生活建议</span><span class="rec-state-v">' + (REGION_ADVICE[rec.focus] || REGION_ADVICE['肩颈']) + '</span></div>'
        + '</div>';
-    h += '<div class="rec-note">持续记录，帮助你更好地了解身体变化。</div>';
-    rec.times.forEach(function(t){
-      h += '<div class="rec-item"><span class="rec-time">' + t.time + '</span>'
-         + '<div class="rec-mid"><div class="rec-region">' + t.region + '</div><div class="rec-feel">' + t.feel + '</div></div>'
-         + '<span class="rec-go">查看分析 →</span></div>';
-    });
   }else{
-    h += '<div class="rec-note" style="margin-top:4px">这一天还没有身体记录。持续记录，帮助你更好地了解身体变化。</div>';
+    h += '<div class="rec-state"><div class="rec-state-title">今日身体状态</div>'
+       + '<div class="rec-state-row"><span class="rec-state-k">记录摘要</span><span class="rec-state-v">这一天还没有身体记录。持续记录，帮助你更好地了解身体变化。</span></div>'
+       + '</div>';
   }
-  box.innerHTML = h;
+  todayBox.innerHTML = h;
+  var hh = '';
+  if(rec && rec.times.length){
+    hh += '<div class="rec-hist-title">历史记录</div>';
+    rec.times.forEach(function(t){
+      hh += '<div class="rec-item"><span class="rec-time">' + t.time + '</span>'
+          + '<div class="rec-mid"><div class="rec-region">' + t.region + '</div><div class="rec-feel">' + t.feel + '</div></div>'
+          + '<span class="rec-go">查看分析 →</span></div>';
+    });
+    hh += '<div class="rec-note">持续记录，帮助你更好地了解身体变化。</div>';
+  }
+  histBox.innerHTML = hh;
 }
 renderCalendar();
 renderRecordSummary();
