@@ -40,24 +40,51 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 选择页：不再整块肌肉变色，改为小红点标记 */
 .m.sel{fill:#F6F0E9;stroke:#E3D5C8}
 
-/* 小红点标记（SVG circle 元素） */
-.dot-mark{fill:#E0584F;stroke:#fff;stroke-width:1.5;cursor:pointer;animation:dotBlink 1.2s ease-in-out infinite}
-@keyframes dotBlink{0%,100%{opacity:1;r:6}50%{opacity:.6;r:7}}
-/* 红点放置瞬间的 Dock 式轻微回弹放大（先 pop 一次，再交给闪烁循环） */
-@keyframes dotPop{0%{r:6}40%{r:9.5}70%{r:5.6}100%{r:6}}
+/* ── 目录式诊断：四大半透明热区（docs/13） ─────────────── */
+.hz-root .hz{fill:#4198AC;fill-opacity:.06;stroke:#4198AC;stroke-opacity:.32;stroke-width:.6;stroke-dasharray:3 2.4;cursor:pointer;transition:fill-opacity .14s ease-out,stroke-opacity .14s ease-out}
+.hz-root .hz:hover{fill-opacity:.13;stroke-opacity:.55}
+.hz-root .hz:active{fill-opacity:.18}
+.hz-root text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;pointer-events:none}
+.hz-pill{fill:rgba(255,255,255,.9);stroke:#4198AC;stroke-opacity:.35;stroke-width:.6;pointer-events:none}
+.hz-name{font-size:10.5px;font-weight:600;fill:#337F92;text-anchor:middle}
+.hz-dot{fill:#E0584F;stroke:#fff;stroke-width:1.3;pointer-events:none}
+.hz-num{font-size:9.5px;font-weight:700;fill:#fff;text-anchor:middle;pointer-events:none}
 
-/* 感觉选择浮动卡片（贴在刚点的红点附近弹出） */
-.feel-card{position:absolute;z-index:30;width:210px;padding:12px;background:#fff;border-radius:14px;box-shadow:0 12px 32px -10px rgba(31,68,77,.28);opacity:0;transform:scale(.85);pointer-events:none;transition:opacity .16s ease-out,transform .16s ease-out}
-.feel-card.show{opacity:1;transform:scale(1);pointer-events:auto}
-.feel-card .fc-title{margin:0 0 8px;font-size:13.5px;font-weight:600;color:#1D2122}
-.feel-card .fc-opt{display:block;width:100%;padding:10px 12px;margin:0 0 4px;border:0;border-radius:10px;background:#F4F7F7;font:inherit;font-size:14px;font-weight:500;color:#1D2122;text-align:left;cursor:pointer;transition:background .12s}
-.feel-card .fc-opt:last-child{margin-bottom:0}
-.feel-card .fc-opt:hover{background:#E8F3F4}
-.feel-card .fc-opt:active{background:#DCEEEF}
-.feel-card .fc-input{width:100%;box-sizing:border-box;padding:9px 12px;margin:0 0 8px;border:1px solid #E3EAE9;border-radius:10px;font:inherit;font-size:14px;color:#1D2122;outline:none}
-.feel-card .fc-input:focus{border-color:#4198AC}
-.feel-card .fc-confirm{display:block;width:100%;padding:9px 0;border:0;border-radius:10px;background:#4198AC;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
-.feel-card .fc-confirm:active{background:#337F92}
+/* 已选症状 chip 条（图下方，可 × 移除） */
+.sel-chips{display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 2px;background:#fff}
+.sel-chips[hidden]{display:none}
+.chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:5px 6px 5px 12px;border:0;border-radius:99px;background:#E8F3F4;color:#337F92;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .12s}
+.chip:hover{background:#DCEEEF}
+.chip .chip-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip .chip-x{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:rgba(51,127,146,.16);font-size:12px;line-height:1;color:#337F92;flex:none}
+.chip .chip-x:active{background:rgba(51,127,146,.3)}
+
+/* 症状目录底部抽屉 */
+.sym-mask{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0);transition:background .25s;pointer-events:none}
+.sym-mask.show{background:rgba(0,0,0,.32);pointer-events:auto}
+.sym-drawer{position:fixed;left:0;right:0;bottom:0;z-index:101;border-radius:20px 20px 0 0;background:#fff;box-shadow:0 -10px 40px -15px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,.35,1);max-height:82vh;display:flex;flex-direction:column}
+.sym-drawer.show{transform:translateY(0)}
+.sd-handle{display:flex;justify-content:center;padding:10px 0 2px;flex:none}
+.sd-bar{width:36px;height:4px;border-radius:2px;background:#D1D5DB}
+.sd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:6px 20px 10px;flex:none}
+.sd-title{margin:0;font-size:17px;font-weight:700;color:#1D2122}
+.sd-hint{margin:3px 0 0;font-size:12.5px;color:#A2ABAC}
+.sd-close{width:30px;height:30px;border:0;border-radius:50%;background:#F1F4F4;color:#6E7778;font-size:17px;line-height:1;cursor:pointer;flex:none}
+.sd-list{padding:0 16px;overflow:auto;flex:1}
+.sd-item{display:flex;width:100%;gap:11px;align-items:flex-start;text-align:left;padding:13px 12px;margin:0 0 8px;border:1px solid #EDF1F1;border-radius:14px;background:#fff;font:inherit;cursor:pointer;transition:background .12s,border-color .12s}
+.sd-item .sd-check{flex:none;width:20px;height:20px;margin-top:1px;border-radius:50%;border:1.8px solid #C9D5D6;position:relative;transition:all .14s}
+.sd-item .sd-check::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) scale(0);transition:transform .14s}
+.sd-item.is-on{background:#F2F9FA;border-color:#9FCED8}
+.sd-item.is-on .sd-check{background:#4198AC;border-color:#4198AC}
+.sd-item.is-on .sd-check::after{transform:rotate(45deg) scale(1)}
+.sd-menu{display:block;font-size:14.5px;font-weight:600;color:#1D2122;line-height:1.4}
+.sd-desc{display:block;margin-top:3px;font-size:12.5px;font-weight:400;color:#8A9394;line-height:1.5}
+.sd-note{display:block;margin-top:5px;font-size:12px;font-weight:500;color:#B0854A}
+.sd-item.is-off{opacity:.52;cursor:not-allowed}
+.sd-item.is-off .sd-menu{color:#8A9394}
+.sd-foot{padding:10px 16px max(14px,calc(env(safe-area-inset-bottom) + 8px));flex:none}
+.sd-done{display:block;width:100%;padding:12px 0;border:0;border-radius:99px;background:#4198AC;color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.4)}
+.sd-done:active{background:#337F92}
 /* 结果页：过劳=橘 / 过弱=淡紫 */
 #page-result .m.tight{fill:#F0A35E;stroke:#D97B2B;stroke-width:.55}
 #page-result .m.weak{fill:#C9B6E8;stroke:#9B7CB8;stroke-width:.55}
@@ -489,7 +516,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   <button class="back-btn" id="select-back-btn" aria-label="返回">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
   </button>
-  <p class="diag-header-sub">点击你觉得不适的肌肉区域</p>
+  <p class="diag-header-sub">点一下不舒服的部位，选出你的情况</p>
 </header>
 <div class="app-wrap">
 <div class="stage" id="stage">
@@ -548,12 +575,26 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <button type="button" id="z-reset" class="z-reset" aria-label="重置">1x</button>
   </div>
   <div class="tap-bubble" id="bubble"></div>
-  <div class="feel-card" id="feelCard" hidden></div>
 </div>
+<div class="sel-chips" id="selChips" hidden></div>
 </div>
 <footer class="bottom-bar">
   <button class="go-wide" id="go" type="button" disabled>查看身体状态 →</button>
 </footer>
+<!-- 症状目录抽屉 -->
+<div class="sym-mask" id="symMask"></div>
+<div class="sym-drawer" id="symDrawer" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="sd-handle"><span class="sd-bar"></span></div>
+  <div class="sd-head">
+    <div>
+      <p class="sd-title" id="sdTitle"></p>
+      <p class="sd-hint" id="sdHint"></p>
+    </div>
+    <button type="button" class="sd-close" id="sdClose" aria-label="关闭">&times;</button>
+  </div>
+  <div class="sd-list" id="sdList"></div>
+  <div class="sd-foot"><button type="button" class="sd-done" id="sdDone">完成</button></div>
+</div>
 </div>
 </div>
 <!-- ===== 诊断结果页 ===== -->
@@ -726,7 +767,9 @@ var REGION_CANDIDATES = null, getSide = null, analyzeReports = null, hitRedFlag 
 var resolveSlot = null, analyzeBySlots = null;
 var BODY_SLOTS = null, FRAMEWORKS = null, DIAGNOSIS_DISCLAIMER = '', BOOK_REF = '';
 var SLOT_BY_ID = null;
-var engineReady = import('./mm-engine.js?v=255').then(function(m){
+// docs/13 目录式诊断
+var REGIONS4 = null, SYMPTOMS = null, SYMPTOM_BY_ID = null, MUTEX_PAIRS = null, mutexBlocked = null;
+var engineReady = import('./mm-engine.js?v=256').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
   MUSCLE_MAP = m.MUSCLE_MAP;
@@ -748,7 +791,13 @@ var engineReady = import('./mm-engine.js?v=255').then(function(m){
   BOOK_REF = m.BOOK_REF;
   SLOT_BY_ID = {};
   BODY_SLOTS.forEach(function(s){ SLOT_BY_ID[s.id] = s; });
-  console.log('[body-map] 引擎加载完成（位置驱动 v255）');
+  REGIONS4 = m.REGIONS4;
+  SYMPTOMS = m.SYMPTOMS;
+  SYMPTOM_BY_ID = m.SYMPTOM_BY_ID;
+  MUTEX_PAIRS = m.MUTEX_PAIRS;
+  mutexBlocked = m.mutexBlocked;
+  setupCatalogUi();
+  console.log('[body-map] 引擎加载完成（目录式症状 v256）');
 }).catch(function(err){
   console.error('[body-map] 引擎加载失败（点选仍可用，诊断不可用）:', err);
 });
@@ -864,17 +913,16 @@ function all(){ return document.querySelectorAll('.m'); }
 // 不置顶的话标了色也看不见。
 function raise(e){ /* 已禁用：不再置顶，保持解剖层级 */ }
 
-var sel = {};            // data-id -> true
+// ── docs/13 目录式诊断：已选症状（按选择顺序） ─────────
+var selectedSymptoms = [];
 var badge = document.getElementById('badge');
 var go = document.getElementById('go');
 var bubbleEl = document.getElementById('bubble');
 var bubbleTimer = null;
 
-function selCount(){ return Object.keys(sel).length; }
-
 function refresh(){
-  var n = selCount();
-  badge.textContent = '已选 ' + n + ' 处';
+  var n = selectedSymptoms.length;
+  badge.textContent = '已选 ' + n + ' 个症状';
   go.disabled = n === 0;
 }
 
@@ -885,200 +933,240 @@ function bubble(text){
   bubbleTimer = setTimeout(function(){ bubbleEl.classList.remove('show'); }, 1600);
 }
 
-// 小红点涂抹模式：点击肌肉上任意位置，在该位置放置/移除小红点
-// 红点作为 SVG circle 放在 SVG 内部，自动跟随缩放和正反面切换
-var dotMarks = [];  // [{el, slotId, regionId, side, feel, freeText, clickHintMuscleId, muscleCn, svgX, svgY, view}]
-var dotIdCounter = 0;
-
-// 按 SVG 坐标判定区域
-function getRegionFromPoint(svgX, svgY, view) {
-  // 上肢：x 在两侧边缘
-  if (svgX < 35 || svgX > 165) {
-    // 但如果是肩部附近（y < 55），归为颈肩
-    if (svgY < 55) return 'neck_shoulder';
-    return 'arm';
-  }
-  if (svgY < 55) return 'neck_shoulder';
-  if (svgY < 140) return 'upper_back';
-  if (svgY < 220) return 'low_back_hip';
-  return 'leg';
+// chip 短名：取 menu 的第一个断句，过长截断
+function shortMenu(s){
+  var c = String(s.menu).split(/[，、。；,]/)[0] || s.menu;
+  return c.length > 10 ? c.slice(0, 10) + '…' : c;
 }
 
-function addDotMark(svgX, svgY, clickHintMuscleId, muscleCn, view){
-  // 找到当前激活的 SVG
-  var stageEl = document.getElementById('stage');
-  var activeCard = stageEl.querySelector('.card:not([style*="none"])');
-  var svg = activeCard ? activeCard.querySelector('svg') : null;
-  if(!svg) return null;
+/* ── 四大半透明热区（注入正/背两张 SVG，随翻转缩放走） ──────── */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+// {区域, 图形, 标签点(lx,ly), 数量红点(bx,by)}；绘制顺序=腿→腰背→肩臂→肩颈
+var HZ_DEFS = [
+  { region: 'leg',  shapes: '<rect x="48" y="230" width="104" height="228" rx="40"/>', lx: 100, ly: 352, bx: 140, by: 248 },
+  { region: 'back', shapes: '<rect x="46" y="84" width="108" height="146" rx="22"/>', lx: 100, ly: 160, bx: 140, by: 102 },
+  { region: 'arm',  shapes: '<rect x="10" y="70" width="42" height="190" rx="18"/><rect x="148" y="70" width="42" height="190" rx="18"/>', lx: 163, ly: 150, bx: 182, by: 86 },
+  { region: 'neck', shapes: '<path d="M52 88 L60 58 Q56 26 78 10 Q100 2 122 10 Q144 26 140 58 L148 88 Z"/>', lx: 100, ly: 46, bx: 140, by: 18 }
+];
 
-  var regionId = getRegionFromPoint(svgX, svgY, view);
-  var side = getSide ? getSide(svgX, view) : 'midline';
-  // 位置驱动诊断：落点即判 9 个身体位置之一（肌肉 id 首选，坐标矩形兜底）
-  var slotId = resolveSlot ? resolveSlot(svgX, svgY, view, clickHintMuscleId).slotId : null;
-  var selKey = (slotId || regionId) + '|' + side;
+function regionName(rid){
+  if(!REGIONS4) return '';
+  var r = REGIONS4.find(function(x){ return x.id === rid; });
+  return r ? r.name : '';
+}
 
-  var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.setAttribute('class', 'dot-mark');
-  dot.setAttribute('cx', svgX);
-  dot.setAttribute('cy', svgY);
-  dot.setAttribute('r', '6');
-  // 放置瞬间的 Dock 式回弹放大：pop 跑完后交给 dotBlink 循环
-  dot.style.animation = 'dotPop .34s ease-out, dotBlink 1.2s ease-in-out .34s infinite';
-  dot.dataset.dotId = 'dot-' + (dotIdCounter++);
-  dot.dataset.slotId = slotId || '';
-  dot.dataset.regionId = regionId;
-  dot.dataset.side = side;
-  dot.dataset.view = view;
-  svg.appendChild(dot);
+function hzCount(region){
+  if(!SYMPTOMS) return 0;
+  return SYMPTOMS.filter(function(s){
+    return s.region === region && selectedSymptoms.indexOf(s.id) !== -1;
+  }).length;
+}
 
-  dotMarks.push({el: dot, slotId: slotId, regionId: regionId, side: side, feel: null, freeText: null, clickHintMuscleId: clickHintMuscleId, muscleCn: muscleCn, svgX: svgX, svgY: svgY, view: view});
-  sel[selKey] = true;
-  refresh();
-
-  // 点击红点本身取消
-  dot.addEventListener('click', function(ev){
-    ev.stopPropagation();
-    removeDotMark(dot.dataset.dotId);
+function buildHzSvgGroup(){
+  var root = document.createElementNS(SVG_NS, 'g');
+  root.setAttribute('class', 'hz-root');
+  HZ_DEFS.forEach(function(def){
+    var tmp = document.createElementNS(SVG_NS, 'svg');
+    tmp.innerHTML = '<g>' + def.shapes + '</g>';
+    Array.prototype.slice.call(tmp.firstChild.children).forEach(function(node){
+      node.setAttribute('class', 'hz');
+      node.dataset.region = def.region;
+      root.appendChild(node);
+    });
+    // 区域名胶囊
+    var name = regionName(def.region);
+    var w = name.length * 12 + 18;
+    var pill = document.createElementNS(SVG_NS, 'rect');
+    pill.setAttribute('class', 'hz-pill');
+    pill.setAttribute('x', def.lx - w / 2);
+    pill.setAttribute('y', def.ly - 10);
+    pill.setAttribute('width', w);
+    pill.setAttribute('height', 19);
+    pill.setAttribute('rx', 9.5);
+    root.appendChild(pill);
+    var txt = document.createElementNS(SVG_NS, 'text');
+    txt.setAttribute('class', 'hz-name');
+    txt.setAttribute('x', def.lx);
+    txt.setAttribute('y', def.ly + 3.6);
+    txt.textContent = name;
+    root.appendChild(txt);
+    // 该区域已选数量红点
+    var bg = document.createElementNS(SVG_NS, 'g');
+    bg.setAttribute('class', 'hz-badge');
+    bg.dataset.region = def.region;
+    bg.setAttribute('visibility', 'hidden');
+    var dot = document.createElementNS(SVG_NS, 'circle');
+    dot.setAttribute('class', 'hz-dot');
+    dot.setAttribute('cx', def.bx);
+    dot.setAttribute('cy', def.by);
+    dot.setAttribute('r', 8.6);
+    var num = document.createElementNS(SVG_NS, 'text');
+    num.setAttribute('class', 'hz-num');
+    num.setAttribute('x', def.bx);
+    num.setAttribute('y', def.by + 3.4);
+    num.textContent = '0';
+    bg.appendChild(dot);
+    bg.appendChild(num);
+    root.appendChild(bg);
   });
-  return dot.dataset.dotId;
+  return root;
 }
 
-function removeDotMark(dotId){
-  var idx = dotMarks.findIndex(function(d){ return d.el.dataset.dotId === dotId; });
-  if(idx === -1) return;
-  var dot = dotMarks[idx];
-  var selKey = (dot.slotId || dot.regionId) + '|' + dot.side;
-  dot.el.remove();
-  dotMarks.splice(idx, 1);
-  var stillHas = dotMarks.some(function(d){ return ((d.slotId || d.regionId) + '|' + d.side) === selKey; });
-  if(!stillHas) delete sel[selKey];
-  if(feelState.dotId === dotId) hideFeelCard(true);
-  clearLayerPerspective();
-  bubble('已取消标记');
-  refresh();
-}
-
-/* ── 感觉选择浮动卡片 ─────────────────────────────── */
-var feelCardEl = document.getElementById('feelCard');
-var feelState = {dotId: null};   // 当前卡片在为哪个红点服务
-var FEEL_OPTIONS = ['酸痛', '僵硬', '无力', '其他'];
-var FEEL_CARD_W = 210, FEEL_CARD_H = 236;  // 估算尺寸用于边界避让
-
-function showFeelCard(dotId, clientX, clientY){
-  feelState.dotId = dotId;
-  renderFeelOptions();
-  var stageEl = document.getElementById('stage');
-  var rect = stageEl.getBoundingClientRect();
-  var x = clientX - rect.left;
-  var y = clientY - rect.top;
-  // 默认放圆点右侧；放不下就翻到左侧；再放不下就水平居中
-  var left = x + 16;
-  if(left + FEEL_CARD_W > rect.width - 8) left = x - 16 - FEEL_CARD_W;
-  if(left < 8) left = Math.max(8, (rect.width - FEEL_CARD_W) / 2);
-  // 垂直方向以圆点为中心，超出则贴边
-  var top = y - FEEL_CARD_H / 2;
-  if(top < 8) top = 8;
-  if(top + FEEL_CARD_H > rect.height - 8) top = rect.height - 8 - FEEL_CARD_H;
-  feelCardEl.style.left = left + 'px';
-  feelCardEl.style.top = Math.max(8, top) + 'px';
-  // 从靠近圆点的那个角展开
-  feelCardEl.style.transformOrigin = (left > x ? 'left' : 'right') + ' ' + (y < top + FEEL_CARD_H / 2 ? 'top' : 'bottom');
-  feelCardEl.hidden = false;
-  requestAnimationFrame(function(){ feelCardEl.classList.add('show'); });
-}
-
-function hideFeelCard(instant){
-  feelState.dotId = null;
-  feelCardEl.classList.remove('show');
-  if(instant){ feelCardEl.hidden = true; return; }
-  setTimeout(function(){ if(!feelState.dotId) feelCardEl.hidden = true; }, 170);
-}
-
-// 选中感觉（或点外部放弃）：写入红点，卡片缩回
-function pickFeel(feel, freeText){
-  var d = dotMarks.find(function(x){ return x.el.dataset.dotId === feelState.dotId; });
-  if(d){
-    d.feel = feel;
-    d.freeText = freeText || null;
-  }
-  var regionLabel = d ? (REGION_LABEL && REGION_LABEL[d.regionId] ? REGION_LABEL[d.regionId] : '') : '';
-  hideFeelCard();
-  if(regionLabel) bubble(regionLabel + ' · ' + feel);
-}
-
-function renderFeelOptions(){
-  var h = '<p class="fc-title">你这里是什么感觉？</p>';
-  FEEL_OPTIONS.forEach(function(f){
-    h += '<button type="button" class="fc-opt" data-feel="' + f + '">' + f + '</button>';
+function refreshHzBadges(){
+  document.querySelectorAll('#stage .hz-badge').forEach(function(g){
+    var n = hzCount(g.dataset.region);
+    g.setAttribute('visibility', n > 0 ? 'visible' : 'hidden');
+    var t = g.querySelector('.hz-num');
+    if(t) t.textContent = String(n);
   });
-  feelCardEl.innerHTML = h;
-  feelCardEl.querySelectorAll('.fc-opt').forEach(function(btn){
-    btn.addEventListener('click', function(ev){
+}
+
+/* ── 症状目录底部抽屉（多选 + 互斥置灰） ───────────────── */
+var symMask = document.getElementById('symMask');
+var symDrawer = document.getElementById('symDrawer');
+var sdTitleEl = document.getElementById('sdTitle');
+var sdHintEl = document.getElementById('sdHint');
+var sdListEl = document.getElementById('sdList');
+var drawerRegion = null;
+var chipsEl = document.getElementById('selChips');
+
+// 与候选症状互斥的、且已被选中的症状 id（同一时间最多一个）
+function mutexBlocker(id){
+  var blocker = null;
+  (MUTEX_PAIRS || []).forEach(function(p){
+    var other = p[0] === id ? p[1] : (p[1] === id ? p[0] : null);
+    if(other && selectedSymptoms.indexOf(other) !== -1) blocker = other;
+  });
+  return blocker;
+}
+
+function renderSdList(){
+  if(!drawerRegion || !SYMPTOMS) return;
+  var list = SYMPTOMS.filter(function(s){ return s.region === drawerRegion; })
+                     .sort(function(a, b){ return a.order - b.order; });
+  sdListEl.innerHTML = '';
+  list.forEach(function(s){
+    var on = selectedSymptoms.indexOf(s.id) !== -1;
+    var blocker = mutexBlocker(s.id);
+    var item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'sd-item' + (on ? ' is-on' : '') + (blocker ? ' is-off' : '');
+    var check = document.createElement('span');
+    check.className = 'sd-check';
+    var txt = document.createElement('span');
+    txt.className = 'sd-text';
+    var menu = document.createElement('span');
+    menu.className = 'sd-menu';
+    menu.textContent = s.menu;
+    var desc = document.createElement('span');
+    desc.className = 'sd-desc';
+    desc.textContent = s.sub || '';
+    txt.appendChild(menu);
+    txt.appendChild(desc);
+    if(blocker){
+      var note = document.createElement('span');
+      note.className = 'sd-note';
+      note.textContent = s.id === 'upper_crossed'
+        ? '①②都有的话，直接选我就好'
+        : '已包含在「' + shortMenu(SYMPTOM_BY_ID[blocker]) + '」里，不用重复选';
+      txt.appendChild(note);
+    }
+    item.appendChild(check);
+    item.appendChild(txt);
+    item.addEventListener('click', function(){
+      if(mutexBlocked(selectedSymptoms, s.id)) return;
+      toggleSymptom(s.id);
+    });
+    sdListEl.appendChild(item);
+  });
+}
+
+function openDrawer(region){
+  if(!REGIONS4) return;
+  var r = REGIONS4.find(function(x){ return x.id === region; });
+  if(!r) return;
+  drawerRegion = region;
+  sdTitleEl.textContent = r.name;
+  sdHintEl.textContent = '对号入座，可多选 · ' + r.hint;
+  renderSdList();
+  symMask.classList.add('show');
+  symDrawer.classList.add('show');
+  symDrawer.setAttribute('aria-hidden', 'false');
+}
+function closeDrawer(){
+  symMask.classList.remove('show');
+  symDrawer.classList.remove('show');
+  symDrawer.setAttribute('aria-hidden', 'true');
+  drawerRegion = null;
+}
+symMask.addEventListener('click', closeDrawer);
+document.getElementById('sdClose').addEventListener('click', closeDrawer);
+document.getElementById('sdDone').addEventListener('click', closeDrawer);
+
+/* ── 已选症状 chip 条 ─────────────────────────────── */
+function renderChips(){
+  if(!SYMPTOM_BY_ID) return;
+  chipsEl.innerHTML = '';
+  chipsEl.hidden = selectedSymptoms.length === 0;
+  selectedSymptoms.forEach(function(id){
+    var s = SYMPTOM_BY_ID[id];
+    if(!s) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip';
+    btn.title = s.menu;
+    var t = document.createElement('span');
+    t.className = 'chip-txt';
+    t.textContent = shortMenu(s);
+    var x = document.createElement('span');
+    x.className = 'chip-x';
+    x.textContent = '×';
+    x.setAttribute('aria-label', '移除 ' + shortMenu(s));
+    btn.appendChild(t);
+    btn.appendChild(x);
+    x.addEventListener('click', function(ev){
       ev.stopPropagation();
-      if(btn.dataset.feel === '其他'){ renderFeelOther(); return; }
-      pickFeel(btn.dataset.feel);
+      toggleSymptom(id);
+    });
+    btn.addEventListener('click', function(){ openDrawer(s.region); });
+    chipsEl.appendChild(btn);
+  });
+}
+
+function toggleSymptom(id){
+  var i = selectedSymptoms.indexOf(id);
+  if(i !== -1){
+    selectedSymptoms.splice(i, 1);
+  }else{
+    if(mutexBlocked && mutexBlocked(selectedSymptoms, id)) return;
+    selectedSymptoms.push(id);
+  }
+  refresh();
+  renderChips();
+  refreshHzBadges();
+  renderSdList();
+}
+
+// 引擎就绪后注入热区（首页/结果页克隆体会剥离 .hz-root）
+function setupCatalogUi(){
+  ['card-front', 'card-back'].forEach(function(cardId){
+    var card = document.getElementById(cardId);
+    if(!card) return;
+    var svg = card.querySelector('svg');
+    if(!svg || svg.querySelector('.hz-root')) return;
+    svg.appendChild(buildHzSvgGroup());
+  });
+  document.querySelectorAll('#stage .hz').forEach(function(el){
+    el.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      if(zoom && zoom.suppressTap) return;
+      openDrawer(el.dataset.region);
     });
   });
+  refresh();
+  refreshHzBadges();
+  renderChips();
 }
-
-function renderFeelOther(){
-  feelCardEl.innerHTML =
-    '<p class="fc-title">你这里是什么感觉？</p>' +
-    '<input class="fc-input" id="fcInput" type="text" placeholder="请输入你的感觉…" maxlength="30" autocomplete="off">' +
-    '<button type="button" class="fc-confirm">确定</button>';
-  var input = feelCardEl.querySelector('#fcInput');
-  feelCardEl.querySelector('.fc-confirm').addEventListener('click', function(ev){
-    ev.stopPropagation();
-    var txt = input.value.trim();
-    pickFeel(txt ? '其他' : '其他', txt);
-  });
-  input.addEventListener('keydown', function(ev){
-    if(ev.key === 'Enter'){ ev.preventDefault(); var txt = input.value.trim(); pickFeel('其他', txt); }
-  });
-  setTimeout(function(){ input.focus(); }, 180);
-}
-
-// 点卡片外部：关闭卡片；若该红点还没选感觉，连红点一起取消（保证有红点必有感觉）
-// 用捕获阶段 click：先于肌肉/红点的 click 处理器执行，且兼容只发 mouse 事件的环境
-document.addEventListener('click', function(ev){
-  if(!feelState.dotId) return;
-  if(ev.target.closest('.feel-card')) return;
-  var dotId = feelState.dotId;
-  var d = dotMarks.find(function(x){ return x.el.dataset.dotId === dotId; });
-  hideFeelCard();
-  if(d && !d.feel) removeDotMark(dotId);
-}, true);
-
-// 点击肌肉或身体轮廓：在该位置放置小红点 + 弹出感觉卡片
-// 肌肉点击降级为位置 hint，正式记录的是区域
-function handleBodyClick(ev, muscleEl){
-  if(zoom && zoom.suppressTap){ return; }
-  var id = muscleEl ? muscleEl.dataset.id : null;
-  var cn = muscleEl ? muscleEl.dataset.cn : '';
-  // 获取当前激活的 SVG 和视图
-  var stageEl = document.getElementById('stage');
-  var activeCard = stageEl.querySelector('.card:not([style*="none"])');
-  if(!activeCard) return;
-  var svg = activeCard.querySelector('svg');
-  var view = activeCard.classList.contains('front') ? 'front' : 'back';
-  // 屏幕坐标转 SVG 坐标
-  var pt = svg.createSVGPoint();
-  pt.x = ev.clientX;
-  pt.y = ev.clientY;
-  var svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-  var dotId = addDotMark(svgP.x, svgP.y, id, cn, view);
-  if(dotId) showFeelCard(dotId, ev.clientX, ev.clientY);
-  if(muscleEl) applyLayeredPerspective(muscleEl, view);
-}
-// 绑定肌肉路径点击
-all().forEach(function(e){
-  e.addEventListener('click', function(ev){ handleBodyClick(ev, e); });
-});
-// 绑定身体轮廓点击（点空白也有响应）
-document.querySelectorAll('#stage svg > path:not(.m)').forEach(function(e){
-  e.style.pointerEvents = 'auto';
-  e.addEventListener('click', function(ev){ handleBodyClick(ev, null); });
-});
 
 // 正/背面切换
 function setStageView(stage, view){
@@ -1116,7 +1204,8 @@ function flipStage(stage){
 }
 document.querySelectorAll('.stage').forEach(function(stage){
   stage.addEventListener('dblclick', function(ev){
-    if(ev.target.closest('.m') || ev.target.closest('.dot-mark') || ev.target.closest('.feel-card') || ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
+    // 诊断第一页：点在热区（身体）上不翻转；结果页点肌肉不翻转
+    if(ev.target.closest('.hz-root') || ev.target.closest('.m') || ev.target.closest('.home-know') || ev.target.closest('.zoom-control')) return;
     flipStage(stage);
   });
 });
@@ -1336,6 +1425,8 @@ function cloneHomeSvgs(){
     dst.innerHTML = '';
     var clone = src.cloneNode(true);
     clone.querySelectorAll('.dot-mark').forEach(function(d){ d.remove(); });
+    // 首页不带诊断目录热区
+    clone.querySelectorAll('.hz-root').forEach(function(z){ z.remove(); });
     clone.querySelectorAll('.m').forEach(function(el){
       el.classList.remove('m');
       el.classList.add('hm');
@@ -1391,57 +1482,9 @@ var currentResult = null;
 var muscleStates = {};
 
 function runDiagnosis(){
-  if(Object.keys(sel).length === 0) return;
-  if(!analyzeBySlots || !MUSCLE_MAP){
-    bubble('诊断引擎还没加载好，请稍等一秒再试');
-    return;
-  }
-  // 步骤1：位置报告。感受卡（feel/freeText）交互保留，但不写入分析（docs/12 D4）；
-  // 红旗词表保留导出，已无文字输入源，不触发、不阻断。
-  var reports = dotMarks.map(function(d){
-    return {
-      slotId: d.slotId,
-      regionId: d.regionId,
-      side: d.side,
-      feel: d.feel,
-      freeText: d.freeText,
-      clickHintMuscleId: d.clickHintMuscleId
-    };
-  });
-
-  // 步骤2：位置 → 9 个身体位置之一 → 一对一失衡类型 → 完整名单（跨区域全显示）
-  var slotResult = analyzeBySlots(dotMarks.map(function(d){
-    return { slotId: d.slotId, side: d.side };
-  }));
-
-  // 步骤3：统一 diagnosisResult（页2涂色/类型卡、页3动作的单一事实源）
-  var nTight = slotResult.colored.filter(function(c){ return c.state === 'tight'; }).length;
-  var nWeak  = slotResult.colored.filter(function(c){ return c.state === 'weak'; }).length;
-  currentResult = {
-    reports: reports,
-    hits: slotResult.hits,        // [{slotId, patternId, side, pattern(含完整名单/stretchOnly)}]
-    colored: slotResult.colored,  // [{muscleId, targetId, state, level, patternId}]
-    redFlags: [],
-    patternText: '',              // 阶段3改为类型卡列表，文字合成逻辑届时删除
-    stats: { possiblyTight: nTight, possiblyWeak: nWeak, candidate: 0, unknown: 0 }
-  };
-
-  // 涂色/页3动作匹配仍读 muscleStates（key=实际色块 id，paintAs 已在引擎层归并）
-  // main=实色；inferred=同色虚线（头夹肌/髂胫束/臀中肌）
-  muscleStates = {};
-  inferredIds = {};
-  slotResult.colored.forEach(function(c){
-    muscleStates[c.targetId] = c.state;
-    if(c.level === 'inferred') inferredIds[c.targetId] = true;
-  });
-
-  cloneResultSvgs();
-  applyResultColors();
-  buildAiSummary(currentResult);
-  pageSelect.style.display = 'none';
-  pageResult.style.display = 'flex';
-  applyResultAutoPerspective();
-  zoomResult.reset();
+  if(selectedSymptoms.length === 0) return;
+  // docs/13 阶段C 接入：symptomUnion 涂色 + 症状解释卡（buildSymptomCard）
+  bubble('身体分析页正在接入中，下一步就好');
 }
 
 var resultCloned = false;
@@ -1458,6 +1501,8 @@ function cloneResultSvgs(){
     var clone = src.cloneNode(true);
     // 移除克隆体里的所有小红点
     clone.querySelectorAll('.dot-mark').forEach(function(dot){ dot.remove(); });
+    // 结果页不带目录式热区
+    clone.querySelectorAll('.hz-root').forEach(function(z){ z.remove(); });
     dst.appendChild(clone);
   });
   // 给结果页肌肉绑定点击事件
@@ -1704,6 +1749,7 @@ document.getElementById('page-result').addEventListener('click', function(ev){
 
 // 第一页返回首页
 document.getElementById('select-back-btn').addEventListener('click', function(){
+  resetFlow();
   pageSelect.style.display = 'none';
   pageHome.style.display = 'flex';
 });
@@ -1730,15 +1776,15 @@ document.getElementById('advice-back-btn').addEventListener('click', function(){
 });
 
 /* ── 首页 ↔ 诊断流程导航 ─────────────────────────────── */
-// 清空一次诊断的全部状态（选择/红点/结果/浮层）
+// 清空一次诊断的全部状态（症状选择/结果/浮层）
 function resetFlow(){
-  document.querySelectorAll('#stage .dot-mark').forEach(function(d){ d.remove(); });
-  dotMarks.length = 0;
-  Object.keys(sel).forEach(function(k){ delete sel[k]; });
+  selectedSymptoms.length = 0;
+  closeDrawer();
   muscleStates = {};
   inferredIds = {};
   refresh();
-  hideFeelCard(true);
+  renderChips();
+  refreshHzBadges();
   clearLayerPerspective();
   hideResultAi();
   sheetMask.classList.remove('show');
