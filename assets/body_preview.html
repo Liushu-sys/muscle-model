@@ -248,6 +248,23 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* docs/13 症状解释卡：机制解释 + 安全提示 */
 .tc-explain{margin:0 0 9px;font-size:12.5px;line-height:1.7;color:#4A5254}
 .tc-flag{margin:9px 0 0;padding:8px 10px;border-radius:0 8px 8px 0;border-left:3px solid #D9A35C;background:#FBF6EE;font-size:12px;line-height:1.65;color:#8A6A36}
+/* docs/13 修订：症状卡三层命名——大字症状名 + 灰字医学描述 */
+.tc-sname{font-size:19px;font-weight:800;color:#1D2122;margin:0 0 2px;line-height:1.35;letter-spacing:.5px}
+.tc-medical{margin:0 0 9px;font-size:11.5px;line-height:1.6;color:#A2ABAC}
+/* docs/13 修订：顶部两张横分统计卡（紧/弱 数字+具体肌肉小字） */
+.tc-duo{display:flex;gap:10px;margin:4px 0 12px}
+.tc-duo .d-card{flex:1;min-width:0;border-radius:12px;padding:10px 12px}
+.tc-duo .d-card.t{background:#FDF3EE}
+.tc-duo .d-card.w{background:#F6F1F9}
+.tc-duo .d-top{display:flex;align-items:baseline;gap:6px;margin-bottom:4px}
+.tc-duo .d-n{font-size:24px;font-weight:800;line-height:1}
+.tc-duo .d-card.t .d-n{color:#E0703F}
+.tc-duo .d-card.w .d-n{color:#9B7CB8}
+.tc-duo .d-lab{font-size:11.5px;font-weight:700}
+.tc-duo .d-card.t .d-lab{color:#C9612F}
+.tc-duo .d-card.w .d-lab{color:#8568A3}
+.tc-duo .d-mus{margin:0;font-size:11.5px;line-height:1.55;color:#5C6365;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-duo .d-mus .inf{color:#A2ABAC}
 
 /* 第二页：整体分析入口 + 底部 CTA */
 .overview-bar{padding:10px 16px 0;flex-shrink:0}
@@ -1713,22 +1730,20 @@ function buildTypeCard(hit){
   return h;
 }
 
-// 单条症状解释卡（docs/13 §3：区域标签/专业名/通俗表现/机制解释/紧弱双栏/依据/免责/红旗）
+// 单条症状解释卡（docs/13 修订：区域标签/大字症状名/灰字医学描述/通俗表现/机制解释/依据/牵伸/红旗/免责；
+// 紧弱肌肉名单上移到顶部双统计卡，卡内不再重复）
 function buildSymptomCard(s){
   var h = '<div class="type-card">';
   // 1 区域标签
   h += '<span class="tc-frame">' + regionName(s.region) + '</span>';
-  // 2 专业名
-  h += '<h5 class="tc-name">' + s.proName + '</h5>';
+  // 2 大字症状名（用户语言）
+  h += '<h5 class="tc-sname">' + (s.shortName || s.menu) + '</h5>';
+  // 2b 灰字医学描述（专业背书）
+  h += '<p class="tc-medical">医学描述：' + s.proName + '</p>';
   // 3 通俗表现
   h += '<p class="tc-plain">' + s.manifest + '</p>';
   // 4 机制解释
   h += '<p class="tc-explain">' + s.explain + '</p>';
-  // 5 双栏名单（推断项灰字）
-  h += '<div class="tc-cols">'
-    + '<div class="tc-col t"><h6>常见偏紧</h6><p>' + typeColNames(s.tight, s.inferredTight) + '</p></div>'
-    + '<div class="tc-col w"><h6>常见偏弱</h6><p>' + typeColNames(s.weak, s.inferredWeak) + '</p></div>'
-    + '</div>';
   // 可配合牵伸：不是本症状判定的紧张侧，图上不标红
   if(s.stretchOnly && s.stretchOnly.length){
     h += '<p class="tc-stretch">可配合牵伸：<b>' + s.stretchOnly.map(muscleCn).join('、')
@@ -1757,24 +1772,40 @@ function buildSymptomCard(s){
   return h;
 }
 
+// docs/13 修订：顶部紧/弱两张横分彩色卡，数字+具体肌肉小字（推断灰标，超一行省略）
+function buildDuoCard(kind, map){
+  var mainIds = [], infIds = [];
+  Object.keys(map).forEach(function(tid){
+    if(map[tid] === 'inferred') infIds.push(tid); else mainIds.push(tid);
+  });
+  var all = mainIds.concat(infIds);
+  var n = all.length;
+  var titleTxt = all.map(muscleCn).join('、');
+  var inner = all.length
+    ? mainIds.map(muscleCn).join('、')
+      + (mainIds.length && infIds.length ? '、' : '')
+      + infIds.map(function(id){ return '<span class="inf">' + muscleCn(id) + '（推断）</span>'; }).join('、')
+    : '<span class="inf">本症状未涉及</span>';
+  return '<div class="d-card ' + kind + '">'
+    + '<div class="d-top"><span class="d-n">' + n + '</span>'
+    + '<span class="d-lab">' + (kind === 't' ? '块常见偏紧' : '块常见偏弱') + '</span></div>'
+    + '<p class="d-mus"' + (all.length ? ' title="' + titleTxt.replace(/"/g,'&quot;') + '"' : '') + '>' + inner + '</p>'
+    + '</div>';
+}
+
 function buildAiSummary(res){
   var tightTargets = {}, weakTargets = {};
   (res.colored || []).forEach(function(c){
-    if(c.state === 'tight') tightTargets[c.targetId] = true;
-    else if(c.state === 'weak') weakTargets[c.targetId] = true;
+    var bucket = c.state === 'tight' ? tightTargets : c.state === 'weak' ? weakTargets : null;
+    if(!bucket) return;
+    // 同一涂色目标只记一次：main 优先于 inferred
+    if(!bucket[c.targetId] || c.level === 'main') bucket[c.targetId] = c.level || 'main';
   });
-  var tightN = Object.keys(tightTargets).length;
-  var weakN = Object.keys(weakTargets).length;
   var html = '';
   html += '<h4>身体整体分析</h4>';
-  html += '<div class="tc-stats">';
-  html += '<div><div class="n t">' + tightN + '</div><div class="l">块常见偏紧</div></div>';
-  html += '<div><div class="n w">' + weakN + '</div><div class="l">块常见偏弱</div></div>';
-  html += '</div>';
-  html += '<p class="tc-countline">选了 ' + (res.symptomIds || []).length + ' 个症状 · 共涉及 '
-    + tightN + ' 块偏紧、' + weakN + ' 块偏弱（已去重）</p>';
+  html += '<div class="tc-duo">' + buildDuoCard('t', tightTargets) + buildDuoCard('w', weakTargets) + '</div>';
 
-  // 症状解释卡：按用户选择顺序
+  // 症状解释卡：按用户选择顺序（docs/13 后为单选，最多一张）
   var cards = (res.symptomIds || []).map(function(sid){
     var s = SYMPTOM_BY_ID[sid];
     return s ? buildSymptomCard(s) : '';
