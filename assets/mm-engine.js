@@ -1604,18 +1604,7 @@ var SYMPTOMS = [
 ];
 var SYMPTOM_BY_ID = Object.fromEntries(SYMPTOMS.map((s) => [s.id, s]));
 
-// 互斥组（UI 展示用）：3（上交叉）是 1+2 的复合套餐，同一块上斜方肌在两边角色相反。
-// 注意 1 与 2 彼此不互斥，可同时选择；真正的互斥关系见 MUTEX_PAIRS。
-var MUTEX_GROUPS = [["upper_crossed", "fwd_head", "round_shoulder"]];
-var MUTEX_PAIRS = [["upper_crossed", "fwd_head"], ["upper_crossed", "round_shoulder"]];
-function mutexBlocked(selectedIds, candidateId) {
-  const sel = selectedIds || [];
-  return MUTEX_PAIRS.some(function (pair) {
-    if (pair[0] === candidateId) return sel.indexOf(pair[1]) !== -1;
-    if (pair[1] === candidateId) return sel.indexOf(pair[0]) !== -1;
-    return false;
-  });
-}
+// docs/13 修订：选择逻辑改为全局单选直替，互斥组（MUTEX_GROUPS/MUTEX_PAIRS/mutexBlocked）已退役删除。
 
 // 多症状涂色并集（docs/13 §2 合并规则）。
 // ids 按用户选择顺序传入；返回 colored / stretchOnly / conflicts。
@@ -1772,9 +1761,6 @@ function actionPackageFor(symptomId) {
     sitStrengthen: map.sitStrengthen || null,
     standRelease: map.standRelease || null,
     standStrengthen: map.standStrengthen || null,
-    // 过渡兼容字段（阶段H 旧第三页下线后移除）
-    reliefSit: map.sitRelease || null,
-    strengthenStand: map.standStrengthen || null,
     advice: advice
   };
 }
@@ -3112,8 +3098,6 @@ export {
   MUSCLE_IDS,
   MUSCLE_MAP,
   MUSCLE_SLOT_MAP,
-  MUTEX_GROUPS,
-  MUTEX_PAIRS,
   PATTERNS,
   RED_FLAGS,
   REGIONS4,
@@ -3141,7 +3125,6 @@ export {
   hitRedFlag,
   matchPatterns,
   matchPatternsBySense,
-  mutexBlocked,
   parseLocal,
   pickActions,
   refinePatterns,

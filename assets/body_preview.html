@@ -294,7 +294,10 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .adv-pane-actions{overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none}
 .adv-pane-actions::-webkit-scrollbar{display:none}
 .adv-action-screen{height:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px;padding:10px 16px calc(70px + env(safe-area-inset-bottom,0px))}
-.adv-screen-tag{flex-shrink:0}
+.adv-screen-tag{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+/* docs/13：动作屏色签右侧的「针对肌肉」小字 */
+.avd-target{font-size:11.5px;color:#8A9596;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avd-target b{color:#6E7778;font-weight:600}
 /* 图区高度按视口自适应：小屏压扁给文字让空间，大屏不超过 118px */
 .adv-action-screen .avd-figure{margin-bottom:0}
 .adv-action-screen .avd-fig{aspect-ratio:auto;height:clamp(86px,13.5vh,118px)}
@@ -670,8 +673,8 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
       </button>
     </div>
     <div class="adv-tabs" id="adv-tabs" role="tablist">
-      <button type="button" class="adv-tab active" data-pane="0" role="tab">坐姿轻动作</button>
-      <button type="button" class="adv-tab" data-pane="1" role="tab">站姿轻动作</button>
+      <button type="button" class="adv-tab active" data-pane="0" role="tab">工位坐着做</button>
+      <button type="button" class="adv-tab" data-pane="1" role="tab">起身站着做</button>
       <button type="button" class="adv-tab" data-pane="2" role="tab">长期改善</button>
     </div>
   </header>
@@ -788,37 +791,19 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 <script type="module">
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
-var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null, REGION_LABEL = null;
-var pickActions = null, SCENE_LABEL = null, SCENE_HINT = null, PATTERNS = null, ACTIONS = null;
-var REGION_CANDIDATES = null, getSide = null, analyzeReports = null, hitRedFlag = null;
-var resolveSlot = null, analyzeBySlots = null;
-var BODY_SLOTS = null, FRAMEWORKS = null, DIAGNOSIS_DISCLAIMER = '', BOOK_REF = '';
-var SLOT_BY_ID = null;
+var MUSCLE_MAP = null, REGION_LABEL = null;
+var PATTERNS = null, ACTIONS = null;
+var DIAGNOSIS_DISCLAIMER = '', BOOK_REF = '';
 // docs/13 目录式诊断
 var REGIONS4 = null, SYMPTOMS = null, SYMPTOM_BY_ID = null, REGION_PAINT = null;
 var symptomUnion = null, actionPackageFor = null;
-var engineReady = import('./mm-engine.js?v=258').then(function(m){
-  parseLocal = m.parseLocal;
-  buildExplainCard = m.buildExplainCard;
+var engineReady = import('./mm-engine.js?v=259').then(function(m){
   MUSCLE_MAP = m.MUSCLE_MAP;
   REGION_LABEL = m.REGION_LABEL;
-  pickActions = m.pickActions;
-  SCENE_LABEL = m.SCENE_LABEL;
-  SCENE_HINT = m.SCENE_HINT;
   PATTERNS = m.PATTERNS;
   ACTIONS = m.ACTIONS;
-  REGION_CANDIDATES = m.REGION_CANDIDATES;
-  getSide = m.getSide;
-  analyzeReports = m.analyzeReports;
-  hitRedFlag = m.hitRedFlag;
-  resolveSlot = m.resolveSlot;
-  analyzeBySlots = m.analyzeBySlots;
-  BODY_SLOTS = m.BODY_SLOTS;
-  FRAMEWORKS = m.FRAMEWORKS;
   DIAGNOSIS_DISCLAIMER = m.DIAGNOSIS_DISCLAIMER;
   BOOK_REF = m.BOOK_REF;
-  SLOT_BY_ID = {};
-  BODY_SLOTS.forEach(function(s){ SLOT_BY_ID[s.id] = s; });
   REGIONS4 = m.REGIONS4;
   SYMPTOMS = m.SYMPTOMS;
   SYMPTOM_BY_ID = m.SYMPTOM_BY_ID;
@@ -826,7 +811,7 @@ var engineReady = import('./mm-engine.js?v=258').then(function(m){
   symptomUnion = m.symptomUnion;
   actionPackageFor = m.actionPackageFor;
   setupCatalogUi();
-  console.log('[body-map] 引擎加载完成（目录式症状 v258）');
+  console.log('[body-map] 引擎加载完成（目录式症状 v259）');
 }).catch(function(err){
   console.error('[body-map] 引擎加载失败（点选仍可用，诊断不可用）:', err);
 });
@@ -1577,158 +1562,12 @@ function applyResultColors(){
   });
 }
 
-/* 按区域统计受累肌肉，用于身体模式文案和第三页建议排序 */
-var REGION_GROUPS = {
-  neck_shoulder: {name:'颈肩', tight:[], weak:[]},
-  upper_back:    {name:'胸背', tight:[], weak:[]},
-  low_back_hip:  {name:'腰背', tight:[], weak:[]},
-  leg:           {name:'下肢', tight:[], weak:[]},
-  arm:           {name:'上肢', tight:[], weak:[]}
-};
-function refreshRegionGroups(){
-  Object.keys(REGION_GROUPS).forEach(function(k){ REGION_GROUPS[k].tight=[]; REGION_GROUPS[k].weak=[]; });
-  Object.keys(muscleStates).forEach(function(id){
-    var m = MUSCLE_MAP[id]; if(!m) return;
-    var g = REGION_GROUPS[m.region]; if(!g) return;
-    if(muscleStates[id]==='tight') g.tight.push(id);
-    else if(muscleStates[id]==='weak') g.weak.push(id);
-  });
-}
-function buildBodyPatternText(){
-  refreshRegionGroups();
-  var busy = [], slack = [];
-  Object.keys(REGION_GROUPS).forEach(function(k){
-    var g = REGION_GROUPS[k];
-    if(g.tight.length) busy.push({k:k, name:g.name, n:g.tight.length});
-    if(g.weak.length)  slack.push({k:k, name:g.name, n:g.weak.length});
-  });
-  if(!busy.length && !slack.length) return '';
-  var t = '';
-  if(busy.length){
-    t += '你的' + busy.map(function(x){ return x.name + '区域'; }).join('、') + '可能存在负担偏高';
-    if(slack.length) t += '，而' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群可能参与不足';
-    t += '，这可能使其他肌肉承担更多代偿工作，从而导致相关区域出现不适。';
-  } else if(slack.length){
-    t += '你的' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群可能参与不足，这可能影响相关区域的稳定。';
-  }
-  return t;
-}
-
-// 红旗安全提示
-function showRedFlagWarning(hits){
-  var words = hits.map(function(h){ return '"' + h.word + '"'; }).join('、');
-  var regionText = hits.map(function(h){
-    var rn = (REGION_LABEL && REGION_LABEL[h.region]) || '相关';
-    return rn + (h.side === 'left' ? '左侧' : h.side === 'right' ? '右侧' : '');
-  }).join('、');
-  var html = '<div style="text-align:center;padding:24px 20px">';
-  html += '<div style="font-size:48px;margin-bottom:12px">⚠️</div>';
-  html += '<h3 style="margin:0 0 8px;font-size:18px;color:#C0392B">建议尽快就医</h3>';
-  html += '<p style="color:#6E7778;font-size:14px;line-height:1.7;margin:0 0 16px">你在' + regionText + '区域描述中提到了' + words + '，这些可能需要专业医生进一步检查。</p>';
-  html += '<p style="color:#A2ABAC;font-size:12.5px;line-height:1.6;margin:0 0 20px">以上提示基于谨慎原则，不构成医学诊断。如果你的症状持续或加重，请及时就诊。</p>';
-  html += '<button type="button" style="background:#E0703F;color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:15px;font-weight:600;cursor:pointer" onclick="document.getElementById(\'redFlagModal\').style.display=\'none\'">知道了</button>';
-  html += '</div>';
-  var modal = document.getElementById('redFlagModal');
-  if(!modal){
-    modal = document.createElement('div');
-    modal.id = 'redFlagModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
-    document.body.appendChild(modal);
-  }
-  modal.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:340px;margin:20px;box-shadow:0 8px 32px rgba(0,0,0,.15)">' + html + '</div>';
-  modal.style.display = 'flex';
-  modal.querySelector('button').addEventListener('click', function(){ modal.style.display = 'none'; });
-  modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
-}
-
-// 整体分析文案：基于统一结果生成
-function buildPatternSummary(analysis, reports){
-  var regions = {};
-  (reports || []).forEach(function(r){
-    var rn = (REGION_LABEL && REGION_LABEL[r.regionId]) || r.regionId;
-    var sideText = r.side === 'left' ? '左侧' : r.side === 'right' ? '右侧' : '';
-    var key = sideText + rn;
-    if(!regions[key]) regions[key] = {feel: r.feel || '未选感觉', freeText: r.freeText};
-  });
-  var tightMuscles = analysis.filter(function(r){ return r.status === 'possibly_tight'; });
-  var weakMuscles = analysis.filter(function(r){ return r.status === 'possibly_weak'; });
-  var candidateMuscles = analysis.filter(function(r){ return r.status === 'candidate'; });
-  var unknownMuscles = analysis.filter(function(r){ return r.status === 'unknown'; });
-
-  var parts = [];
-  // 用户报告
-  var reportParts = Object.keys(regions).map(function(k){
-    var r = regions[k];
-    var feelText = r.freeText ? r.freeText : r.feel;
-    return k + '（' + feelText + '）';
-  });
-  if(reportParts.length) parts.push('你在' + reportParts.join('、') + '报告了不适。');
-  // 可能过劳
-  if(tightMuscles.length){
-    var names = tightMuscles.map(function(r){ return r.muscleName; });
-    parts.push('该区域的' + names.join('、') + '可能存在负担偏高');
-  }
-  // 可能偏弱
-  if(weakMuscles.length){
-    var names2 = weakMuscles.map(function(r){ return r.muscleName; });
-    parts.push((tightMuscles.length ? '，' : '该区域的') + names2.join('、') + '可能参与不足');
-  }
-  if(tightMuscles.length || weakMuscles.length){
-    parts.push('。以上判断基于模式匹配，是可能性分析，不是确诊。');
-  }
-  // 候选/信息不足
-  var notColored = candidateMuscles.length + unknownMuscles.length;
-  if(notColored > 0){
-    parts.push('另有' + notColored + '块候选肌肉当前信息不足以判断状态，未着色。');
-  }
-  if(!tightMuscles.length && !weakMuscles.length && notColored > 0){
-    parts.push('仅凭当前信息无法给出明确的肌肉状态判断，建议咨询专业人士或补充更多症状描述。');
-  }
-  return parts.join('');
-}
+/* docs/13 修订：旧多症状文字链路（REGION_GROUPS/refreshRegionGroups/
+   buildBodyPatternText/showRedFlagWarning/buildPatternSummary）已删除——
+   单症状科普链路不再做区域文案合成与旧版红旗弹窗。 */
 
 // 肌肉中文名（找不到 id 时降级显示 id）
 function muscleCn(id){ var m = MUSCLE_MAP[id]; return m ? m.name : id; }
-// 一栏名单：主项正常色，推断项灰字标注
-function typeColNames(mainIds, inferredIds){
-  var parts = (mainIds || []).map(function(id){ return muscleCn(id); });
-  (inferredIds || []).forEach(function(id){
-    parts.push('<span class="inf">' + muscleCn(id) + '（资料推断）</span>');
-  });
-  return parts.length ? parts.join('、') : '<span class="inf">—</span>';
-}
-
-// 单个命中类型的卡片（docs/12 §7.2 七要素）
-function buildTypeCard(hit){
-  var slot = SLOT_BY_ID[hit.slotId];
-  var p = hit.pattern;
-  var fw = FRAMEWORKS[slot.framework];
-  var h = '<div class="type-card">';
-  // 1 框架标签行
-  h += '<span class="tc-frame' + (fw.limb ? ' limb' : '') + '">' + fw.tag + '</span>';
-  // 2 类型名（书原名）
-  h += '<h5 class="tc-name">' + slot.bookName + '</h5>';
-  // 3 通俗表现
-  h += '<p class="tc-plain">' + slot.plain + '</p>';
-  // 4 两栏名单（推断项灰字）
-  h += '<div class="tc-cols">'
-    + '<div class="tc-col t"><h6>常见偏紧</h6><p>' + typeColNames(p.tight, p.inferredTight) + '</p></div>'
-    + '<div class="tc-col w"><h6>常见偏弱</h6><p>' + typeColNames(p.weak, p.inferredWeak) + '</p></div>'
-    + '</div>';
-  // 6 thoracic 特有：可牵伸对象（不是该模式判定的紧张侧，图上不涂红）
-  if(p.stretchOnly && p.stretchOnly.length){
-    h += '<p class="tc-stretch">可配合牵伸：<b>' + p.stretchOnly.map(muscleCn).join('、')
-      + '</b>（治疗建议，非该模式判定的紧张侧，图上不标红）</p>';
-  }
-  // 5 书原文金句 + 页码引用
-  h += '<div class="tc-quote">';
-  if(p.note) h += '“' + p.note + '”';
-  h += '<span class="src">' + BOOK_REF + ' p.' + p.bookPage + '</span></div>';
-  // 7 固定免责声明
-  h += '<p class="tc-disclaim">' + DIAGNOSIS_DISCLAIMER + '</p>';
-  h += '</div>';
-  return h;
-}
 
 // 单条症状解释卡（docs/13 修订：区域标签/大字症状名/灰字医学描述/通俗表现/机制解释/依据/牵伸/红旗/免责；
 // 紧弱肌肉名单上移到顶部双统计卡，卡内不再重复）
@@ -2121,40 +1960,36 @@ var ADVICE_SECTIONS = [
 ];
 
 /* ─────────────────────────────────────────────────────
-   第三页：坐姿 / 站姿 / 长期改善 三板块横滑 + 动作跟练
-   数据只读本页之前的诊断结果（muscleStates），不重新诊断
+   第三页（docs/13 修订）：工位坐着做 / 起身站着做 / 长期改善 三板块横滑
+   动作直接取本次唯一症状的四槽动作包（actionPackageFor），不再现场按肌肉反推
    ───────────────────────────────────────────────────── */
 var adviceBodyEl = document.getElementById('advice-body');
-var advicePicks = {sit:{relief:null, strengthen:null}, stand:{relief:null, strengthen:null}};
 // 页面内每个动作屏对应一个节奏状态（多实例，同一时间只允许一个在跑）
 var advRhythms = [];
 
-// 按场景 + 类型挑 1 个动作：精确姿势优先，posture:'any' 降级；都没有就返回 null
-function pickSceneAction(kind, posture, tightIds, weakIds){
-  if(typeof ACTIONS === 'undefined' || !ACTIONS) return null;
-  var hitIds = kind==='relief' ? tightIds : weakIds;
-  var stateOk = kind==='relief'
-    ? function(a){ return a.forState==='tight' || a.forState==='both'; }
-    : function(a){ return a.forState==='weak'; };
-  var pool = ACTIONS.filter(function(a){
-    return stateOk(a) && a.muscles.some(function(m){ return hitIds.indexOf(m) !== -1; });
-  });
-  var exact = pool.filter(function(a){ return a.posture === posture; });
-  if(exact.length) return exact[0];
-  var any = pool.filter(function(a){ return a.posture === 'any'; });
-  return any.length ? any[0] : null;
+// 动作在本症状语境下「针对哪些肌肉」：动作肌肉 ∩ 该侧名单（松=紧/推断紧/牵伸，强=弱/推断弱）
+function actionTargetText(a, s, kind){
+  if(!a || !a.muscles) return '';
+  var side = kind === 'relief'
+    ? (s.tight || []).concat(s.inferredTight || [], s.stretchOnly || [])
+    : (s.weak || []).concat(s.inferredWeak || []);
+  var hit = a.muscles.filter(function(mid){ return side.indexOf(mid) !== -1; });
+  if(!hit.length) hit = a.muscles.slice(0, 2);  // 兜底：对账已保证命中，理论上走不到
+  return hit.map(muscleCn).join('、');
 }
 
 // 一个动作 = 一整屏：标签 + 双态示意图 + 介绍 + 跟练节奏
-function actionScreenHtml(a, kind){
+function actionScreenHtml(a, kind, targetText){
   var tag = kind==='relief'
-    ? '<span class="adv-tag adv-tag-relief">🔴 立即缓解</span>'
-    : '<span class="adv-tag adv-tag-strengthen">🟣 长期加强</span>';
+    ? '<span class="adv-tag adv-tag-relief">放松</span>'
+    : '<span class="adv-tag adv-tag-strengthen">强化</span>';
   var figIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
   var arrow = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="20" y2="12"/><polyline points="15 7 20 12 15 17"/></svg>';
   var rhythmMode = buildRhythm(a).mode;
   var h = '<div class="adv-action-screen" data-action-id="' + a.id + '">';
-  h += '<div class="adv-screen-tag">' + tag + '</div>';
+  h += '<div class="adv-screen-tag">' + tag
+    + (targetText ? '<span class="avd-target">针对 <b>' + targetText + '</b></span>' : '')
+    + '</div>';
   h += '<div class="avd-figure">'
     + '<div class="avd-fig">' + figIcon + '<span class="avd-fig-label">准备姿势</span></div>'
     + '<div class="avd-fig-arrow">' + arrow + '</div>'
@@ -2191,31 +2026,33 @@ function emptyActionScreenHtml(){
 }
 
 function renderAdvicePage(){
-  refreshRegionGroups();
   // 重进页面：停掉旧屏所有节奏，丢弃旧状态（DOM 也会整体重建）
   stopAllAdvRhythms();
   advRhythms = [];
   document.querySelectorAll('#adv-tabs .adv-tab').forEach(function(t,i){ t.classList.toggle('active', i===0); });
 
-  // 受累区域（用于长期改善建议排序）
-  var affected = [];
-  Object.keys(REGION_GROUPS).forEach(function(k){
-    if(REGION_GROUPS[k].tight.length || REGION_GROUPS[k].weak.length) affected.push(k);
-  });
-  var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='tight'; });
-  var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='weak'; });
-
-  // ── 坐姿 / 站姿：各 1 缓解 +（有则）1 加强；动作直接是整屏 ──
-  ['sit','stand'].forEach(function(scene){
-    advicePicks[scene].relief     = pickSceneAction('relief', scene, tightIds, weakIds);
-    advicePicks[scene].strengthen = pickSceneAction('strengthen', scene, tightIds, weakIds);
-  });
+  // docs/13：唯一症状 → 确定四槽动作包；空槽不渲染，每姿势保底 1（数据层已对账全满）
+  var sid = currentResult && (currentResult.symptomIds || [])[0];
+  var symptom = sid ? SYMPTOM_BY_ID[sid] : null;
+  var pkg = (symptom && actionPackageFor) ? actionPackageFor(sid) : null;
+  var actionById = {};
+  (ACTIONS || []).forEach(function(a){ actionById[a.id] = a; });
+  // 板块 → 槽位（顺序即纵滑顺序：先放松后强化）
+  var scenes = {
+    sit:   [{id: pkg && pkg.sitRelease,       kind: 'relief'},
+            {id: pkg && pkg.sitStrengthen,    kind: 'strengthen'}],
+    stand: [{id: pkg && pkg.standRelease,     kind: 'relief'},
+            {id: pkg && pkg.standStrengthen,  kind: 'strengthen'}]
+  };
 
   function sceneWrapHtml(scene){
-    var p = advicePicks[scene];
     var screens = '', n = 0;
-    if(p.relief){ screens += actionScreenHtml(p.relief, 'relief'); n++; }
-    if(p.strengthen){ screens += actionScreenHtml(p.strengthen, 'strengthen'); n++; }
+    scenes[scene].forEach(function(slot){
+      var a = slot.id ? actionById[slot.id] : null;
+      if(!a) return;  // 缺格不凑
+      screens += actionScreenHtml(a, slot.kind, actionTargetText(a, symptom, slot.kind));
+      n++;
+    });
     if(n === 0) screens = emptyActionScreenHtml();
     // 多屏时右侧给一组纵滑指示点（绝对定位在 wrap 上，不随内容滚）
     var dots = '';
@@ -2227,6 +2064,14 @@ function renderAdvicePage(){
     return '<div class="adv-pane-wrap"><section class="adv-pane adv-pane-actions">'
       + screens + '</section>' + dots + '</div>';
   }
+
+  // 受累区域（长期建议排序用）：直接从本次涂色结果按肌肉库区域聚合，不再维护 REGION_GROUPS
+  var affected = {};
+  (currentResult && currentResult.colored || []).forEach(function(c){
+    var mm = MUSCLE_MAP[c.muscleId];
+    if(mm && mm.region) affected[mm.region] = true;
+  });
+  affected = Object.keys(affected);
 
   // ── 长期改善：姿势/行为/环境 × 各2条（沿用既有池子与排序），三卡撑满平分 ──
   var hLong = '<section class="adv-pane adv-pane-long"><div class="adv-dims">';
