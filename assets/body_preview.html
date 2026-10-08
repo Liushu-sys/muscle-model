@@ -183,6 +183,35 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .ai-card .ai-tag{display:inline-block;margin-right:6px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#E8F3F4;color:#337F92}
 .ai-card .ai-red{background:#FDECEB;color:#D8403A}
 
+/* 整体分析：失衡类型卡（位置驱动，docs/12 §7.2） */
+.tc-stats{display:flex;gap:24px;margin:10px 0 6px}
+.tc-stats .n{font-size:30px;font-weight:800;line-height:1}
+.tc-stats .n.t{color:#E0703F}
+.tc-stats .n.w{color:#9B7CB8}
+.tc-stats .l{font-size:12.5px;color:#6E7778;margin-top:2px}
+.tc-countline{color:#6E7778;font-size:12.5px;margin:0 0 12px}
+.type-card{border:1px solid #EDF0EF;border-radius:14px;padding:13px 14px 10px;margin-bottom:12px;background:#FCFDFD}
+.type-card:last-of-type{margin-bottom:4px}
+.tc-frame{display:inline-block;padding:2px 9px;border-radius:99px;font-size:10.5px;font-weight:600;background:#E8F3F4;color:#337F92;margin-bottom:7px}
+.tc-frame.limb{background:#F1F3F2;color:#6E7778}
+.tc-name{font-size:15px;font-weight:700;color:#1D2122;margin:0 0 3px;line-height:1.4}
+.tc-plain{font-size:12.5px;color:#6E7778;margin:0 0 9px;line-height:1.6}
+.tc-cols{display:flex;gap:10px;margin-bottom:2px}
+.tc-col{flex:1;min-width:0;border-radius:10px;padding:8px 10px}
+.tc-col.t{background:#FDF3EE}
+.tc-col.w{background:#F6F1F9}
+.tc-col h6{margin:0 0 4px;font-size:11.5px;font-weight:700}
+.tc-col.t h6{color:#E0703F}
+.tc-col.w h6{color:#9B7CB8}
+.tc-col p{margin:0;font-size:12.5px;line-height:1.65;color:#3C4244}
+.tc-col .inf{color:#A2ABAC}
+.tc-quote{margin:9px 0 0;padding:8px 10px;border-left:3px solid #B8D6D8;background:#F6FAFA;border-radius:0 8px 8px 0;font-size:12.5px;color:#4A5254;line-height:1.65}
+.tc-quote .src{display:block;margin-top:4px;color:#A2ABAC;font-size:11.5px}
+.tc-stretch{margin-top:8px;font-size:12.5px;color:#6E7778;line-height:1.6}
+.tc-stretch b{color:#E0703F;font-weight:600}
+.tc-disclaim{margin:10px 0 2px;padding-top:10px;border-top:1px solid #EDF0EF;font-size:11.5px;color:#A2ABAC;line-height:1.6;text-align:center}
+.tc-tip{color:#A2ABAC;font-size:12px;margin:8px 0 0}
+
 /* 第二页：整体分析入口 + 底部 CTA */
 .overview-bar{padding:10px 16px 0;flex-shrink:0}
 .overview-btn{width:100%;padding:13px 16px;border:1px solid #E3EAE9;border-radius:16px;background:#fff;font:inherit;font-size:15px;font-weight:600;color:#337F92;cursor:pointer;box-shadow:0 2px 8px rgba(31,68,77,.06)}
@@ -534,8 +563,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div class="diag-legend">
-      <span class="lg-item"><span class="lg-dot lg-tight"></span>过劳</span>
+      <span class="lg-item"><span class="lg-dot lg-tight"></span>偏紧</span>
       <span class="lg-item"><span class="lg-dot lg-weak"></span>偏弱</span>
+      <span class="lg-item"><span class="lg-dot lg-inferred"></span>资料推断</span>
     </div>
   </header>
   <div class="app-wrap">
@@ -694,6 +724,8 @@ var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null, REGION_LABEL 
 var pickActions = null, SCENE_LABEL = null, SCENE_HINT = null, PATTERNS = null, ACTIONS = null;
 var REGION_CANDIDATES = null, getSide = null, analyzeReports = null, hitRedFlag = null;
 var resolveSlot = null, analyzeBySlots = null;
+var BODY_SLOTS = null, FRAMEWORKS = null, DIAGNOSIS_DISCLAIMER = '', BOOK_REF = '';
+var SLOT_BY_ID = null;
 var engineReady = import('./mm-engine.js?v=255').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
@@ -710,6 +742,12 @@ var engineReady = import('./mm-engine.js?v=255').then(function(m){
   hitRedFlag = m.hitRedFlag;
   resolveSlot = m.resolveSlot;
   analyzeBySlots = m.analyzeBySlots;
+  BODY_SLOTS = m.BODY_SLOTS;
+  FRAMEWORKS = m.FRAMEWORKS;
+  DIAGNOSIS_DISCLAIMER = m.DIAGNOSIS_DISCLAIMER;
+  BOOK_REF = m.BOOK_REF;
+  SLOT_BY_ID = {};
+  BODY_SLOTS.forEach(function(s){ SLOT_BY_ID[s.id] = s; });
   console.log('[body-map] 引擎加载完成（位置驱动 v255）');
 }).catch(function(err){
   console.error('[body-map] 引擎加载失败（点选仍可用，诊断不可用）:', err);
@@ -1565,30 +1603,78 @@ function buildPatternSummary(analysis, reports){
   return parts.join('');
 }
 
+// 肌肉中文名（找不到 id 时降级显示 id）
+function muscleCn(id){ var m = MUSCLE_MAP[id]; return m ? m.name : id; }
+// 一栏名单：主项正常色，推断项灰字标注
+function typeColNames(mainIds, inferredIds){
+  var parts = (mainIds || []).map(function(id){ return muscleCn(id); });
+  (inferredIds || []).forEach(function(id){
+    parts.push('<span class="inf">' + muscleCn(id) + '（资料推断）</span>');
+  });
+  return parts.length ? parts.join('、') : '<span class="inf">—</span>';
+}
+
+// 单个命中类型的卡片（docs/12 §7.2 七要素）
+function buildTypeCard(hit){
+  var slot = SLOT_BY_ID[hit.slotId];
+  var p = hit.pattern;
+  var fw = FRAMEWORKS[slot.framework];
+  var h = '<div class="type-card">';
+  // 1 框架标签行
+  h += '<span class="tc-frame' + (fw.limb ? ' limb' : '') + '">' + fw.tag + '</span>';
+  // 2 类型名（书原名）
+  h += '<h5 class="tc-name">' + slot.bookName + '</h5>';
+  // 3 通俗表现
+  h += '<p class="tc-plain">' + slot.plain + '</p>';
+  // 4 两栏名单（推断项灰字）
+  h += '<div class="tc-cols">'
+    + '<div class="tc-col t"><h6>常见偏紧</h6><p>' + typeColNames(p.tight, p.inferredTight) + '</p></div>'
+    + '<div class="tc-col w"><h6>常见偏弱</h6><p>' + typeColNames(p.weak, p.inferredWeak) + '</p></div>'
+    + '</div>';
+  // 6 thoracic 特有：可牵伸对象（不是该模式判定的紧张侧，图上不涂红）
+  if(p.stretchOnly && p.stretchOnly.length){
+    h += '<p class="tc-stretch">可配合牵伸：<b>' + p.stretchOnly.map(muscleCn).join('、')
+      + '</b>（治疗建议，非该模式判定的紧张侧，图上不标红）</p>';
+  }
+  // 5 书原文金句 + 页码引用
+  h += '<div class="tc-quote">';
+  if(p.note) h += '“' + p.note + '”';
+  h += '<span class="src">' + BOOK_REF + ' p.' + p.bookPage + '</span></div>';
+  // 7 固定免责声明
+  h += '<p class="tc-disclaim">' + DIAGNOSIS_DISCLAIMER + '</p>';
+  h += '</div>';
+  return h;
+}
+
 function buildAiSummary(res){
   var html = '';
   var stats = res.stats || {};
   var tightN = stats.possiblyTight || 0;
   var weakN = stats.possiblyWeak || 0;
-  var candidateN = (stats.candidate || 0) + (stats.unknown || 0);
   html += '<h4>身体整体分析</h4>';
-  html += '<div style="display:flex;gap:24px;margin:12px 0 16px">';
-  html += '<div><div style="font-size:32px;font-weight:800;color:#E0703F;line-height:1">' + tightN + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块可能过劳</div></div>';
-  html += '<div><div style="font-size:32px;font-weight:800;color:#9B7CB8;line-height:1">' + weakN + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块可能偏弱</div></div>';
+  html += '<div class="tc-stats">';
+  html += '<div><div class="n t">' + tightN + '</div><div class="l">块常见偏紧</div></div>';
+  html += '<div><div class="n w">' + weakN + '</div><div class="l">块常见偏弱</div></div>';
   html += '</div>';
   var clickedN = (res.reports || []).length;
-  var assocN = Math.max(0, tightN + weakN - clickedN);
-  html += '<p style="color:#6E7778;font-size:12.5px;margin:-6px 0 12px">你指出的 ' + clickedN + ' 处不适 · 关联分析发现 ' + assocN + ' 块可能相关的肌肉</p>';
-  if(candidateN > 0) html += '<p style="color:#A2ABAC;font-size:12.5px;margin-bottom:12px">另有 ' + candidateN + ' 块候选肌肉当前信息不足以判断，未着色。</p>';
-  // 身体模式文案（来自统一结果）
-  var patternText = res.patternText || '';
-  if(patternText){
-    html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #edf0ef">';
-    html += '<h5 style="margin:0 0 6px;font-size:13px;font-weight:700;color:#6E7778;text-transform:uppercase;letter-spacing:.3px">分析说明</h5>';
-    html += '<p style="margin:0;font-size:14px;line-height:1.7;color:#1D2122">' + patternText + '</p>';
-    html += '</div>';
+  var relatedN = (res.colored || []).length;
+  html += '<p class="tc-countline">你指出的 ' + clickedN + ' 处不适 · 这些失衡模式常见涉及 ' + relatedN + ' 块肌肉</p>';
+
+  // 类型卡：按点击顺序，同类型（跨侧别）只出一张
+  var seenPattern = {};
+  var cards = '';
+  var cardCount = 0;
+  (res.hits || []).forEach(function(hit){
+    if(seenPattern[hit.patternId]) return;
+    seenPattern[hit.patternId] = true;
+    cards += buildTypeCard(hit);
+    cardCount++;
+  });
+  html += cards;
+  if(!cardCount){
+    html += '<p style="color:#A2ABAC;font-size:13px">还没有可展示的失衡模式，请返回上一页标记不适位置。</p>';
   }
-  html += '<p style="color:#A2ABAC;font-size:12.5px;margin-top:14px">如想详细了解肌肉功能，点击对应肌肉进行了解。</p>';
+  html += '<p class="tc-tip">虚线/灰色标注为资料推断项；如想了解单块肌肉功能，点击图上肌肉查看。</p>';
   aiCard.innerHTML = html;
 }
 
@@ -2192,40 +2278,52 @@ function bindAdviceRhythm(root, r){
 }
 
 function openSheet(id){
-  var m = MUSCLE_MAP[id];
+  // 色块 id → 本次诊断中的实际肌肉（rectus_femoris 与 quadriceps 共用同一块，docs/12 §5.1）
+  var coloredEntry = null;
+  if(currentResult && currentResult.colored){
+    for(var i = 0; i < currentResult.colored.length; i++){
+      if(currentResult.colored[i].targetId === id){ coloredEntry = currentResult.colored[i]; break; }
+    }
+  }
+  var realId = coloredEntry ? coloredEntry.muscleId : id;
+  var m = MUSCLE_MAP[realId] || MUSCLE_MAP[id];
   if(!m) return;
-  // 从统一结果中查找该肌肉的分析
-  var analysis = currentResult && currentResult.analysis ? currentResult.analysis.find(function(r){ return r.muscleId === id; }) : null;
-  var st = analysis ? analysis.status : (muscleStates[id] ? muscleStates[id] : 'neutral');
-  var evLevel = analysis ? analysis.evidenceLevel : null;
-  var clues = analysis ? analysis.clues : [];
-  var tagCls = st === 'possibly_tight' || st === 'tight' ? 'tight' : st === 'possibly_weak' || st === 'weak' ? 'weak' : '';
-  var tagTxt = (st === 'possibly_tight' || st === 'tight') ? '可能过劳' : (st === 'possibly_weak' || st === 'weak') ? '可能偏弱' : (st === 'candidate' ? '候选' : (st === 'unknown' ? '暂无法判断' : ''));
+
+  var st = coloredEntry ? coloredEntry.state : 'neutral';
+  var isInferred = coloredEntry && coloredEntry.level === 'inferred';
+  var typeShort = '';
+  if(coloredEntry && currentResult.hits){
+    for(var j = 0; j < currentResult.hits.length; j++){
+      if(currentResult.hits[j].patternId === coloredEntry.patternId){
+        typeShort = SLOT_BY_ID[currentResult.hits[j].slotId].short;
+        break;
+      }
+    }
+  }
+  var isStabilizer = (realId === 'multifidus' || realId === 'quadratus_lumborum');
+  var tagCls = st === 'tight' ? 'tight' : st === 'weak' ? 'weak' : '';
+  var tagTxt = st === 'tight' ? '常见偏紧' : st === 'weak' ? '常见偏弱' : '';
   var regionName = (REGION_LABEL && REGION_LABEL[m.region]) || '相关';
 
   var h = '<h3>' + m.name + '</h3>';
   if(tagTxt) h += '<span class="sheet-tag ' + tagCls + '">' + tagTxt + '</span>';
-  if(evLevel) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">证据' + evLevel + '</span>';
+  if(isInferred) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">资料推断</span>';
 
   // 主要功能
   h += '<div class="sec"><h5>主要功能</h5><p>' + (m.desc || '参与' + regionName + '区域的活动与稳定。') + '</p></div>';
 
-  // 分析依据
-  if(clues.length){
-    h += '<div class="sec"><h5>分析依据</h5><ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.8;color:#6E7778">';
-    clues.forEach(function(c){ h += '<li>' + c + '</li>'; });
-    h += '</ul></div>';
-  }
-
-  // 根据状态显示不同分析内容
-  if(st === 'possibly_tight' || st === 'tight'){
-    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉可能存在负担偏高，使' + regionName + '区域更容易出现不适。</p></div>';
-  } else if(st === 'possibly_weak' || st === 'weak'){
-    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉可能参与不足，影响' + regionName + '区域的稳定。</p></div>';
-  } else if(st === 'candidate'){
-    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉是' + regionName + '区域的候选肌肉，但当前信息不足以判断其状态，建议咨询专业人士。</p></div>';
+  // 关联说明：涂色肌肉带「在【某型】中」前缀（docs/12 §7.2）
+  if(st === 'tight'){
+    h += '<div class="sec"><h5>可能的关联</h5><p>在【' + typeShort + '】中，' + m.name
+      + '属于常见偏紧的一侧，紧张时' + regionName + '区域更容易出现不适。</p></div>';
+  } else if(st === 'weak'){
+    h += '<div class="sec"><h5>可能的关联</h5><p>在【' + typeShort + '】中，' + m.name
+      + '属于常见偏弱的一侧，参与不足时会影响' + regionName + '区域的稳定。</p></div>';
+  } else if(isStabilizer){
+    // 多裂肌/腰方肌：以书模式为准，永不标倾向色（docs/12 D6）
+    h += '<div class="sec"><h5>可能的关联</h5><p>这块肌肉是该区域的深层稳定结构，当前模式资料未对其过劳/过弱下结论。</p></div>';
   } else {
-    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉可能与' + regionName + '区域的不适有关，但当前信息不足以判断。</p></div>';
+    h += '<div class="sec"><h5>可能的关联</h5><p>它可能与' + regionName + '区域的不适有关，但不在你本次命中模式的常见名单内。</p></div>';
   }
   // 书页引用
   if(m.bookPage){
