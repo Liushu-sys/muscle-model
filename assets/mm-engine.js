@@ -1131,6 +1131,204 @@ var PATTERNS = [
     ]
   }
 ];
+// ════════════════════════════════════════════════════════════════════
+// 位置驱动诊断（docs/12 阶段1）
+// 用户点「身体位置」→ resolveSlot 判 9 个 slot 之一 → 一对一映射失衡类型
+// → analyzeBySlots 端出该类型完整过劳/过弱名单（跨区域全显示）。
+// 旧文字链路 analyzeReports/matchPatterns/parseLocal 自阶段1起停用，保留不删。
+// ════════════════════════════════════════════════════════════════════
+
+// 9 个身体位置 → 9 个失衡类型（一对一）。framework 是解释外壳，不是第 10 种类型。
+var BODY_SLOTS = [
+  { id: "neck", name: "脖子", patternId: "cranio_cervical", framework: "UCS",
+    plain: "头不自觉往前探，脖子后面发沉发紧，看手机电脑久了更明显" },
+  { id: "chest", name: "胸口/肩胛间", patternId: "scapulothoracic", framework: "UCS",
+    plain: "含胸、两肩往前扣，肩胛骨之间发酸，打字开车看手机久了加重" },
+  { id: "shoulder_girdle", name: "肩外侧/肩后深层", patternId: "shoulder_glenohumeral", framework: "UCS",
+    plain: "抬手、梳头、手往后背够的时候费劲或卡住" },
+  { id: "mid_back", name: "上背脊柱", patternId: "thoracic", framework: "cross",
+    plain: "背挺不直、习惯性驼背，常和圆肩、头前伸一起出现" },
+  { id: "low_back_hip", name: "腰/骨盆/臀", patternId: "hip", framework: "LCS",
+    plain: "久坐后髋前面紧、站起来要缓一下，腰容易累，屁股使不上劲" },
+  { id: "thigh", name: "大腿/膝", patternId: "knee", framework: "joint",
+    plain: "膝盖发软、上下楼打软腿、大腿后侧紧" },
+  { id: "calf", name: "小腿/踝", patternId: "ankle", framework: "joint",
+    plain: "小腿肚和跟腱紧、勾脚费劲、走路容易绊" },
+  { id: "upper_arm", name: "上臂/肘", patternId: "elbow", framework: "joint",
+    plain: "胳膊伸不直、手肘前后侧发紧" },
+  { id: "forearm", name: "前臂/腕", patternId: "wrist", framework: "joint",
+    plain: "手腕酸、打字握鼠标后发紧" }
+];
+var BODY_SLOTS_BY_ID = Object.fromEntries(BODY_SLOTS.map((s) => [s.id, s]));
+
+// 框架层（文案阶段2补全；阶段1先立骨架）
+var FRAMEWORKS = {
+  UCS:   { id: "UCS-01", name: "上交叉综合征", tag: "上交叉综合征 · 相关成分", limb: false },
+  LCS:   { id: "LCS-01", name: "下交叉综合征", tag: "下交叉综合征 · 相关成分", limb: false },
+  cross: { id: "cross", name: "跨上/下交叉", tag: "跨上/下交叉相关", limb: false },
+  joint: { id: "joint", name: "独立关节模式", tag: "独立关节模式 · 不属于交叉综合征", limb: true }
+};
+
+// 兜底坐标矩形（SVG viewBox 200×460，docs/12 §3.1 初值，实测微调后回填图纸）
+var SLOT_RECTS = {
+  armXLo: 35, armXHi: 165,     // 两侧上肢带分界
+  neckY: 55,                   // 颈线
+  hipYLo: 140, hipYHi: 255,    // 腰背/骨盆/臀
+  thighYLo: 255, thighYHi: 330,
+  calfYLo: 330,
+  armSplitY: 180,              // 上臂/前臂分界
+  views: {
+    front: { shoulderXLo: 55, shoulderXHi: 145, chestYHi: 110, bandYLo: 110, bandXHalf: 20 },
+    back:  { shoulderXLo: 70, shoulderXHi: 130, chestYHi: 100, bandYLo: 100, bandXHalf: 30 }
+  }
+};
+
+// 肌肉 id → slot（docs/12 §3.2）。归属依据：取该肌肉有书原句支持的类型所在 slot；
+// 无类型肌肉按解剖位置归 slot（点中它们照常按坐标兜底触发类型，自己不涂色）。
+var MUSCLE_SLOT_MAP = {
+  // neck
+  sternocleidomastoid: "neck", deep_neck_flexor: "neck", suboccipital: "neck",
+  splenius_capitis: "neck", levator_scapulae: "neck", scalenes: "neck",
+  // chest（圆肩型）：上/下斜方肌虽长在颈肩视觉区，书 p89 减弱组归此 slot
+  pectoralis_major: "chest", pectoralis_minor: "chest", rhomboid: "chest",
+  trapezius_middle: "chest", serratus_anterior: "chest",
+  trapezius_upper: "chest", trapezius_lower: "chest",
+  // shoulder_girdle（肩卡型）
+  subscapularis: "shoulder_girdle", latissimus_dorsi: "shoulder_girdle",
+  supraspinatus: "shoulder_girdle", infraspinatus: "shoulder_girdle",
+  deltoid: "shoulder_girdle", teres_major: "shoulder_girdle", teres_minor: "shoulder_girdle",
+  // mid_back（驼背型）
+  erector_spinae: "mid_back",
+  // low_back_hip（骨盆前倾型）
+  iliopsoas: "low_back_hip", quadratus_lumborum: "low_back_hip", multifidus: "low_back_hip",
+  rectus_abdominis: "low_back_hip", transversus_abdominis: "low_back_hip",
+  obliquus_externus: "low_back_hip", obliquus_internus: "low_back_hip",
+  gluteus_maximus: "low_back_hip", gluteus_medius: "low_back_hip",
+  piriformis: "low_back_hip", tensor_fasciae_latae: "low_back_hip",
+  // thigh（膝型）；rectus_femoris 仅数据层，点击首选仍可能落在股四头肌色块
+  quadriceps: "thigh", rectus_femoris: "thigh", hamstrings: "thigh",
+  sartorius: "thigh", hip_adductors: "thigh", iliotibial_tract: "thigh",
+  // calf（踝型）
+  gastrocnemius: "calf", soleus: "calf", fibularis: "calf",
+  tibialis_posterior: "calf", tibialis_anterior: "calf",
+  // upper_arm（肘型）
+  biceps_brachii: "upper_arm", triceps_brachii: "upper_arm", brachioradialis: "upper_arm",
+  // forearm（腕型）
+  forearm_flexors: "forearm", forearm_extensors: "forearm"
+};
+
+// thoracic 特例：PATTERNS.thoracic.tight 里的胸大肌/胸小肌/髂腰肌是书 p236 的
+// 「治疗牵伸对象」，不是该模式判定的紧张组——图上不涂红，卡片只列文字（docs/12 §4④）。
+var SLOT_PATTERN_OVERRIDE = {
+  thoracic: { tight: [], stretchOnly: ["pectoralis_major", "pectoralis_minor", "iliopsoas"] }
+};
+
+// 多角色肌肉的「色块视觉位置所属 slot」（docs/12 §6.2 冲突优先级）。
+// 同一块肌肉在不同类型里角色相反时，色块颜色优先取它视觉所在 slot 的类型：
+// - 腘绳肌：骨盆型=弱 / 膝型=紧，色块在大腿 → 紧（红）
+// - 竖脊肌：驼背型=弱 / 骨盆型=紧，色块腰背段在 low_back_hip → 紧（红）
+// - 股四头肌色块：股直肌（骨盆型紧）与股四头肌（膝型弱）共用，色块在大腿 → 膝型优先（紫）
+var PAINT_TARGET_SLOT = {
+  hamstrings: "thigh",
+  erector_spinae: "low_back_hip",
+  quadriceps: "thigh"
+};
+
+function paintTargetOf(muscleId) {
+  const m = MUSCLE_MAP[muscleId];
+  return m && m.paintAs ? m.paintAs : muscleId;
+}
+
+// 双层保险：首选肌肉 id 映射；点缝隙/轮廓/无类型肌肉时走坐标矩形兜底。
+function resolveSlot(svgX, svgY, view, hintMuscleId) {
+  if (hintMuscleId && MUSCLE_SLOT_MAP[hintMuscleId]) {
+    return { slotId: MUSCLE_SLOT_MAP[hintMuscleId], by: "muscle" };
+  }
+  return { slotId: resolveSlotByRect(svgX, svgY, view), by: "rect" };
+}
+
+function resolveSlotByRect(x, y, view) {
+  const cfg = SLOT_RECTS.views[view] || SLOT_RECTS.views.front;
+  // 两侧上肢：肩峰端（y<颈线）归 neck，与既有规则一致
+  if (x < SLOT_RECTS.armXLo || x > SLOT_RECTS.armXHi) {
+    if (y < SLOT_RECTS.neckY) return "neck";
+    return y < SLOT_RECTS.armSplitY ? "upper_arm" : "forearm";
+  }
+  if (y < SLOT_RECTS.neckY) return "neck";
+  if (y >= SLOT_RECTS.calfYLo) return "calf";
+  if (y >= SLOT_RECTS.thighYLo) return "thigh";
+  if (y >= SLOT_RECTS.hipYLo) return "low_back_hip";
+  // 55≤y<140：胸背一个视觉大区里塞了圆肩/肩卡/驼背 3 个类型
+  if (view === "back") {
+    if (y < cfg.chestYHi) {
+      return (x < cfg.shoulderXLo || x > cfg.shoulderXHi) ? "shoulder_girdle" : "chest";
+    }
+    // y100–140：脊柱中带（下斜方肌区）仍属圆肩 slot，两侧归胸椎
+    return Math.abs(x - 100) <= cfg.bandXHalf ? "chest" : "mid_back";
+  }
+  // front
+  if (y < cfg.chestYHi) {
+    return (x < cfg.shoulderXLo || x > cfg.shoulderXHi) ? "shoulder_girdle" : "chest";
+  }
+  // y110–140：胸骨/肋脊中线窄带归胸椎，两侧胸壁下缘归圆肩
+  return Math.abs(x - 100) <= cfg.bandXHalf ? "mid_back" : "chest";
+}
+
+// 位置 → 类型 → 完整名单。
+// marks: [{slotId, side}]；同 slot+side 只产生一条 hit（D8：多点多类型卡并列）。
+// colored: 全部命中类型名单并集，同色块跨类型角色冲突时按 PAINT_TARGET_SLOT 取色。
+function analyzeBySlots(marks) {
+  const hits = [];
+  const hitKeys = new Set();
+  (marks || []).forEach((mk) => {
+    if (!mk || !mk.slotId) return;
+    const side = mk.side || "midline";
+    const key = mk.slotId + "|" + side;
+    if (hitKeys.has(key)) return;
+    hitKeys.add(key);
+    const slot = BODY_SLOTS_BY_ID[mk.slotId];
+    if (!slot) return;
+    const p = PATTERNS.find((x) => x.id === slot.patternId);
+    if (!p) return;
+    const ov = SLOT_PATTERN_OVERRIDE[p.id];
+    const display = ov ? Object.assign({}, p, { tight: ov.tight, stretchOnly: ov.stretchOnly }) : p;
+    hits.push({ slotId: slot.id, patternId: p.id, side: side, pattern: display });
+  });
+
+  // 按「实际涂色块」聚合候选（rectus_femoris 与 quadriceps 会聚到同一块）
+  const byTarget = new Map();
+  hits.forEach((h, idx) => {
+    const add = (ids, state, level) => {
+      (ids || []).forEach((id) => {
+        if (!MUSCLE_MAP[id]) return;
+        const target = paintTargetOf(id);
+        if (!byTarget.has(target)) byTarget.set(target, []);
+        byTarget.get(target).push({
+          muscleId: id, targetId: target, state: state, level: level,
+          patternId: h.patternId, slotId: h.slotId, order: idx
+        });
+      });
+    };
+    add(h.pattern.tight, "tight", "main");
+    add(h.pattern.weak, "weak", "main");
+    add(h.pattern.inferredTight, "tight", "inferred");
+    add(h.pattern.inferredWeak, "weak", "inferred");
+  });
+
+  const colored = [];
+  byTarget.forEach((list, target) => {
+    let pick = null;
+    const preferredSlot = PAINT_TARGET_SLOT[target];
+    if (preferredSlot) pick = list.find((e) => e.slotId === preferredSlot);
+    if (!pick) pick = list.slice().sort((a, b) => a.order - b.order)[0];
+    colored.push({
+      muscleId: pick.muscleId, targetId: target,
+      state: pick.state, level: pick.level, patternId: pick.patternId
+    });
+  });
+  return { hits: hits, colored: colored };
+}
+
 function matchPatternsBySense(input) {
   const score = {};
   for (const p of PATTERNS) {
@@ -2284,19 +2482,24 @@ function actionTargetName(a, lib) {
 }
 export {
   ACTIONS,
+  BODY_SLOTS,
   DEMO_PATTERN_IDS,
+  FRAMEWORKS,
   KIND_LABEL,
   MUSCLES,
   MUSCLE_IDS,
   MUSCLE_MAP,
+  MUSCLE_SLOT_MAP,
   PATTERNS,
   RED_FLAGS,
   REGION_CANDIDATES,
   REGION_LABEL,
   SCENE_HINT,
   SCENE_LABEL,
+  SLOT_RECTS,
   actionTargetLabel,
   actionTargetName,
+  analyzeBySlots,
   analyzeReports,
   buildExplainCard,
   buildExplanation,
@@ -2309,5 +2512,6 @@ export {
   matchPatternsBySense,
   parseLocal,
   pickActions,
-  refinePatterns
+  refinePatterns,
+  resolveSlot
 };

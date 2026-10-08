@@ -693,7 +693,8 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null, REGION_LABEL = null;
 var pickActions = null, SCENE_LABEL = null, SCENE_HINT = null, PATTERNS = null, ACTIONS = null;
 var REGION_CANDIDATES = null, getSide = null, analyzeReports = null, hitRedFlag = null;
-var engineReady = import('./mm-engine.js?v=254').then(function(m){
+var resolveSlot = null, analyzeBySlots = null;
+var engineReady = import('./mm-engine.js?v=255').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
   MUSCLE_MAP = m.MUSCLE_MAP;
@@ -707,7 +708,9 @@ var engineReady = import('./mm-engine.js?v=254').then(function(m){
   getSide = m.getSide;
   analyzeReports = m.analyzeReports;
   hitRedFlag = m.hitRedFlag;
-  console.log('[body-map] 引擎加载完成');
+  resolveSlot = m.resolveSlot;
+  analyzeBySlots = m.analyzeBySlots;
+  console.log('[body-map] 引擎加载完成（位置驱动 v255）');
 }).catch(function(err){
   console.error('[body-map] 引擎加载失败（点选仍可用，诊断不可用）:', err);
 });
@@ -846,7 +849,7 @@ function bubble(text){
 
 // 小红点涂抹模式：点击肌肉上任意位置，在该位置放置/移除小红点
 // 红点作为 SVG circle 放在 SVG 内部，自动跟随缩放和正反面切换
-var dotMarks = [];  // [{el, regionId, side, feel, freeText, clickHintMuscleId, muscleCn, svgX, svgY, view}]
+var dotMarks = [];  // [{el, slotId, regionId, side, feel, freeText, clickHintMuscleId, muscleCn, svgX, svgY, view}]
 var dotIdCounter = 0;
 
 // 按 SVG 坐标判定区域
@@ -872,7 +875,9 @@ function addDotMark(svgX, svgY, clickHintMuscleId, muscleCn, view){
 
   var regionId = getRegionFromPoint(svgX, svgY, view);
   var side = getSide ? getSide(svgX, view) : 'midline';
-  var selKey = regionId + '|' + side;
+  // 位置驱动诊断：落点即判 9 个身体位置之一（肌肉 id 首选，坐标矩形兜底）
+  var slotId = resolveSlot ? resolveSlot(svgX, svgY, view, clickHintMuscleId).slotId : null;
+  var selKey = (slotId || regionId) + '|' + side;
 
   var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   dot.setAttribute('class', 'dot-mark');
@@ -882,12 +887,13 @@ function addDotMark(svgX, svgY, clickHintMuscleId, muscleCn, view){
   // 放置瞬间的 Dock 式回弹放大：pop 跑完后交给 dotBlink 循环
   dot.style.animation = 'dotPop .34s ease-out, dotBlink 1.2s ease-in-out .34s infinite';
   dot.dataset.dotId = 'dot-' + (dotIdCounter++);
+  dot.dataset.slotId = slotId || '';
   dot.dataset.regionId = regionId;
   dot.dataset.side = side;
   dot.dataset.view = view;
   svg.appendChild(dot);
 
-  dotMarks.push({el: dot, regionId: regionId, side: side, feel: null, freeText: null, clickHintMuscleId: clickHintMuscleId, muscleCn: muscleCn, svgX: svgX, svgY: svgY, view: view});
+  dotMarks.push({el: dot, slotId: slotId, regionId: regionId, side: side, feel: null, freeText: null, clickHintMuscleId: clickHintMuscleId, muscleCn: muscleCn, svgX: svgX, svgY: svgY, view: view});
   sel[selKey] = true;
   refresh();
 
@@ -903,10 +909,10 @@ function removeDotMark(dotId){
   var idx = dotMarks.findIndex(function(d){ return d.el.dataset.dotId === dotId; });
   if(idx === -1) return;
   var dot = dotMarks[idx];
-  var selKey = dot.regionId + '|' + dot.side;
+  var selKey = (dot.slotId || dot.regionId) + '|' + dot.side;
   dot.el.remove();
   dotMarks.splice(idx, 1);
-  var stillHas = dotMarks.some(function(d){ return (d.regionId + '|' + d.side) === selKey; });
+  var stillHas = dotMarks.some(function(d){ return ((d.slotId || d.regionId) + '|' + d.side) === selKey; });
   if(!stillHas) delete sel[selKey];
   if(feelState.dotId === dotId) hideFeelCard(true);
   clearLayerPerspective();
@@ -1348,13 +1354,15 @@ var muscleStates = {};
 
 function runDiagnosis(){
   if(Object.keys(sel).length === 0) return;
-  if(!analyzeReports || !MUSCLE_MAP){
+  if(!analyzeBySlots || !MUSCLE_MAP){
     bubble('诊断引擎还没加载好，请稍等一秒再试');
     return;
   }
-  // 步骤1：构造区域报告（区域+侧别+感觉+自定义文字绑定）
+  // 步骤1：位置报告。感受卡（feel/freeText）交互保留，但不写入分析（docs/12 D4）；
+  // 红旗词表保留导出，已无文字输入源，不触发、不阻断。
   var reports = dotMarks.map(function(d){
     return {
+      slotId: d.slotId,
       regionId: d.regionId,
       side: d.side,
       feel: d.feel,
@@ -1363,51 +1371,30 @@ function runDiagnosis(){
     };
   });
 
-  // 步骤2：红旗筛查——命中后优先展示安全提示，限制后续针对性建议
-  var redFlagHits = [];
-  reports.forEach(function(r){
-    if(r.freeText && hitRedFlag) {
-      var hit = hitRedFlag(r.freeText);
-      if(hit) redFlagHits.push({word: hit, region: r.regionId, side: r.side});
-    }
-  });
-  // 红旗命中→不进入分析页，显示安全提示
-  if(redFlagHits.length > 0){
-    showRedFlagWarning(redFlagHits);
-    return;
-  }
+  // 步骤2：位置 → 9 个身体位置之一 → 一对一失衡类型 → 完整名单（跨区域全显示）
+  var slotResult = analyzeBySlots(dotMarks.map(function(d){
+    return { slotId: d.slotId, side: d.side };
+  }));
 
-  // 步骤3：区域→候选肌肉→状态推断（possibly_tight/possibly_weak/candidate/unknown + 证据等级）
-  var analysisResults = analyzeReports(reports, PATTERNS, MUSCLE_MAP);
-
-  // 步骤4：构建统一 diagnosisResult（单一事实源，页2/页3统一读取）
+  // 步骤3：统一 diagnosisResult（页2涂色/类型卡、页3动作的单一事实源）
+  var nTight = slotResult.colored.filter(function(c){ return c.state === 'tight'; }).length;
+  var nWeak  = slotResult.colored.filter(function(c){ return c.state === 'weak'; }).length;
   currentResult = {
-    reports: reports,                    // 用户原始输入
-    analysis: analysisResults,            // 每块候选肌肉的分析结果
-    redFlags: redFlagHits,                // 安全标记
-    // 整体分析文案
-    patternText: buildPatternSummary(analysisResults, reports),
-    // 统计
-    stats: {
-      possiblyTight: analysisResults.filter(function(r){return r.status === 'possibly_tight';}).length,
-      possiblyWeak: analysisResults.filter(function(r){return r.status === 'possibly_weak';}).length,
-      candidate: analysisResults.filter(function(r){return r.status === 'candidate';}).length,
-      unknown: analysisResults.filter(function(r){return r.status === 'unknown';}).length
-    }
+    reports: reports,
+    hits: slotResult.hits,        // [{slotId, patternId, side, pattern(含完整名单/stretchOnly)}]
+    colored: slotResult.colored,  // [{muscleId, targetId, state, level, patternId}]
+    redFlags: [],
+    patternText: '',              // 阶段3改为类型卡列表，文字合成逻辑届时删除
+    stats: { possiblyTight: nTight, possiblyWeak: nWeak, candidate: 0, unknown: 0 }
   };
 
-  // muscleStates 保留给页2涂色/页3动作匹配用，值域：tight/weak
-  // 只有 allowColor=true 且 evidenceLevel L1/L2 才涂色
+  // 涂色/页3动作匹配仍读 muscleStates（key=实际色块 id，paintAs 已在引擎层归并）
+  // main=实色；inferred=同色虚线（头夹肌/髂胫束/臀中肌）
   muscleStates = {};
   inferredIds = {};
-  analysisResults.forEach(function(r){
-    if(r.allowColor && (r.evidenceLevel === 'L1' || r.evidenceLevel === 'L2')){
-      if(r.status === 'possibly_tight') muscleStates[r.muscleId] = 'tight';
-      else if(r.status === 'possibly_weak') muscleStates[r.muscleId] = 'weak';
-      if(r.evidenceLevel === 'L2') inferredIds[r.muscleId] = true; // L2 用虚线
-    } else {
-      inferredIds[r.muscleId] = true; // L3/L0/candidate/unknown 不涂色
-    }
+  slotResult.colored.forEach(function(c){
+    muscleStates[c.targetId] = c.state;
+    if(c.level === 'inferred') inferredIds[c.targetId] = true;
   });
 
   cloneResultSvgs();
