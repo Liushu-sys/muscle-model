@@ -1376,18 +1376,20 @@ var REGIONS4 = [
 var REGIONS4_BY_ID = Object.fromEntries(REGIONS4.map((r) => [r.id, r]));
 
 // docs/13 修订：四大区 → 肌肉块底色归类（仅诊断页1分区着色用，不参与涂色判定）。
-// 48 块肌肉全覆盖；4 块跨区肌肉（上斜方肌/肩胛提肌＝肩颈∩肩臂，髂腰肌/竖脊肌＝腰背∩臀腿）
+// 48 块肌肉全覆盖；6 块跨区肌肉（上斜方肌/肩胛提肌/胸大肌/胸小肌＝肩颈∩肩臂，髂腰肌/竖脊肌＝腰背∩臀腿）
 // 在两个区各出现一次，第一页用半透明双层填充呈现叠色。
 var REGION_PAINT = {
   neck: [
     "sternocleidomastoid", "deep_neck_flexor", "suboccipital", "splenius_capitis",
-    "levator_scapulae", "trapezius_upper", "scalenes"
+    "levator_scapulae", "trapezius_upper", "scalenes",
+    // 与肩臂重叠：胸肌属上交叉紧张链（Janda UCS），牵涉痛投射肩前（Travell）
+    "pectoralis_major", "pectoralis_minor"
   ],
   arm: [
-    // 与肩颈重叠 2 块
-    "trapezius_upper", "levator_scapulae",
+    // 与肩颈重叠 4 块
+    "trapezius_upper", "levator_scapulae", "pectoralis_major", "pectoralis_minor",
     // 肩胛胸壁/肩袖/上臂带
-    "pectoralis_major", "pectoralis_minor", "subscapularis", "latissimus_dorsi",
+    "subscapularis", "latissimus_dorsi",
     "teres_major", "supraspinatus", "infraspinatus", "teres_minor", "deltoid",
     "serratus_anterior", "rhomboid", "trapezius_middle", "trapezius_lower",
     // 肘/前臂
