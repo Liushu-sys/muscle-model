@@ -90,7 +90,8 @@ export const PATTERNS: Pattern[] = [
     joint: '髋关节',
     bookPage: 281,
     limitation: '髋关节伸展减少 / 髋关节屈曲挛缩',
-    tight: ['iliopsoas', 'quadriceps', 'erector_spinae'],
+    // p.281 原文紧张组为「髂腰肌、股直肌」；股直肌已从股四头肌组拆出（rectus_femoris）
+    tight: ['iliopsoas', 'rectus_femoris', 'erector_spinae'],
     weak: ['gluteus_maximus', 'hamstrings', 'rectus_abdominis', 'transversus_abdominis'],
     // 臀中肌：书 p.281 同页讨论髋部外展肌作用，但不在该模式原文的Weak清单里
     inferredWeak: ['gluteus_medius'],

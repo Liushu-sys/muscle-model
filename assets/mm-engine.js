@@ -487,16 +487,32 @@ var MUSCLES = [
   {
     id: "quadriceps",
     name: "\u80A1\u56DB\u5934\u808C",
-    alias: ["\u80A1\u76F4\u808C", "\u80A1\u5185\u4FA7\u808C", "\u80A1\u5916\u4FA7\u808C"],
+    alias: ["\u80A1\u5185\u4FA7\u808C", "\u80A1\u5916\u4FA7\u808C", "\u80A1\u4E2D\u95F4\u808C"],
     region: "leg",
     type: "weak",
     side: "front",
     x: 40,
     y: 63,
-    desc: "\u5927\u817F\u524D\u9762\uFF0C\u8D1F\u8D23\u4F38\u76F4\u819D\u76D6\uFF0C\u5F31\u4E86\u819D\u76D6\u4F1A\u53D1\u8F6F",
+    desc: "\u5927\u817F\u524D\u9762\uFF08\u80A1\u5185\u4FA7\u808C\u3001\u80A1\u5916\u4FA7\u808C\u3001\u80A1\u4E2D\u95F4\u808C\uFF09\uFF0C\u8D1F\u8D23\u4F38\u76F4\u819D\u76D6\uFF0C\u5F31\u4E86\u819D\u76D6\u4F1A\u53D1\u8F6F\u3002\u6CE8\uFF1A\u80A1\u76F4\u808C\u5DF2\u5355\u72EC\u5217\u51FA",
     senses: ["\u819D\u76D6\u53D1\u8F6F", "\u4E0B\u697C\u68AF\u6253\u8F6F\u817F", "\u819D\u76D6\u524D\u9762\u75BC"],
     bookPage: 316
-    // 「伸膝肌减弱：股四头肌的四块肌肉」
+    // 「伸膝肌减弱：股四头肌的四块肌肉」；股直肌在 p.281 髋模式为紧张组，已拆为独立 id
+  },
+  {
+    id: "rectus_femoris",
+    name: "\u80A1\u76F4\u808C",
+    alias: ["\u80A1\u76F4\u808C\uFF08\u80A1\u56DB\u5934\u808C\uFF09"],
+    region: "low_back_hip",
+    type: "tight",
+    side: "front",
+    x: 40,
+    y: 63,
+    // 无独立 SVG 路径，涂色与点击别名统一走 paintAs（唯一别名真源）
+    paintAs: "quadriceps",
+    desc: "\u80A1\u56DB\u5934\u808C\u4E2D\u552F\u4E00\u8DE8\u8FC7\u9ACB\u548C\u819D\u4E24\u4E2A\u5173\u8282\u7684\u808C\u8089\uFF0C\u4E45\u5750\u4F1A\u77ED\u7F29\uFF0C\u628A\u9AA8\u76C6\u5F80\u524D\u62C9",
+    senses: ["\u9ACB\u524D\u9762\u7D27", "\u5927\u817F\u6839\u524D\u9762\u7D27", "\u4E45\u5750\u7AD9\u8D77\u6765\u9ACB\u524D\u626F\u7740"],
+    bookPage: 281
+    // 髋模式 p.281「髋关节屈肌紧张：髂腰肌、股直肌」
   },
   {
     id: "hip_adductors",
@@ -725,6 +741,7 @@ var REGION_CANDIDATES = {
       { id: "obliquus_internus",  relation: "local",    note: "\u8179\u90E8\u6DF1\u5C42" },
       { id: "rectus_abdominis",   relation: "local",    note: "\u8179\u90E8\u6B63\u4E2D" },
       { id: "transversus_abdominis",relation: "stabilizer",note: "\u8179\u90E8\u6700\u6DF1\u5C42\u7A33\u5B9A" },
+      { id: "rectus_femoris",     relation: "local",    note: "\u80A1\u56DB\u5934\u808C\u4E2D\u8DE8\u9ACB\u819D\u7684\u80A1\u76F4\u808C\uFF0Cp.281 \u9ACB\u6A21\u5F0F\u7D27\u5F20\u7EC4\uFF08\u65E0\u72EC\u7ACB\u8DEF\u5F84\uFF0C\u8272\u5757\u6620\u5C04\u80A1\u56DB\u5934\u808C\uFF09" },
       { id: "iliopsoas",          relation: "local",    note: "\u8170\u5927\u808C\u8FDE\u63A5\u810A\u67F1\u548C\u80A1\u9AA8" },
       { id: "piriformis",         relation: "local",    note: "\u81C0\u90E8\u6DF1\u5C42" },
       { id: "gluteus_maximus",    relation: "local",    note: "\u81C0\u90E8\u4E3B\u529B" },
@@ -996,7 +1013,7 @@ var PATTERNS = [
     joint: "\u9ACB\u5173\u8282",
     bookPage: 281,
     limitation: "\u9ACB\u5173\u8282\u4F38\u5C55\u51CF\u5C11 / \u9ACB\u5173\u8282\u5C48\u66F2\u631B\u7F29",
-    tight: ["iliopsoas", "quadriceps", "erector_spinae"],
+    tight: ["iliopsoas", "rectus_femoris", "erector_spinae"],
     weak: ["gluteus_maximus", "hamstrings", "rectus_abdominis", "transversus_abdominis"],
     // 臀中肌：书 p.281 同页讨论髋部外展肌作用，但不在该模式原文的Weak清单里
     inferredWeak: ["gluteus_medius"],

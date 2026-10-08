@@ -46,6 +46,7 @@ def main():
     rows = []
     for mid, name, body in blocks:
         pg = re.search(r"bookPage: (\d+)", body)
+        pm = re.search(r"paintAs: '([a-z_]+)'", body)
         rows.append({
             "id": mid, "name": name,
             "side": field(body, "side"),
@@ -53,19 +54,25 @@ def main():
             "region": REGION.get(field(body, "region"), ""),
             "page": pg.group(1) if pg else "—",
             "note": NOTE.get(field(body, "bookNote"), "—"),
+            "paintAs": pm.group(1) if pm else None,
             "front": "有" if mid in D["front"] else "—",
             "back": "有" if mid in D["back"] else "—",
             "local": "✅" if mid in referenced else "⚪",
         })
 
-    # 一致性断言：两边 id 必须完全一致，不一致直接报错退出
+    # 一致性断言：无路径肌肉必须声明 paintAs 映射；未声明又缺路径才报错
     ts_ids = {r["id"] for r in rows}
     path_ids = set(D["groups"].keys())
-    only_ts = sorted(ts_ids - path_ids)
+    mapped = {r["id"]: r["paintAs"] for r in rows if r["paintAs"]}
+    bad_mapping = [f"{k}→{v}" for k, v in mapped.items() if v not in path_ids]
+    only_ts = sorted(i for i in (ts_ids - path_ids) if i not in mapped)
     only_path = sorted(path_ids - ts_ids)
+    if bad_mapping:
+        print("❌ paintAs 指向了不存在的路径分组:", bad_mapping)
+        return 1
     if only_ts or only_path:
         print("❌ 三张表没有对齐：")
-        print("   只在 muscles.ts（图上不会亮）:", only_ts or "无")
+        print("   只在 muscles.ts 且未声明 paintAs（图上不会亮）:", only_ts or "无")
         print("   只在 body_paths.json（AI 说不出）:", only_path or "无")
         return 1
 
@@ -75,26 +82,30 @@ def main():
         return 1
 
     lines = [
-        "# 02 · 47 组肌肉映射清单",
+        "# 02 · 肌肉映射清单（48 组）",
         "",
         "> 本文件由 `tools/gen_muscle_table.py` 自动生成，不要手改。  ",
         "> 用途：现场一旦出现「AI 说这块肌紧，但图上这块不亮」，对着这张表从上往下查。  ",
-        "> 三张表的 id 必须完全一致，任何一处不一致都会在 demo 现场翻车。",
+        "> id 必须能在图上落色：有独立路径，或声明 paintAs 映射到已有色块。",
         "",
         "| id | 中文名 | 面 | 默认倾向 | 部位 | 书页 | 依据 | 正面路径 | 背面路径 | 本地9模式 |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in rows:
         tp = "T 偏紧" if r["type"] == "tight" else "W 偏弱"
+        front = f"→{r['paintAs']}" if r["paintAs"] else r["front"]
+        back = f"→{r['paintAs']}" if r["paintAs"] else r["back"]
         lines.append(
             f"| `{r['id']}` | {r['name']} | {r['side']} | {tp} | {r['region']} "
-            f"| {r['page']} | {r['note']} | {r['front']} | {r['back']} | {r['local']} |"
+            f"| {r['page']} | {r['note']} | {front} | {back} | {r['local']} |"
         )
 
     n_local = sum(1 for r in rows if r["local"] == "✅")
+    n_mapped = len(mapped)
     lines += [
         "",
-        f"合计 **{len(rows)}** 组，与 `assets/body_paths.json` 的 **{len(path_ids)}** 个分组完全一致。",
+        f"合计 **{len(rows)}** 组；其中 **{len(path_ids)}** 组有独立 SVG 路径，"
+        f"**{n_mapped}** 组无独立路径、通过 paintAs 映射上色块（{', '.join(f'{k}→{v}' for k, v in mapped.items())}）。",
         f"其中 **{n_local}** 组会被本地 9 条模式点亮，其余 **{len(rows) - n_local}** 组只有 AI 引擎能点亮。",
         "",
         "## 字段怎么读",

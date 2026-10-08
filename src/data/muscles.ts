@@ -47,6 +47,7 @@ export interface Muscle {
   senses: string[]
   bookPage?: number   // 书上印的页码，便于溯源
   bookNote?: 'book' | 'infer' | 'clinic'
+  paintAs?: string    // 无独立 SVG 路径时，涂色/点击映射到的色块 id（唯一别名真源，如股直肌→股四头肌）
 }
 
 export const MUSCLES: Muscle[] = [
@@ -375,11 +376,22 @@ export const MUSCLES: Muscle[] = [
   {
     id: 'quadriceps',
     name: '股四头肌',
-    alias: ['股直肌', '股内侧肌', '股外侧肌'],
+    alias: ['股内侧肌', '股外侧肌', '股中间肌'],
     region: 'leg', type: 'weak', side: 'front', x: 40, y: 63,
-    desc: '大腿前面，负责伸直膝盖，弱了膝盖会发软',
+    desc: '大腿前面（股内侧肌、股外侧肌、股中间肌），负责伸直膝盖，弱了膝盖会发软。注：股直肌已单独列出',
     senses: ['膝盖发软', '下楼梯打软腿', '膝盖前面疼'],
-    bookPage: 316,   // 「伸膝肌减弱：股四头肌的四块肌肉」
+    bookPage: 316,   // 「伸膝肌减弱：股四头肌的四块肌肉」；股直肌在 p.281 髋模式为紧张组，已拆为独立 id
+  },
+  {
+    id: 'rectus_femoris',
+    name: '股直肌',
+    alias: ['股直肌（股四头肌）'],
+    region: 'low_back_hip', type: 'tight', side: 'front', x: 40, y: 63,
+    // 无独立 SVG 路径，涂色与点击映射到股四头肌色块（paintAs 为唯一别名真源）
+    paintAs: 'quadriceps',
+    desc: '股四头肌中唯一跨过髋和膝两个关节的肌肉，久坐会短缩，把骨盆往前拉',
+    senses: ['髋前面紧', '大腿根前面紧', '久坐站起来髋前扯着'],
+    bookPage: 281,   // 髋模式 p.281「髋关节屈肌紧张：髂腰肌、股直肌」
   },
   {
     id: 'hip_adductors',
