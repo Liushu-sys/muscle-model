@@ -19,6 +19,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MUS = os.path.join(ROOT, "src", "data", "muscles.ts")
 PAT = os.path.join(ROOT, "src", "data", "patterns.ts")
 PATHS = os.path.join(ROOT, "assets", "body_paths.json")
+ENGINE = os.path.join(ROOT, "assets", "mm-engine.js")
 OUT = os.path.join(ROOT, "docs", "02-47组肌肉映射清单.md")
 
 REGION = {
@@ -43,6 +44,15 @@ def main():
     pools = re.findall(r"(?:inferredTight|inferredWeak|tight|weak): \[(.*?)\]", pat, re.S)
     referenced = set(re.findall(r"'([a-z_]+)'", "\n".join(pools)))
 
+    # docs/13：14 个目录症状（SYMPTOMS，在引擎文件里）也会点亮肌肉
+    eng = open(ENGINE, encoding="utf-8").read()
+    m = re.search(r"var SYMPTOMS = \[(.*?)\n\];", eng, re.S)
+    symptom_block = m.group(1) if m else ""
+    spools = re.findall(
+        r"(?:inferredTight|inferredWeak|stretchOnly|tight|weak): \[(.*?)\]",
+        symptom_block, re.S)
+    symptom_ref = set(re.findall(r'"([a-z_]+)"', "\n".join(spools)))
+
     rows = []
     for mid, name, body in blocks:
         pg = re.search(r"bookPage: (\d+)", body)
@@ -57,7 +67,7 @@ def main():
             "paintAs": pm.group(1) if pm else None,
             "front": "有" if mid in D["front"] else "—",
             "back": "有" if mid in D["back"] else "—",
-            "local": "✅" if mid in referenced else "⚪",
+            "local": ("✅" if mid in referenced else "🟡") if mid in (referenced | symptom_ref) else "⚪",
         })
 
     # 一致性断言：无路径肌肉必须声明 paintAs 映射；未声明又缺路径才报错
@@ -88,7 +98,7 @@ def main():
         "> 用途：现场一旦出现「AI 说这块肌紧，但图上这块不亮」，对着这张表从上往下查。  ",
         "> id 必须能在图上落色：有独立路径，或声明 paintAs 映射到已有色块。",
         "",
-        "| id | 中文名 | 面 | 默认倾向 | 部位 | 书页 | 依据 | 正面路径 | 背面路径 | 本地9模式 |",
+        "| id | 中文名 | 面 | 默认倾向 | 部位 | 书页 | 依据 | 正面路径 | 背面路径 | 9模式/14症状 |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in rows:
@@ -101,12 +111,14 @@ def main():
         )
 
     n_local = sum(1 for r in rows if r["local"] == "✅")
+    n_symptom_only = sum(1 for r in rows if r["local"] == "🟡")
     n_mapped = len(mapped)
     lines += [
         "",
         f"合计 **{len(rows)}** 组；其中 **{len(path_ids)}** 组有独立 SVG 路径，"
         f"**{n_mapped}** 组无独立路径、通过 paintAs 映射上色块（{', '.join(f'{k}→{v}' for k, v in mapped.items())}）。",
-        f"其中 **{n_local}** 组会被本地 9 条模式点亮，其余 **{len(rows) - n_local}** 组只有 AI 引擎能点亮。",
+        f"其中 **{n_local}** 组被书内 9 模式点亮（✅），**{n_symptom_only}** 组仅由 docs/13 的 14 症状点亮（🟡），"
+        f"其余 **{len(rows) - n_local - n_symptom_only}** 组当前无入口（⚪）。",
         "",
         "## 字段怎么读",
         "",
@@ -117,7 +129,7 @@ def main():
         "  - `书列名` = 《基础肌动学》第4版白纸黑字点名了这块肌肉属于紧张侧还是减弱侧，现场可以直接引页码",
         "  - `同群推断` = 书里点名的是它所在的肌群，这条是我们推的，**不要**说成「书上讲」",
         "  - `常识判断` = 书里没提，按解剖和常见体态定，同样别说成引用",
-        "- **本地9模式**：✅ 本地引擎的 9 条模式会产出它；⚪ 只有 AI 引擎能点亮（白名单允许，不是废数据）",
+        "- **9模式/14症状**：✅ 书内 9 模式会产出它；🟡 仅 docs/13 新增症状会点亮；⚪ 当前无涂色入口",
         "",
         "## 现场排查三步",
         "",
@@ -138,7 +150,7 @@ def main():
     open(OUT, "w", encoding="utf-8").write("\n".join(lines))
 
     print(f"✅ 已生成 {os.path.relpath(OUT, ROOT)} —— {len(rows)} 组")
-    print(f"   本地9模式覆盖 {n_local}，仅 AI 可点亮 {len(rows) - n_local}")
+    print(f"   9模式覆盖 {n_local}，仅14症状覆盖 {n_symptom_only}，无入口 {len(rows) - n_local - n_symptom_only}")
     print(f"   双面(both): {[r['id'] for r in rows if r['side'] == 'both'] or '无'}")
     stats = {k: sum(1 for r in rows if r["note"] == k) for k in ("书列名", "同群推断", "常识判断", "—")}
     print(f"   依据来源: {stats}")

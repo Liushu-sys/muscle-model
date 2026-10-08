@@ -1361,6 +1361,362 @@ function analyzeBySlots(marks) {
   return { hits: hits, colored: colored };
 }
 
+// ════════════════════════════════════════════════════════════════════
+// 目录式症状诊断（docs/13）
+// 四大区域热区 → 用户从症状目录自选 → symptomUnion 确定性合并涂色。
+// 取代 9-slot 位置猜测：没有坐标兜底、没有 slot 冲突仲裁。
+// ════════════════════════════════════════════════════════════════════
+
+var REGIONS4 = [
+  { id: "neck", name: "肩颈", hint: "脖子、后脑勺、斜方肌、含胸圆肩" },
+  { id: "arm", name: "肩臂", hint: "肩膀、手肘、手腕、前臂" },
+  { id: "back", name: "腰背", hint: "上背、腰、腰骶一侧" },
+  { id: "leg", name: "臀腿", hint: "屁股、大腿、膝盖、小腿、脚踝" }
+];
+var REGIONS4_BY_ID = Object.fromEntries(REGIONS4.map((r) => [r.id, r]));
+
+// 每条症状 = 一个确定性的紧/弱方案。evidence: book(书内模式) / synthesis(多页书据综合) / literature(书外文献)
+// sourcePattern 关联 PATTERNS 以复用书金句/页码；stretchOnly 只列名牵伸，永不涂色。
+var SYMPTOMS = [
+  {
+    id: "fwd_head", region: "neck", order: 1,
+    menu: "头不自觉往前探，脖子后面发沉发紧",
+    sub: "看手机电脑一天后最明显，后脑勺紧、抬头费劲",
+    proName: "颅颈区 · 头部过度前伸姿势",
+    manifest: "久看屏幕后颈后酸沉、后脑勺发紧，晨起偶尔像「落枕」，转脖子不如以前灵活。",
+    explain: "头每向前探一点，颈椎要承担的重量就明显增加。前侧的胸锁乳突肌长期短缩去适应这个姿势，后侧的枕下肌群被拉住持续做功，而真正该把头稳稳托住的深层颈屈肌却被抑制、使不上劲。",
+    tight: ["sternocleidomastoid", "suboccipital", "levator_scapulae"],
+    weak: ["deep_neck_flexor"],
+    inferredTight: ["splenius_capitis"],
+    sourcePattern: "cranio_cervical", evidence: "book"
+  },
+  {
+    id: "round_shoulder", region: "neck", order: 2,
+    menu: "含胸驼背、肩膀往前扣，两肩之间那一片酸",
+    sub: "挺胸一会儿就累，肩胛骨内侧缘发酸",
+    proName: "肩胛胸壁关节 · 肩胛骨过度前伸下旋（圆肩姿势）",
+    manifest: "肩带往前向内扣，自然站立时手心朝后；刻意挺胸坚持不了多久，两肩胛骨之间酸胀。",
+    explain: "打字、开车、刷手机让胸大肌和胸小肌持续缩短，把肩胛骨往前拉；背后的菱形肌、斜方肌中束被拉长还要发力维持，前锯肌和斜方肌上、下束力量不足，肩胛骨转不回正常位置。",
+    tight: ["pectoralis_major", "pectoralis_minor"],
+    weak: ["rhomboid", "trapezius_middle", "serratus_anterior", "trapezius_upper", "trapezius_lower"],
+    sourcePattern: "scapulothoracic", evidence: "book"
+  },
+  {
+    id: "upper_crossed", region: "neck", order: 3,
+    menu: "脖子前探 + 圆肩 + 斜方肌鼓包，肩颈整片都紧",
+    sub: "上面两条都有，肩颈又僵又厚，常带头痛",
+    proName: "上交叉综合征（Upper Crossed Syndrome）",
+    manifest: "颈肩背整片僵硬，上斜方肌摸起来硬厚，头前探、圆肩同时存在，容易伴随头痛和肩前侧不适。",
+    explain: "这是前两条合在一起的完整形态：紧张的胸肌、枕下肌群、上斜方肌，与被抑制的深层颈屈肌和肩胛稳定肌，在躯干前后交叉成一个「X」。上斜方肌属于「越紧越没力」的过劳肌——只按揉放松只能管一时，背后无力的肌肉不被唤醒，紧张很快会回来。",
+    tight: ["trapezius_upper", "levator_scapulae", "sternocleidomastoid", "suboccipital", "pectoralis_major", "pectoralis_minor"],
+    weak: ["deep_neck_flexor", "rhomboid", "trapezius_middle", "trapezius_lower", "serratus_anterior"],
+    inferredTight: ["scalenes"],
+    sourcePattern: "scapulothoracic", evidence: "literature",
+    evidenceNote: "上交叉综合征由康复科医生 Vladimir Janda 提出；紧/弱分组见 Chang MC 等 2023 年系统综述（Healthcare 11(16):2328），书内依据 p.89、p.235"
+  },
+  {
+    id: "shoulder_impinge", region: "arm", order: 4,
+    menu: "抬手梳头、够后背费劲，肩膀前侧或外侧疼",
+    sub: "抬臂到某个角度卡住，侧卧压着肩不舒服",
+    proName: "盂肱关节 · 外展前屈受限伴外旋不足（肩峰下撞击倾向）",
+    manifest: "抬胳膊过头顶时卡住或疼痛，手够不到后背拉链，梳头穿衣费力。",
+    explain: "胸大肌、肩胛下肌、背阔肌这组内旋肌紧张，把肱骨头往前上方顶；负责外旋和外展的冈下肌、冈上肌、三角肌力量不足，抬臂时肱骨头在肩峰下的间隙被夹住，于是出现「卡」和痛。",
+    tight: ["pectoralis_major", "latissimus_dorsi", "subscapularis"],
+    weak: ["deltoid", "supraspinatus", "infraspinatus", "serratus_anterior", "trapezius_upper", "trapezius_lower"],
+    inferredTight: ["teres_major"],
+    inferredWeak: ["teres_minor"],
+    sourcePattern: "shoulder_glenohumeral", evidence: "book"
+  },
+  {
+    id: "mouse_wrist", region: "arm", order: 5,
+    menu: "握鼠标一天手腕发酸发紧，前臂内侧扯着",
+    sub: "腕背侧酸，抓握发力不如以前",
+    proName: "腕关节 · 伸展不足（屈腕肌短缩模式）",
+    manifest: "用键盘鼠标一天后手腕酸、发涩，转动时有牵拉感，握东西久了容易累。",
+    explain: "握鼠标时手腕长期处于微屈位置，前臂屈肌群持续缩短；拮抗的腕伸肌群被拉长且肌力下降，腕关节前后力线失衡。",
+    tight: ["forearm_flexors"],
+    weak: ["forearm_extensors"],
+    sourcePattern: "wrist", evidence: "book",
+    redFlag: "如果拇指、食指、中指发麻，夜间麻醒、甩甩手会缓解，可能是腕管综合征，建议线下就医评估。"
+  },
+  {
+    id: "elbow_flex", region: "arm", order: 6,
+    menu: "肘窝前面发紧，胳膊没法完全伸直",
+    sub: "上臂前侧一直绷着，伸肘末端有拉住感",
+    proName: "肘关节复合体 · 屈曲挛缩倾向",
+    manifest: "手臂想完全伸直时肘窝前面拉住，上臂前侧紧张，活动开以后会松一些。",
+    explain: "长期屈肘操作鼠标和手机，屈肘的肱二头肌适应了短缩长度，拮抗的肱三头肌肌力不足，肘关节长期达不到完全伸展的位置。",
+    tight: ["biceps_brachii"],
+    weak: ["triceps_brachii"],
+    sourcePattern: "elbow", evidence: "book",
+    redFlag: "如果痛点固定在肘外侧一个点，拧毛巾、端锅时明显加重，更可能是网球肘（肌腱过用），不属于「紧-弱失衡」，以休息减负为主，持续不缓解请就医。"
+  },
+  {
+    id: "thoracic_kyphosis", region: "back", order: 7,
+    menu: "上背弓着，挺胸坚持不了一会儿",
+    sub: "后背中间酸累，深吸气觉得展不开",
+    proName: "胸椎 · 过度后凸（圆背姿势）",
+    manifest: "胸椎段发僵发挺，刻意挺胸撑不过几分钟，上背中段酸累，吸气时胸廓打不开。",
+    explain: "胸段竖脊肌区域性无力，撑不住脊柱；胸前侧肌肉和髋屈肌短缩，把躯干往前下方拉，胸椎活动度随之下降。这个模式里胸肌和髂腰肌是「可以配合牵伸」的对象，但不是它判定的紧张侧，图上不标红。",
+    tight: [],
+    weak: ["erector_spinae"],
+    stretchOnly: ["pectoralis_major", "pectoralis_minor", "iliopsoas"],
+    sourcePattern: "thoracic", evidence: "book"
+  },
+  {
+    id: "stiff_low_back", region: "back", order: 8,
+    menu: "坐一天腰硬邦邦，刚起身直不起来、走两步才缓开",
+    sub: "腰部大面积发紧，不是某一个点",
+    proName: "久坐型腰椎活动受限（髋屈短缩 · 腰背等长过用 · 核心臀肌抑制）",
+    manifest: "坐下和刚站起来那一下最难受，站直活动几分钟后缓解；腰是大片发紧，而不是固定一个点刺痛。",
+    explain: "久坐时髂腰肌长时间处在短缩位，起身后拉住骨盆，让腰椎被迫过度后伸；腰段竖脊肌和腰方肌于是持续等长代偿。同时腹横肌和臀大肌被抑制，腰椎前后两道稳定保护都变弱。",
+    tight: ["iliopsoas", "erector_spinae", "quadratus_lumborum"],
+    weak: ["transversus_abdominis", "gluteus_maximus"],
+    evidence: "synthesis", bookPage: 281,
+    evidenceNote: "综合《基础肌动学》第4版 p.281（久坐致髋屈短缩、腰背伸肌紧张）、p.225（腰方肌为腰段稳定肌）、p.235（核心稳定训练）",
+    redFlag: "如果麻木串到脚背，或出现大小便控制异常，请立即线下就医。"
+  },
+  {
+    id: "ql_lopsided", region: "back", order: 9,
+    menu: "腰总是一边酸，跷二郎腿后更明显",
+    sub: "感觉身子是拧的，腰骶交界一侧深部酸",
+    proName: "腰方肌不对称过载（骨盆侧稳定失衡）",
+    manifest: "腰骶交界一侧深部酸胀，翻身、单腿站立或久坐后加重，照镜子可能发现骨盆一高一低。",
+    explain: "跷二郎腿、单侧负重、坐椅子歪向一边，会让一侧腰方肌长期短缩；臀中肌本是走路时稳住骨盆的肌肉，它无力时，腰方肌被迫向上提拉骨盆来代偿——连接腰方肌与对侧臀中肌的「外侧肌筋膜悬带」就此失灵。",
+    tight: ["quadratus_lumborum"],
+    weak: ["gluteus_medius", "transversus_abdominis"],
+    evidence: "synthesis", bookPage: 225,
+    evidenceNote: "书内依据 p.225（腰方肌）、p.253–256（臀中肌与骨盆侧向稳定）；悬带代偿机制见肌筋膜研究（Willard 等，2012）"
+  },
+  {
+    id: "pelvic_tilt", region: "leg", order: 10,
+    menu: "站着腰塌、小肚子往前顶，平躺腰下能塞拳头",
+    sub: "腰椎曲度大，站久腰累，大腿根前侧紧",
+    proName: "髋关节 · 屈曲挛缩致骨盆前倾（下交叉姿势）",
+    manifest: "站姿腰曲过大、小腹前顶，平躺时腰贴不到床面，久站后腰骶部酸累。",
+    explain: "髂腰肌、股直肌和腰背伸肌组成「前倾力偶」，把骨盆往前下方拉；腹肌和臀大肌这组向后的力偶力量不足，骨盆前倾，腰椎被迫代偿性前凸。",
+    tight: ["iliopsoas", "rectus_femoris", "erector_spinae"],
+    weak: ["gluteus_maximus", "hamstrings", "rectus_abdominis", "transversus_abdominis"],
+    inferredWeak: ["gluteus_medius"],
+    sourcePattern: "hip", evidence: "book"
+  },
+  {
+    id: "glute_amnesia", region: "leg", order: 11,
+    menu: "屁股越来越扁，臀桥全是腰和大腿后侧在使劲",
+    sub: "走路臀不发力，爬楼腿先酸，深蹲膝盖往内扣",
+    proName: "臀肌失忆症（Gluteal Amnesia · 死臀综合征）",
+    manifest: "臀部松软扁平，走路爬楼感觉不到臀部发力，做臀桥时腰和大腿后侧先酸。",
+    explain: "久坐让髋屈肌（髂腰肌、股直肌、阔筋膜张肌）持续处于缩短激活状态，神经系统通过「交互抑制」长期关闭它的拮抗肌——臀大肌和臀中肌。臀部不发力后，腰、腘绳肌和膝盖被迫代偿，连锁出现腰酸和膝痛。",
+    tight: ["iliopsoas", "rectus_femoris", "tensor_fasciae_latae"],
+    weak: ["gluteus_maximus", "gluteus_medius"],
+    evidence: "synthesis", bookPage: 281,
+    evidenceNote: "书内依据 p.281、p.253；交互抑制与臀肌抑制机制为康复医学共识，北京市卫健委 2025 年健康科普亦有专门介绍"
+  },
+  {
+    id: "knee_soft", region: "leg", order: 12,
+    menu: "上下楼膝盖发软、蹲下起不来，大腿后侧一直紧",
+    sub: "下楼比上楼明显，膝前侧酸软",
+    proName: "膝关节 · 伸展不足 / 屈曲挛缩倾向",
+    manifest: "上下楼梯膝盖打软，下蹲到底困难，膝前侧酸，大腿后侧长期发紧。",
+    explain: "腘绳肌紧张，拉着小腿让膝关节长期达不到完全伸直；股四头肌肌力不足，无法稳定髌骨、也无力完成伸膝的最后一段。",
+    tight: ["hamstrings"],
+    weak: ["quadriceps"],
+    inferredTight: ["iliotibial_tract"],
+    sourcePattern: "knee", evidence: "book"
+  },
+  {
+    id: "ankle_stiff", region: "leg", order: 13,
+    menu: "久坐起来脚发僵，下蹲脚跟踩不实",
+    sub: "小腿后侧紧，踮脚易抽筋，晨起第一步脚跟疼",
+    proName: "踝关节 · 背伸受限 / 跖屈挛缩倾向",
+    manifest: "久坐起身脚发僵，下蹲时脚跟离地，小腿后侧紧，走路觉得踝活动不开。",
+    explain: "久坐屈膝加上日常穿鞋，让小腿后侧的腓肠肌、比目鱼肌适应了短缩长度；拮抗的胫骨前肌无力，踝背伸角度不足，下蹲和步态只能靠别处代偿。",
+    tight: ["gastrocnemius", "soleus"],
+    weak: ["tibialis_anterior"],
+    inferredTight: ["tibialis_posterior", "fibularis"],
+    sourcePattern: "ankle", evidence: "book"
+  },
+  {
+    id: "piriformis_tight", region: "leg", order: 14,
+    menu: "臀部深处一个点酸，盘腿久坐后加重",
+    sub: "久坐起身那一下臀痛，跷二郎腿也会加重",
+    proName: "梨状肌紧张（髋外旋肌短缩模式）",
+    manifest: "臀部中央深部酸胀，椅面顶到该处或盘腿、跷二郎腿时加重，大腿根部活动受限。",
+    explain: "久坐屈髋时梨状肌持续受压、容易短缩或痉挛；臀中肌、臀大肌被抑制后，髋关节外旋稳定更多压给梨状肌，形成「越紧越累、越累越紧」的循环。",
+    tight: ["piriformis"],
+    weak: ["gluteus_medius", "gluteus_maximus"],
+    evidence: "synthesis", bookPage: 253,
+    evidenceNote: "书内依据 p.253（梨状肌属髋外旋肌群）；久坐梨状肌受压机制为康复临床常见模式",
+    redFlag: "如果疼痛或麻木沿大腿后侧一直串到小腿、脚上，可能涉及坐骨神经，建议线下就医。"
+  }
+];
+var SYMPTOM_BY_ID = Object.fromEntries(SYMPTOMS.map((s) => [s.id, s]));
+
+// 互斥组（UI 展示用）：3（上交叉）是 1+2 的复合套餐，同一块上斜方肌在两边角色相反。
+// 注意 1 与 2 彼此不互斥，可同时选择；真正的互斥关系见 MUTEX_PAIRS。
+var MUTEX_GROUPS = [["upper_crossed", "fwd_head", "round_shoulder"]];
+var MUTEX_PAIRS = [["upper_crossed", "fwd_head"], ["upper_crossed", "round_shoulder"]];
+function mutexBlocked(selectedIds, candidateId) {
+  const sel = selectedIds || [];
+  return MUTEX_PAIRS.some(function (pair) {
+    if (pair[0] === candidateId) return sel.indexOf(pair[1]) !== -1;
+    if (pair[1] === candidateId) return sel.indexOf(pair[0]) !== -1;
+    return false;
+  });
+}
+
+// 多症状涂色并集（docs/13 §2 合并规则）。
+// ids 按用户选择顺序传入；返回 colored / stretchOnly / conflicts。
+function symptomUnion(ids) {
+  const ordered = (ids || []).filter((id) => SYMPTOM_BY_ID[id]);
+  const byTarget = new Map();
+  const conflicts = [];
+  ordered.forEach((sid, idx) => {
+    const s = SYMPTOM_BY_ID[sid];
+    const add = (muscleIds, state, level) => {
+      (muscleIds || []).forEach((mid) => {
+        if (!MUSCLE_MAP[mid]) return;
+        const target = paintTargetOf(mid);
+        if (!byTarget.has(target)) byTarget.set(target, []);
+        byTarget.get(target).push({ muscleId: mid, targetId: target, state, level, symptomId: sid, order: idx });
+      });
+    };
+    add(s.tight, "tight", "main");
+    add(s.weak, "weak", "main");
+    add(s.inferredTight, "tight", "inferred");
+    add(s.inferredWeak, "weak", "inferred");
+  });
+
+  const colored = [];
+  byTarget.forEach((list, target) => {
+    // 规则2：状态冲突 → 选择顺序最早的症状为准
+    let pick = list.slice().sort((a, b) => a.order - b.order)[0];
+    const winners = list.filter((e) => e.state === pick.state);
+    // 规则3：同状态下主项优先于推断项
+    const main = winners.find((e) => e.level === "main");
+    if (main) pick = main;
+    // 被丢弃的相反状态 → 记录冲突（卡片仍展示本症状名单，只是不涂色）
+    list.forEach((e) => {
+      if (e.state !== pick.state) {
+        conflicts.push({ targetId: target, muscleId: e.muscleId, state: e.state,
+          symptomId: e.symptomId, droppedBySymptomId: pick.symptomId });
+      }
+    });
+    colored.push({
+      muscleId: pick.muscleId, targetId: target, state: pick.state, level: pick.level,
+      symptomId: pick.symptomId,
+      symptomIds: Array.from(new Set(list.filter((e) => e.state === pick.state).map((e) => e.symptomId)))
+    });
+  });
+
+  const stretchOnly = Array.from(new Set(ordered.reduce((acc, sid) => {
+    return acc.concat(SYMPTOM_BY_ID[sid].stretchOnly || []);
+  }, []).filter((id) => MUSCLE_MAP[id])));
+
+  return { symptomIds: ordered, colored: colored, stretchOnly: stretchOnly, conflicts: conflicts };
+}
+
+// 症状 → 第三页动作包（与肌肉解耦，直连动作 id）
+var SYMPTOM_ACTIONS = {
+  fwd_head:           { reliefSit: "levator_release",      strengthenStand: "wall_angel" },
+  round_shoulder:     { reliefSit: "chair_pec_open",       strengthenStand: "wall_angel" },
+  upper_crossed:      { reliefSit: "chair_pec_open",       strengthenStand: "wall_angel" },
+  shoulder_impinge:   { reliefSit: "sit_pec_er_stretch",   strengthenStand: "ext_rotation" },
+  mouse_wrist:        { reliefSit: "wrist_stretch",        strengthenStand: "wrist_extend" },
+  elbow_flex:         { reliefSit: "arm_plateau",          strengthenStand: "band_pushdown" },
+  thoracic_kyphosis:  { reliefSit: "sit_thoracic_ext",     strengthenStand: "wall_angel" },
+  stiff_low_back:     { reliefSit: "sit_hip_open",         strengthenStand: "stand_glute_kick" },
+  ql_lopsided:        { reliefSit: "sit_ql_sidebend",      strengthenStand: "stand_abd_leg" },
+  pelvic_tilt:        { reliefSit: "sit_hip_open",         strengthenStand: "stand_glute_kick" },
+  glute_amnesia:      { reliefSit: "sit_glute",            strengthenStand: "stand_glute_kick" },
+  knee_soft:          { reliefSit: "ham_seated_stretch",   strengthenStand: "wall_squat" },
+  ankle_stiff:        { reliefSit: "sit_calf_towel",       strengthenStand: "tibialis_activate" },
+  piriformis_tight:   { reliefSit: "sit_hip_open",         strengthenStand: "stand_abd_leg" }
+};
+// 症状 → 长期建议（posture 姿势 / behavior 行为 / environment 环境）
+var SYMPTOM_ADVICE = {
+  fwd_head: {
+    posture: ["屏幕垫高到与视线平齐，少做低头动作", "每隔一段时间做一次收下巴，让头回到肩膀正上方"],
+    behavior: ["减少长时间低头刷手机，手机尽量举到眼前", "用电脑每 30–45 分钟起身活动 2 分钟"],
+    environment: ["检查电脑屏幕上沿是否与眼睛齐平", "选择高度合适的枕头，让颈部休息时保持自然位置"]
+  },
+  round_shoulder: {
+    posture: ["坐姿保持双肩放松下沉，避免含胸内扣", "打字时手肘有支撑，不让肩膀耸起"],
+    behavior: ["用电脑一段时间后起身扩胸活动", "每 30–45 分钟起身活动 2 分钟"],
+    environment: ["调整桌椅高度，让前臂能自然平放桌面", "让键盘鼠标处于更自然的操作范围，避免向前探肩"]
+  },
+  upper_crossed: {
+    posture: ["坐立时想象头顶被向上提，下巴微收、肩下沉", "避免长时间维持头前伸加圆肩的固定姿势"],
+    behavior: ["每 30–45 分钟起身做扩胸和收下巴", "减少连续久坐，安排固定的肩背强化练习"],
+    environment: ["屏幕与视线平齐，键盘鼠标贴近身体", "椅背对中上背有支撑，必要时加靠垫"]
+  },
+  shoulder_impinge: {
+    posture: ["避免长时间抬臂或举手过肩的固定姿势", "背包双肩轮换，减少单侧负重"],
+    behavior: ["抬手疼痛的角度先回避，不硬撑", "每天做肩袖和肩胛稳定的轻量练习"],
+    environment: ["常用物品放在肩高以下的柜层，减少够高动作", "调整工位让手臂不必一直外展"]
+  },
+  mouse_wrist: {
+    posture: ["握鼠标时手腕保持中立，不压在桌沿", "前臂有支撑，手腕不悬空"],
+    behavior: ["连续用键鼠一段时间后活动手腕手指", "减少重复性抓握和长时间单手操作"],
+    environment: ["使用腕托或把键盘鼠标放到更顺手的位置", "桌沿做圆角处理，避免手腕长期顶着硬边"]
+  },
+  elbow_flex: {
+    posture: ["操作鼠标键盘时手肘有支撑、角度放松", "避免长时间紧握手机、屈肘受压"],
+    behavior: ["定时把手臂完全伸直活动几下", "减少长时间屈肘负重（提重物）"],
+    environment: ["桌椅高度让肘部自然约 90 度", "给前臂增加支撑面，减少肘部持续受力"]
+  },
+  thoracic_kyphosis: {
+    posture: ["坐姿保持上背舒展，避免整个人塌进椅背", "每小时做几次双手抱头的上背后仰"],
+    behavior: ["用电脑一段时间后起身扩胸伸展", "规律安排胸背和胸椎活动度练习"],
+    environment: ["屏幕高度足够，避免上背长期弓着看屏幕", "椅背支撑在腰和上背，不顶后脑勺"]
+  },
+  stiff_low_back: {
+    posture: ["腰后放腰靠，保持腰椎自然曲度", "坐姿双脚平放地面，不跷二郎腿"],
+    behavior: ["每坐 30–45 分钟起身慢走 2 分钟再弯腰", "久坐后先活动开，再做弯腰搬东西的动作"],
+    environment: ["椅子高度让大腿与地面平行、膝略低于髋", "桌下留够伸腿空间，方便定时换姿势"]
+  },
+  ql_lopsided: {
+    posture: ["双脚平放、两侧坐骨均匀承重，不歪坐", "尽量不跷二郎腿，单侧负重要左右换着来"],
+    behavior: ["每 30–45 分钟起身做侧向伸展", "安排臀中肌强化练习（侧抬腿、蚌式）"],
+    environment: ["椅子高度让双脚能完全踩实地面", "常用物品放在正前方，减少扭身去够"]
+  },
+  pelvic_tilt: {
+    posture: ["站姿均匀承重，避免塌腰挺肚", "坐姿腰后有支撑，不让骨盆全程后倒或前倾"],
+    behavior: ["每天安排臀桥和核心轻练习", "减少连续久坐，定时站起做髋部伸展"],
+    environment: ["椅子高度让大腿与地面平行、膝略低于髋", "腰后放腰靠支撑腰椎自然曲度"]
+  },
+  glute_amnesia: {
+    posture: ["久坐时每隔一段时间主动收紧臀部几秒", "起身走路时刻意感受脚跟蹬地、臀部发力"],
+    behavior: ["每 30–45 分钟起身活动，让臀部定期「开机」", "每天 10 分钟臀桥、蚌式或后踢腿唤醒臀部"],
+    environment: ["避免坐过软过深的沙发，减少臀部受压", "椅子高度让双脚完全踩实、膝盖不高于髋"]
+  },
+  knee_soft: {
+    posture: ["久站久坐多换姿势，减少膝关节长期锁直", "上下楼梯慢一点，下楼尤其不逞强"],
+    behavior: ["规律做靠墙静蹲和坐姿伸膝强化股四头肌", "运动前先活动开膝关节"],
+    environment: ["椅子高度以起立时不用手撑、膝盖不费力为宜", "湿滑地面注意防滑，避免膝盖突然受力"]
+  },
+  ankle_stiff: {
+    posture: ["久坐后起身先活动脚踝再走", "坐姿避免脚尖一直朝下"],
+    behavior: ["每天做小腿牵伸和勾脚练习", "久坐定时做脚踝上下绕环"],
+    environment: ["桌下留够伸腿和勾脚的空间", "鞋履选择鞋底软硬适中、给脚踝活动余地的款式"]
+  },
+  piriformis_tight: {
+    posture: ["坐姿双脚平放，避免盘腿和跷二郎腿", "久坐时重心两侧轮换，不一直压一侧臀部"],
+    behavior: ["每 30–45 分钟起身走动伸展", "规律做髋部外旋肌牵伸和臀中肌强化"],
+    environment: ["椅面软硬适中，减少臀部深处持续受压", "椅子高度让双脚完全踩实，髋部不被架高"]
+  }
+};
+function actionPackageFor(symptomId) {
+  const map = SYMPTOM_ACTIONS[symptomId];
+  const advice = SYMPTOM_ADVICE[symptomId] || { posture: [], behavior: [], environment: [] };
+  return {
+    symptomId: symptomId,
+    reliefSit: map ? map.reliefSit : null,
+    strengthenStand: map ? map.strengthenStand : null,
+    advice: advice
+  };
+}
+
 function matchPatternsBySense(input) {
   const score = {};
   for (const p of PATTERNS) {
@@ -2109,13 +2465,13 @@ var ACTIONS = [
   },
   {
     id: "tibialis_activate",
-    name: "\u52FE\u811A / \u811A\u8DDF\u8D70\u8DEF",
+    name: "勾脚 / 脚跟走路",
     forState: "weak",
     muscles: ["tibialis_anterior"],
     regions: ["leg"],
     scenes: ["desk", "gym", "open", "bed"],
     gear: "none",
-    posture: "sit",
+    posture: "any",
     kind: "activate",
     howto: "\u5750\u7740\u6216\u7AD9\u7740\uFF0C\u811A\u5C16\u7528\u529B\u5F80\u56DE\u52FE\u5230\u6781\u9650\uFF0C\u505C 2 \u79D2\u653E\u677E\uFF1B\u80FD\u7AD9\u8D77\u6765\u5C31\u8E2E\u7740\u811A\u8D70\u8DEF 30 \u79D2\u3002",
     dose: "20 \u6B21 / \u8D70 30 \u79D2",
@@ -2152,13 +2508,13 @@ var ACTIONS = [
   },
   {
     id: "wrist_extend",
-    name: "\u8155\u4F38\u5C55\uFF08\u8F7B\u91CD\u91CF\uFF09",
+    name: "腕伸展（轻重量）",
     forState: "weak",
     muscles: ["forearm_extensors"],
     regions: ["arm"],
     scenes: ["desk", "gym", "open", "bed"],
     gear: "band",
-    posture: "sit",
+    posture: "any",
     kind: "activate",
     howto: "\u524D\u81C2\u6401\u5728\u684C\u6CBF\u6216\u5927\u817F\u4E0A\uFF0C\u624B\u60AC\u7A7A\u63E1\u4E2A\u8F7B\u4E1C\u897F\uFF0C\u624B\u8155\u6162\u6162\u5F80\u4E0A\u62AC\u518D\u653E\u4E0B\u3002",
     dose: "15 \u6B21 \xD7 2 \u7EC4",
@@ -2445,6 +2801,112 @@ var ACTIONS = [
     dose: "每侧 30 秒 × 2",
     why: "多裂肌是脊柱两侧负责旋转稳定的深层肌肉，坐姿转体是它最温和的牵拉方式。",
     caution: "转体幅度以舒服为限，不要追求响声"
+  },
+  // ═══════ docs/13 目录式诊断新增动作（按症状场景补位） ═══════
+  {
+    id: "sit_pec_er_stretch",
+    name: "坐姿肩前侧牵伸",
+    forState: "tight",
+    muscles: ["pectoralis_major", "subscapularis"],
+    regions: ["upper_back"],
+    scenes: ["desk", "open"],
+    gear: "none",
+    posture: "sit",
+    kind: "stretch",
+    howto: "坐稳，双手放在身后椅背或桌面上，吸气挺胸、肩膀向后向下展开，感觉胸口和肩膀前侧被拉开，保持自然呼吸。",
+    dose: "20–30 秒 × 2",
+    why: "胸肌和肩胛下肌短缩会把肩膀往前拉、把肱骨头往前顶，这个动作在工位上就能把肩前侧打开。",
+    caution: "不要挺腰代偿，拉伸感在胸前和肩前即可"
+  },
+  {
+    id: "sit_thoracic_ext",
+    name: "坐姿抱头胸椎伸展",
+    forState: "weak",
+    muscles: ["erector_spinae"],
+    regions: ["upper_back", "low_back_hip"],
+    scenes: ["desk", "open"],
+    gear: "none",
+    posture: "sit",
+    kind: "activate",
+    howto: "坐直双脚踩实，双手十指交叉抱在头后。吸气时胸椎向后上方轻轻挺起、双肘向外展开，呼气回到中立，动作只发生在上背，不塌腰。",
+    dose: "10 次 × 2 组",
+    why: "长期含胸让胸段竖脊肌长期被拉长无力，这个动作帮助胸椎重新学会伸展。",
+    caution: "是上背后仰，不是折腰；头晕就减小幅度"
+  },
+  {
+    id: "stand_glute_kick",
+    name: "站姿扶椅后踢腿",
+    forState: "weak",
+    muscles: ["gluteus_maximus"],
+    regions: ["low_back_hip"],
+    scenes: ["open", "desk"],
+    gear: "none",
+    posture: "stand",
+    kind: "activate",
+    howto: "双手扶住椅背站稳，一条腿慢慢向后伸到臀部收紧，在末端夹紧 2 秒，再缓慢收回。骨盆保持朝前不晃。",
+    dose: "每侧 12 次 × 2 组",
+    why: "久坐会让臀大肌被神经抑制『忘记发力』，后踢腿能孤立唤醒它，把活从腰和大腿后侧手里接回来。",
+    caution: "腿不用抬很高，关键是臀部先发力而不是塌腰"
+  },
+  {
+    id: "stand_abd_leg",
+    name: "站姿侧抬腿",
+    forState: "weak",
+    muscles: ["gluteus_medius"],
+    regions: ["low_back_hip", "leg"],
+    scenes: ["open", "desk"],
+    gear: "none",
+    posture: "stand",
+    kind: "activate",
+    howto: "扶椅背站稳，一条腿向侧方缓慢抬起约 30 度，脚尖朝前、骨盆不歪，停 1 秒后缓慢放下。",
+    dose: "每侧 12 次 × 2 组",
+    why: "臀中肌负责走路单腿站立时稳住骨盆，它无力时腰方肌和膝盖就得代偿，侧抬腿是它最直接的强化动作。",
+    caution: "身体不要向对侧倾斜借力"
+  },
+  {
+    id: "sit_ql_sidebend",
+    name: "坐姿侧向伸展",
+    forState: "tight",
+    muscles: ["quadratus_lumborum"],
+    regions: ["low_back_hip"],
+    scenes: ["desk", "open"],
+    gear: "none",
+    posture: "sit",
+    kind: "stretch",
+    howto: "坐稳在椅面，双脚踩实分开与髋同宽。一手向上伸直，身体缓慢向对侧侧屈，感觉腰侧被拉开，保持呼吸后换边。",
+    dose: "每侧 20–30 秒 × 2",
+    why: "跷二郎腿和单侧负重让一侧腰方肌长期短缩，坐姿侧屈能直接拉开它。",
+    caution: "侧屈而不是前扑，两侧都要拉，紧的一侧可多停 10 秒"
+  },
+  {
+    id: "sit_calf_towel",
+    name: "坐姿毛巾拉小腿",
+    forState: "tight",
+    muscles: ["gastrocnemius", "soleus"],
+    regions: ["leg"],
+    scenes: ["desk", "open"],
+    gear: "none",
+    posture: "sit",
+    kind: "stretch",
+    howto: "坐在地上或椅边，一条腿向前伸，毛巾绕在前脚掌两端，双手把毛巾向身体方向轻拉，脚尖回勾、膝盖尽量伸直，感觉小腿后侧拉开。",
+    dose: "每侧 20–30 秒 × 2",
+    why: "久坐和穿鞋让小腿后侧肌群适应短缩，脚踝活动度变小，拉松它下蹲时脚跟才能踩实。",
+    caution: "腰背保持挺直，从髋关节向前而不是弓背"
+  },
+  {
+    id: "sit_chair_dip",
+    name: "椅子撑体",
+    forState: "weak",
+    muscles: ["triceps_brachii"],
+    regions: ["arm"],
+    scenes: ["desk", "open"],
+    gear: "none",
+    posture: "sit",
+    kind: "activate",
+    howto: "双手撑在稳固的椅面两侧边缘，臀部前移离开椅子，屈肘让身体缓慢下沉，再用手臂后侧发力把自己撑起。",
+    dose: "8–10 次 × 2 组",
+    why: "长期屈肘操作让手臂后侧的肱三头肌无力，撑体可以在工位上直接强化它。",
+    caution: "椅子必须稳固不会滑动；肩部不适就停止"
   }
 ];
 var KIND_PRIORITY = {
@@ -2524,13 +2986,21 @@ export {
   MUSCLE_IDS,
   MUSCLE_MAP,
   MUSCLE_SLOT_MAP,
+  MUTEX_GROUPS,
+  MUTEX_PAIRS,
   PATTERNS,
   RED_FLAGS,
+  REGIONS4,
   REGION_CANDIDATES,
   REGION_LABEL,
   SCENE_HINT,
   SCENE_LABEL,
   SLOT_RECTS,
+  SYMPTOMS,
+  SYMPTOM_ACTIONS,
+  SYMPTOM_ADVICE,
+  SYMPTOM_BY_ID,
+  actionPackageFor,
   actionTargetLabel,
   actionTargetName,
   analyzeBySlots,
@@ -2544,8 +3014,10 @@ export {
   hitRedFlag,
   matchPatterns,
   matchPatternsBySense,
+  mutexBlocked,
   parseLocal,
   pickActions,
   refinePatterns,
-  resolveSlot
+  resolveSlot,
+  symptomUnion
 };

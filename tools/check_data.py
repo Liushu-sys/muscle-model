@@ -20,6 +20,7 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MUS = os.path.join(ROOT, "src", "data", "muscles.ts")
 PAT = os.path.join(ROOT, "src", "data", "patterns.ts")
+ENGINE = os.path.join(ROOT, "assets", "mm-engine.js")
 
 RED_FLAGS = ["手麻", "手臂发麻", "腿麻", "放射性", "头晕", "恶心",
              "视力模糊", "夜间痛醒", "外伤", "发烧", "走路不稳",
@@ -84,11 +85,25 @@ def main():
             names = [muscles[d]["name"] for d in dup if d in muscles]
             warnings.append(f"模式 {pid} 中 {names} 同时是「紧张」和「减弱」，UI 上一个点不能两种颜色，需去重")
 
-    # ---- 检查 2 ----
+    # ---- 检查 2（docs/13：14 症状引用也算被点亮）----
+    symptom_ids = set()
+    eng_path = ENGINE
+    if os.path.exists(eng_path):
+        eng = open(eng_path, encoding="utf-8").read()
+        m = re.search(r"var SYMPTOMS = \[(.*?)\n\];", eng, re.S)
+        if m:
+            pools = re.findall(
+                r"(?:inferredTight|inferredWeak|stretchOnly|tight|weak): \[(.*?)\]",
+                m.group(1), re.S)
+            symptom_ids = set(re.findall(r'"([a-z_]+)"', "\n".join(pools)))
+            missing_sym = sorted(x for x in symptom_ids if x not in muscles)
+            if missing_sym:
+                errors.append(f"SYMPTOMS 引用了 muscles.ts 中不存在的肌肉 id：{missing_sym}")
+    used |= symptom_ids
     orphan = set(muscles) - used
     if orphan:
         names = [muscles[o]["name"] for o in sorted(orphan)]
-        warnings.append(f"{len(orphan)} 块肌肉从未被任何模式引用，永远不会被点亮（备位）：{names}")
+        warnings.append(f"{len(orphan)} 块肌肉未被 9 模式或 14 症状引用，图上无涂色入口（备位）：{names}")
 
     # ---- 检查 4 ----
     for mid, m in muscles.items():
