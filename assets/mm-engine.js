@@ -1139,35 +1139,67 @@ var PATTERNS = [
 // ════════════════════════════════════════════════════════════════════
 
 // 9 个身体位置 → 9 个失衡类型（一对一）。framework 是解释外壳，不是第 10 种类型。
+// bookName = 书原名（双层命名的第一层，卡片标题用）；plain = 通俗表现（第二层）。
 var BODY_SLOTS = [
   { id: "neck", name: "脖子", patternId: "cranio_cervical", framework: "UCS",
+    bookName: "颅颈区 · 头部过度前伸姿势",
     plain: "头不自觉往前探，脖子后面发沉发紧，看手机电脑久了更明显" },
   { id: "chest", name: "胸口/肩胛间", patternId: "scapulothoracic", framework: "UCS",
+    bookName: "肩胛胸壁关节 · 肩胛骨过度下旋、前伸和前倾",
     plain: "含胸、两肩往前扣，肩胛骨之间发酸，打字开车看手机久了加重" },
   { id: "shoulder_girdle", name: "肩外侧/肩后深层", patternId: "shoulder_glenohumeral", framework: "UCS",
+    bookName: "盂肱关节 · 肩外展/前屈受限、外旋不足",
     plain: "抬手、梳头、手往后背够的时候费劲或卡住" },
   { id: "mid_back", name: "上背脊柱", patternId: "thoracic", framework: "cross",
+    bookName: "胸椎区域 · 胸椎过度后凸（驼背）",
     plain: "背挺不直、习惯性驼背，常和圆肩、头前伸一起出现" },
   { id: "low_back_hip", name: "腰/骨盆/臀", patternId: "hip", framework: "LCS",
+    bookName: "髋关节 · 伸展减少、屈曲挛缩（骨盆前倾）",
     plain: "久坐后髋前面紧、站起来要缓一下，腰容易累，屁股使不上劲" },
   { id: "thigh", name: "大腿/膝", patternId: "knee", framework: "joint",
+    bookName: "膝关节 · 伸展不足、屈曲挛缩",
     plain: "膝盖发软、上下楼打软腿、大腿后侧紧" },
   { id: "calf", name: "小腿/踝", patternId: "ankle", framework: "joint",
+    bookName: "踝关节 · 背伸受限、跖屈挛缩",
     plain: "小腿肚和跟腱紧、勾脚费劲、走路容易绊" },
   { id: "upper_arm", name: "上臂/肘", patternId: "elbow", framework: "joint",
+    bookName: "肘关节复合体 · 伸展减弱、屈曲挛缩",
     plain: "胳膊伸不直、手肘前后侧发紧" },
   { id: "forearm", name: "前臂/腕", patternId: "wrist", framework: "joint",
+    bookName: "腕关节 · 腕伸展不足",
     plain: "手腕酸、打字握鼠标后发紧" }
 ];
 var BODY_SLOTS_BY_ID = Object.fromEntries(BODY_SLOTS.map((s) => [s.id, s]));
 
-// 框架层（文案阶段2补全；阶段1先立骨架）
+// 框架层：类型的解释外壳。desc 用于类型卡框架标签行的展开说明。
+// limb=true 表示该类型用「关节活动度受限」模式解释，不属于上下交叉综合征（docs/12 §2）。
 var FRAMEWORKS = {
-  UCS:   { id: "UCS-01", name: "上交叉综合征", tag: "上交叉综合征 · 相关成分", limb: false },
-  LCS:   { id: "LCS-01", name: "下交叉综合征", tag: "下交叉综合征 · 相关成分", limb: false },
-  cross: { id: "cross", name: "跨上/下交叉", tag: "跨上/下交叉相关", limb: false },
-  joint: { id: "joint", name: "独立关节模式", tag: "独立关节模式 · 不属于交叉综合征", limb: true }
+  UCS: {
+    id: "UCS-01", name: "上交叉综合征",
+    tag: "上交叉综合征 · 相关成分", limb: false,
+    desc: "颈肩胸区域“前侧偏紧、后侧偏弱”的连锁失衡：胸前与颈后肌肉紧张，颈深屈肌和肩胛稳定肌偏弱，常一起表现为头前伸、圆肩。"
+  },
+  LCS: {
+    id: "LCS-01", name: "下交叉综合征",
+    tag: "下交叉综合征 · 相关成分", limb: false,
+    desc: "腰骨盆区域“屈髋肌与腰背肌偏紧、腹肌与臀肌偏弱”的力偶失衡，久坐下常见，表现为骨盆前倾和腰部容易累。"
+  },
+  cross: {
+    id: "cross", name: "跨上/下交叉",
+    tag: "跨上/下交叉相关", limb: false,
+    desc: "胸椎后凸（驼背）位于上、下交叉之间，常与圆肩、头前伸或骨盆前倾同时出现。"
+  },
+  joint: {
+    id: "joint", name: "独立关节模式",
+    tag: "独立关节模式", limb: true,
+    desc: "该类型用单一关节的活动度受限模式解释，不属于上交叉或下交叉综合征。"
+  }
 };
+
+// D10 文案红线：每张类型卡底部固定免责声明
+var DIAGNOSIS_DISCLAIMER = "以上为该失衡模式中的常见肌肉关系，不代表您个人肌肉状态的确认。";
+// 书证引用统一格式
+var BOOK_REF = "依据《基础肌动学》第 4 版";
 
 // 兜底坐标矩形（SVG viewBox 200×460，docs/12 §3.1 初值，实测微调后回填图纸）
 var SLOT_RECTS = {
@@ -2483,7 +2515,9 @@ function actionTargetName(a, lib) {
 export {
   ACTIONS,
   BODY_SLOTS,
+  BOOK_REF,
   DEMO_PATTERN_IDS,
+  DIAGNOSIS_DISCLAIMER,
   FRAMEWORKS,
   KIND_LABEL,
   MUSCLES,
