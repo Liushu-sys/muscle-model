@@ -191,40 +191,94 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .cta-primary{width:100%;padding:14px 16px;border:0;border-radius:16px;background:#4198AC;color:#fff;font:inherit;font-size:15.5px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.4);transition:transform .12s,background .12s}
 .cta-primary:active{transform:scale(.98);background:#337F92}
 
-/* 第三页：上下分页（snap），每页撑满可视区域 */
-.advice-body{flex:1;min-height:0;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none}
+/* 第三页：三段横滑（snap），每板块一整屏 */
+/* overflow:hidden 裁住滑入前停在屏幕右侧的详情面板，避免整页出现横向溢出 */
+#page-advice{overflow:hidden}
+.advice-header{display:block;padding-bottom:10px}
+.advice-header-row{display:flex;align-items:center;height:34px}
+.adv-tabs{display:flex;gap:3px;margin-top:10px;padding:3.5px;background:#F2F5F5;border-radius:99px}
+.adv-tab{flex:1;padding:7.5px 0;border:0;background:transparent;border-radius:99px;font:inherit;font-size:13px;font-weight:600;color:#7B8586;cursor:pointer;transition:background .18s ease,color .18s ease,transform .12s ease;white-space:nowrap}
+.adv-tab.active{background:#fff;color:#337F92;box-shadow:0 1px 5px rgba(31,68,77,.14)}
+.adv-tab:active{transform:scale(.96)}
+
+.advice-body{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;scroll-behavior:smooth}
 .advice-body::-webkit-scrollbar{display:none}
-.adv-page{height:100%;scroll-snap-align:start;display:flex;flex-direction:column;padding:18px 20px 22px}
-.adv-sub{margin:0;font-size:14px;color:#6E7778;line-height:1.65}
-/* 第三页两屏共用标题样式（当下即做的缓解动作 / 长期坚持的改善方向） */
-.adv-page-title{margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122}
-.adv-actions{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
-.adv-card{flex:1;min-height:0;display:flex;align-items:center;gap:14px;padding:12px 12px 12px 16px;background:#F8FAFA;border-radius:16px}
-.adv-card-text{flex:1;min-width:0}
-.adv-tag{display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600}
-.adv-name{font-size:14.5px;font-weight:700;color:#1D2122;margin-bottom:3px}
-.adv-desc{font-size:13px;color:#6E7778;line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.adv-dose{margin-top:6px;font-size:12.5px;font-weight:600;color:#337F92}
-.adv-img{position:relative;flex-shrink:0;width:50%;align-self:stretch;border-radius:12px;background:#E8F0F0;display:grid;place-items:center}
-.adv-img span{font-size:11px;color:#A2ABAC}
-.adv-fav{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;cursor:pointer;color:#B7BFC0;transition:transform .15s ease,color .15s ease}
-.adv-fav:active{transform:scale(.88)}
-.adv-fav svg{width:16px;height:16px}
-.adv-fav.on{color:#F5A623}
-.adv-fav.on svg{fill:currentColor}
-.adv-lt-title{margin:0 0 14px;font-size:15px;font-weight:700;color:#1D2122}
-.adv-dim{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:10px;margin-bottom:14px;padding:14px 16px;background:#F8FAFA;border-radius:16px}
+.adv-pane{flex:0 0 100%;max-width:100%;height:100%;scroll-snap-align:start;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:14px 16px 88px;display:flex;flex-direction:column}
+.adv-pane::-webkit-scrollbar{display:none}
+
+/* 场景动作入口卡（上下两个，撑满一屏） */
+.adv-entries{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px}
+.adv-entry{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:7px;padding:18px 46px 18px 20px;border:0;text-align:left;background:#F8FAFA;border-radius:18px;font:inherit;cursor:pointer;transition:transform .14s ease}
+.adv-entry:active{transform:scale(.985)}
+.adv-entry .adv-tag{align-self:flex-start;margin-bottom:1px}
+.adv-entry-name{font-size:16px;font-weight:700;color:#1D2122}
+.adv-entry-desc{font-size:13px;color:#6E7778;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.adv-entry-arrow{position:absolute;right:18px;top:50%;transform:translateY(-50%);color:#A2ABAC;display:flex}
+.adv-entry-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:#A2ABAC;line-height:1.7;border:1.5px dashed #E3EAE9;border-radius:18px;padding:20px}
+
+/* 标签（沿用红/紫语义色） */
+.adv-tag{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600}
+.adv-tag-relief{background:#FDECEB;color:#D8403A}
+.adv-tag-strengthen{background:#F0E8F5;color:#7B5BA0}
+
+/* 长期改善：姿势/行为/环境，紧凑一屏 */
+.adv-dim{padding:12px 15px;background:#F8FAFA;border-radius:16px;margin-bottom:10px}
 .adv-dim:last-child{margin-bottom:0}
-.adv-dim h6{margin:0;font-size:14px;font-weight:700;color:#1D2122}
+.adv-dim h6{margin:0 0 7px;font-size:14px;font-weight:700;color:#1D2122}
 .adv-dim h6 .dim-chip{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:700}
 .dim-chip-posture{background:#E8F3F4;color:#337F92}
 .dim-chip-behavior{background:#FDECEB;color:#D8403A}
 .dim-chip-environment{background:#F0E8F5;color:#7B5BA0}
-.adv-item-t{font-size:14px;font-weight:600;color:#1D2122;margin-bottom:2px}
-.adv-item-d{font-size:13px;color:#6E7778;line-height:1.5}
-.advice-home-bar{flex-shrink:0;padding:8px 16px max(12px,env(safe-area-inset-bottom));border-top:1px solid #edf0ef;background:#fff}
-#advice-home-btn{width:100%;min-height:48px;border:1.5px solid #CFE2E5;border-radius:14px;background:#fff;color:#337F92;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:background .16s}
-#advice-home-btn:active{background:#F2F8F7}
+.adv-item{padding:3px 0}
+.adv-item-t{font-size:13.5px;font-weight:600;color:#1D2122;margin-bottom:1px}
+.adv-item-d{font-size:12.5px;color:#6E7778;line-height:1.5}
+
+/* 底部「完成，返回首页」浮动胶囊 */
+.advice-home-bar{position:absolute;left:16px;right:16px;bottom:max(14px,env(safe-area-inset-bottom,0px));z-index:30;padding:0;border:0;background:transparent;transition:opacity .2s ease}
+#advice-home-btn{width:100%;min-height:46px;border:0;border-radius:99px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#337F92;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -8px rgba(31,68,77,.28);border:1px solid rgba(207,226,229,.8);transition:transform .12s,background .16s}
+#advice-home-btn:active{transform:scale(.98);background:#F2F8F7}
+#page-advice.detail-open .advice-home-bar{opacity:0;pointer-events:none}
+
+/* ── 动作跟练详情（页内 overlay）────────────────────── */
+.adv-detail{position:absolute;inset:0;z-index:40;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);visibility:hidden}
+.adv-detail.open{transform:translateX(0);visibility:visible}
+.adv-detail-top{flex-shrink:0;display:flex;align-items:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 6px}
+.adv-detail-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:6px 20px calc(26px + env(safe-area-inset-bottom,0px))}
+.adv-detail-scroll::-webkit-scrollbar{display:none}
+
+/* 双态示意图：左准备 → 右完成 */
+.avd-figure{display:flex;align-items:stretch;gap:8px;margin-bottom:6px}
+.avd-fig{flex:1;aspect-ratio:4/3;border-radius:14px;background:#EEF3F3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#93A0A1}
+.avd-fig svg{width:30px;height:30px}
+.avd-fig-label{font-size:11.5px;font-weight:600}
+.avd-fig-arrow{flex:0 0 18px;display:flex;align-items:center;justify-content:center;color:#B7C2C3}
+.avd-fig-cap{margin:0 0 14px;font-size:12px;color:#9AA4A5;text-align:center}
+
+/* 动作介绍卡 */
+.avd-info{background:#F8FAFA;border-radius:18px;padding:16px 18px;margin-bottom:14px}
+.avd-name{margin:0 0 5px;font-size:18px;font-weight:700;color:#1D2122}
+.avd-purpose{margin:0 0 12px;font-size:13.5px;line-height:1.6;color:#556062}
+.avd-step-label{margin:0 0 4px;font-size:12.5px;font-weight:700;color:#337F92}
+.avd-step{margin:0;font-size:13.5px;line-height:1.7;color:#1D2122}
+.avd-dose{margin-top:10px;font-size:12px;font-weight:600;color:#8A9596}
+
+/* 跟练节奏区 */
+.avd-rhythm{background:#F8FAFA;border-radius:18px;padding:18px 18px 20px}
+.avd-rhythm-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:13px}
+.avd-rhythm-title{font-size:14.5px;font-weight:700;color:#1D2122}
+.avd-rhythm-count{font-size:13px;font-weight:700;color:#337F92}
+.avd-rhythm-count.done{color:#4F9E6F}
+.avd-phase{font-size:12.5px;color:#8A9596;margin-bottom:9px;min-height:17px}
+.avd-track{display:flex;gap:6px;margin-bottom:15px}
+.avd-dot{flex:1;height:7px;border-radius:99px;background:#E4EBEB;transition:background .25s ease}
+.avd-dot.on{background:#4198AC}
+.avd-bar{height:8px;border-radius:99px;background:#E4EBEB;overflow:hidden;margin-bottom:15px}
+.avd-bar-fill{height:100%;width:0;border-radius:99px;background:#4198AC;transition:width .35s ease}
+.avd-start{width:100%;min-height:48px;border:0;border-radius:15px;background:#4198AC;color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(65,152,172,.35);transition:transform .12s,background .12s}
+.avd-start:active{transform:scale(.98)}
+.avd-start.ghost{background:#fff;color:#337F92;border:1.5px solid #CFE2E5;box-shadow:none}
+.avd-done-tip{display:none;align-items:center;justify-content:center;gap:7px;margin-top:12px;font-size:14px;font-weight:600;color:#4F9E6F}
+.avd-done-tip.show{display:flex}
 
 /* ── iOS Sheet ─────────────────────── */
 .sheet-mask{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0);transition:background .25s;pointer-events:none}
@@ -500,13 +554,31 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 <!-- ===== 改善建议页（第三页）===== -->
 <div id="page-advice" class="page" style="display:none">
-  <header class="result-header">
-    <button class="back-btn" id="advice-back-btn" aria-label="返回">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
+  <header class="result-header advice-header">
+    <div class="advice-header-row">
+      <button class="back-btn" id="advice-back-btn" aria-label="返回">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <div class="adv-tabs" id="adv-tabs" role="tablist">
+      <button type="button" class="adv-tab active" data-pane="0" role="tab">坐姿轻动作</button>
+      <button type="button" class="adv-tab" data-pane="1" role="tab">站姿轻动作</button>
+      <button type="button" class="adv-tab" data-pane="2" role="tab">长期改善</button>
+    </div>
   </header>
-  <div class="advice-body" id="advice-body"><!-- 阶段5填充 --></div>
-  <div class="advice-home-bar">
+  <div class="advice-body" id="advice-body"><!-- 阶段5填充：三屏横滑 --></div>
+
+  <!-- 动作跟练详情（页内 overlay，不新增页面） -->
+  <div class="adv-detail" id="adv-detail" aria-hidden="true">
+    <header class="adv-detail-top">
+      <button class="back-btn" id="adv-detail-back" aria-label="返回动作列表">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </header>
+    <div class="adv-detail-scroll" id="adv-detail-scroll"></div>
+  </div>
+
+  <div class="advice-home-bar" id="advice-home-bar">
     <button type="button" id="advice-home-btn">完成，返回首页</button>
   </div>
 </div>
@@ -1704,59 +1776,83 @@ var ADVICE_SECTIONS = [
   {key:'environment',title:'环境', hint:'调整每天使用的设备和空间。'}
 ];
 
+/* ─────────────────────────────────────────────────────
+   第三页：坐姿 / 站姿 / 长期改善 三板块横滑 + 动作跟练
+   数据只读本页之前的诊断结果（muscleStates），不重新诊断
+   ───────────────────────────────────────────────────── */
+var adviceBodyEl = document.getElementById('advice-body');
+var adviceDetailEl = document.getElementById('adv-detail');
+var adviceDetailScroll = document.getElementById('adv-detail-scroll');
+var advicePicks = {sit:{relief:null, strengthen:null}, stand:{relief:null, strengthen:null}};
+var advRhythmTimer = null;
+
+// 按场景 + 类型挑 1 个动作：精确姿势优先，posture:'any' 降级；都没有就返回 null
+function pickSceneAction(kind, posture, tightIds, weakIds){
+  if(typeof ACTIONS === 'undefined' || !ACTIONS) return null;
+  var hitIds = kind==='relief' ? tightIds : weakIds;
+  var stateOk = kind==='relief'
+    ? function(a){ return a.forState==='tight' || a.forState==='both'; }
+    : function(a){ return a.forState==='weak'; };
+  var pool = ACTIONS.filter(function(a){
+    return stateOk(a) && a.muscles.some(function(m){ return hitIds.indexOf(m) !== -1; });
+  });
+  var exact = pool.filter(function(a){ return a.posture === posture; });
+  if(exact.length) return exact[0];
+  var any = pool.filter(function(a){ return a.posture === 'any'; });
+  return any.length ? any[0] : null;
+}
+
+function sceneEntryHtml(a, kind, scene){
+  var tag = kind==='relief'
+    ? '<span class="adv-tag adv-tag-relief">🔴 立即缓解</span>'
+    : '<span class="adv-tag adv-tag-strengthen">🟣 长期加强</span>';
+  var desc = (a.howto || '').split('。')[0];
+  if(desc) desc += '。';
+  return '<button type="button" class="adv-entry" data-scene="' + scene + '" data-kind="' + kind + '">'
+    + tag
+    + '<div class="adv-entry-name">' + a.name + '</div>'
+    + '<div class="adv-entry-desc">' + desc + '</div>'
+    + '<span class="adv-entry-arrow"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span>'
+    + '</button>';
+}
+
 function renderAdvicePage(){
   refreshRegionGroups();
+  // 重进页面：收起可能残留的动作详情
+  stopAdvRhythm();
+  adviceDetailEl.classList.remove('open');
+  adviceDetailEl.setAttribute('aria-hidden','true');
+  document.getElementById('page-advice').classList.remove('detail-open');
+  document.querySelectorAll('#adv-tabs .adv-tab').forEach(function(t,i){ t.classList.toggle('active', i===0); });
+
   // 受累区域（用于长期改善建议排序）
   var affected = [];
   Object.keys(REGION_GROUPS).forEach(function(k){
     if(REGION_GROUPS[k].tight.length || REGION_GROUPS[k].weak.length) affected.push(k);
   });
-
-  // ── 第 1 页：现在可以做 ──
-  var h1 = '<div class="adv-page-title">当下即做的缓解动作</div>';
-
-  // 固定 3 个动作：过劳 → 缓解（优先2个）；偏弱 → 强化（1个）；不足则用剩余动作补齐
   var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='tight'; });
   var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id]==='weak'; });
-  var acts = [];
-  if(typeof ACTIONS !== 'undefined' && ACTIONS){
-    // 当下即做的缓解动作：只保留坐姿/原地站姿/任意姿势，排除躺姿与床上动作
-    var nowOK = function(a){ return a.posture==='sit' || a.posture==='stand' || a.posture==='any'; };
-    var relief = ACTIONS.filter(function(a){ return (a.forState==='tight' || a.forState==='both') && nowOK(a) && a.muscles.some(function(m){ return tightIds.indexOf(m)!==-1; }); });
-    var strengthen = ACTIONS.filter(function(a){ return a.forState==='weak' && a.muscles.some(function(m){ return weakIds.indexOf(m)!==-1; }); });
-    relief.slice(0,2).forEach(function(a){ acts.push({a:a, kind:'relief'}); });
-    if(strengthen.length) acts.push({a:strengthen[0], kind:'strengthen'});
-    var rest = relief.slice(2).map(function(a){ return {a:a, kind:'relief'}; })
-      .concat(strengthen.slice(1).map(function(a){ return {a:a, kind:'strengthen'}; }));
-    while(acts.length < 3 && rest.length) acts.push(rest.shift());
-  }
-  h1 += '<div class="adv-actions">';
-  acts.forEach(function(x){
-    var a = x.a;
-    var tagBg = x.kind==='relief' ? '#FDECEB' : '#F0E8F5';
-    var tagColor = x.kind==='relief' ? '#D8403A' : '#7B5BA0';
-    var tagTxt = x.kind==='relief' ? '🔴 立即缓解' : '🟣 长期强化';
-    var howto = (a.howto || '').split('。')[0];
-    if(howto) howto += '。';
-    h1 += '<div class="adv-card">';
-    h1 += '<div class="adv-card-text">';
-    h1 += '<span class="adv-tag" style="background:' + tagBg + ';color:' + tagColor + '">' + tagTxt + '</span>';
-    h1 += '<div class="adv-name">' + a.name + '</div>';
-    h1 += '<div class="adv-desc">' + howto + '</div>';
-    if(a.dose) h1 += '<div class="adv-dose">' + a.dose + '</div>';
-    h1 += '</div>';
-    h1 += '<div class="adv-img"><span>动作示意</span>'
-      + '<button type="button" class="adv-fav" data-favid="' + (a.id || a.name) + '" aria-label="收藏">'
-      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg>'
-      + '</button></div>';
-    h1 += '</div>';
-  });
-  h1 += '</div>';
 
-  // ── 第 2 页：长期改善（姿势/行为/环境 × 各2条）──
-  var h2 = '<div class="adv-page-title">长期坚持的改善方向</div>';
+  // ── 坐姿 / 站姿：各 1 缓解 +（有则）1 加强 ──
+  ['sit','stand'].forEach(function(scene){
+    advicePicks[scene].relief     = pickSceneAction('relief', scene, tightIds, weakIds);
+    advicePicks[scene].strengthen = pickSceneAction('strengthen', scene, tightIds, weakIds);
+  });
+
+  function scenePaneHtml(scene){
+    var p = advicePicks[scene];
+    var h = '<div class="adv-entries">';
+    if(p.relief) h += sceneEntryHtml(p.relief, 'relief', scene);
+    else h += '<div class="adv-entry-empty">当前没有匹配的即时缓解动作</div>';
+    if(p.strengthen) h += sceneEntryHtml(p.strengthen, 'strengthen', scene);
+    else h += '<div class="adv-entry-empty">这个姿势下暂时没有对应的加强动作<br>可以换到另一个场景看看</div>';
+    h += '</div>';
+    return '<section class="adv-pane">' + h + '</section>';
+  }
+
+  // ── 长期改善：姿势/行为/环境 × 各2条（沿用既有池子与排序）──
+  var hLong = '<section class="adv-pane"><div style="flex:1;display:flex;flex-direction:column;justify-content:center">';
   ADVICE_SECTIONS.forEach(function(sec){
-    // 区域相关的建议排前面，固定取2条
     var pool = ADVICE_POOL[sec.key].slice();
     pool.sort(function(a,b){
       var aHit = a.regions.some(function(r){ return affected.indexOf(r) !== -1; }) ? 0 : 1;
@@ -1764,35 +1860,199 @@ function renderAdvicePage(){
       return aHit - bHit;
     });
     var items = pool.slice(0, 2);
-    h2 += '<div class="adv-dim"><h6><span class="dim-chip dim-chip-' + sec.key + '">' + sec.title + '</span></h6>';
+    hLong += '<div class="adv-dim"><h6><span class="dim-chip dim-chip-' + sec.key + '">' + sec.title + '</span></h6>';
     items.forEach(function(it){
-      h2 += '<div class="adv-item">';
-      h2 += '<div class="adv-item-t">' + it.t + '</div>';
-      h2 += '<div class="adv-item-d">' + it.d + '</div>';
-      h2 += '</div>';
+      hLong += '<div class="adv-item">';
+      hLong += '<div class="adv-item-t">' + it.t + '</div>';
+      hLong += '<div class="adv-item-d">' + it.d + '</div>';
+      hLong += '</div>';
     });
-    h2 += '</div>';
+    hLong += '</div>';
   });
+  hLong += '</div></section>';
 
-  document.getElementById('advice-body').innerHTML =
-    '<section class="adv-page">' + h1 + '</section>' +
-    '<section class="adv-page">' + h2 + '</section>';
-  document.getElementById('advice-body').scrollTop = 0;
+  adviceBodyEl.innerHTML = scenePaneHtml('sit') + scenePaneHtml('stand') + hLong;
+  adviceBodyEl.scrollLeft = 0;
+}
 
-  // 收藏：点亮/取消，localStorage 持久化
-  var favs = [];
-  try{ favs = JSON.parse(localStorage.getItem('favActions')||'[]'); }catch(e){}
-  document.querySelectorAll('.adv-fav').forEach(function(btn){
-    if(favs.indexOf(btn.dataset.favid) !== -1) btn.classList.add('on');
-    btn.addEventListener('click', function(){
-      var on = btn.classList.toggle('on');
-      var arr = [];
-      try{ arr = JSON.parse(localStorage.getItem('favActions')||'[]'); }catch(e){}
-      var i = arr.indexOf(btn.dataset.favid);
-      if(on && i === -1) arr.push(btn.dataset.favid);
-      if(!on && i !== -1) arr.splice(i, 1);
-      try{ localStorage.setItem('favActions', JSON.stringify(arr)); }catch(e){}
-    });
+/* 顶部三段切换 ↔ 横向滑动联动（静态元素，只绑一次） */
+(function(){
+  var tabsWrap = document.getElementById('adv-tabs');
+  tabsWrap.addEventListener('click', function(e){
+    var b = e.target.closest('.adv-tab');
+    if(!b) return;
+    var i = parseInt(b.dataset.pane, 10);
+    adviceBodyEl.scrollTo({left: i * adviceBodyEl.clientWidth, behavior:'smooth'});
+  });
+  var snapTimer = null;
+  adviceBodyEl.addEventListener('scroll', function(){
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(function(){
+      var i = Math.round(adviceBodyEl.scrollLeft / adviceBodyEl.clientWidth) || 0;
+      tabsWrap.querySelectorAll('.adv-tab').forEach(function(t, j){ t.classList.toggle('active', j === i); });
+    }, 70);
+  });
+  // 动作入口点击（事件委托，renderAdvicePage 重渲染后仍有效）
+  adviceBodyEl.addEventListener('click', function(e){
+    var b = e.target.closest('.adv-entry');
+    if(!b) return;
+    var pick = advicePicks[b.dataset.scene] && advicePicks[b.dataset.scene][b.dataset.kind];
+    if(pick) openAdviceDetail(pick);
+  });
+  document.getElementById('adv-detail-back').addEventListener('click', closeAdviceDetail);
+})();
+
+/* ── 动作跟练详情 ── */
+// 内置节奏：保持型（拉伸/按压或剂量含秒）→ 倒计时；次数型 → N 次 ×（2 秒做 + 1 秒回位）
+function buildRhythm(a){
+  var dose = a.dose || '';
+  var isHold = /秒|分钟/.test(dose) || a.kind === 'release' || a.kind === 'stretch';
+  if(isHold){
+    var secs = 30;
+    var m = dose.match(/(\d+(?:\.\d+)?)\s*(秒|分钟)/);
+    if(m){
+      secs = parseFloat(m[1]);
+      if(m[2] === '分钟') secs *= 60;
+    }
+    return {mode:'hold', total: Math.max(5, Math.min(60, Math.round(secs)))};
+  }
+  var reps = 10;
+  var rm = dose.match(/(\d+)\s*次/);
+  if(rm) reps = Math.max(3, Math.min(20, parseInt(rm[1], 10)));
+  return {mode:'reps', total:reps, active:2, rest:1};
+}
+
+function adviceDetailHtml(a, r){
+  var figIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
+  var arrow = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="20" y2="12"/><polyline points="15 7 20 12 15 17"/></svg>';
+  var h = '';
+  h += '<div class="avd-figure">'
+    + '<div class="avd-fig">' + figIcon + '<span class="avd-fig-label">准备姿势</span></div>'
+    + '<div class="avd-fig-arrow">' + arrow + '</div>'
+    + '<div class="avd-fig">' + figIcon + '<span class="avd-fig-label">完成动作</span></div>'
+    + '</div>';
+  h += '<p class="avd-fig-cap">左：准备姿势 · 右：完成动作</p>';
+
+  h += '<div class="avd-info">';
+  h += '<h3 class="avd-name">' + a.name + '</h3>';
+  if(a.why) h += '<p class="avd-purpose">' + a.why + '</p>';
+  h += '<p class="avd-step-label">怎么做</p>';
+  h += '<p class="avd-step">' + (a.howto || '') + '</p>';
+  if(a.dose) h += '<div class="avd-dose">建议剂量：' + a.dose + '</div>';
+  h += '</div>';
+
+  h += '<div class="avd-rhythm">';
+  h += '<div class="avd-rhythm-head">';
+  h += '<div class="avd-rhythm-title">' + (r.mode==='reps' ? '跟着节奏，一次一下' : '跟着节奏保持住') + '</div>';
+  h += '<div class="avd-rhythm-count">' + (r.mode==='reps' ? '共 ' + r.total + ' 次' : '共 ' + r.total + ' 秒') + '</div>';
+  h += '</div>';
+  h += '<div class="avd-phase"></div>';
+  h += '<div class="avd-rhythm-viz"></div>';
+  h += '<button type="button" class="avd-start">开始跟练</button>';
+  h += '<div class="avd-done-tip"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>完成，做得好</div>';
+  h += '</div>';
+  return h;
+}
+
+function stopAdvRhythm(){
+  if(advRhythmTimer){ clearTimeout(advRhythmTimer); advRhythmTimer = null; }
+}
+
+function openAdviceDetail(a){
+  stopAdvRhythm();
+  var r = buildRhythm(a);
+  adviceDetailScroll.innerHTML = adviceDetailHtml(a, r);
+  adviceDetailEl.classList.add('open');
+  adviceDetailEl.setAttribute('aria-hidden','false');
+  document.getElementById('page-advice').classList.add('detail-open');
+  adviceDetailScroll.scrollTop = 0;
+  bindAdviceRhythm(r);
+}
+
+function closeAdviceDetail(){
+  stopAdvRhythm();
+  adviceDetailEl.classList.remove('open');
+  adviceDetailEl.setAttribute('aria-hidden','true');
+  document.getElementById('page-advice').classList.remove('detail-open');
+}
+
+function bindAdviceRhythm(r){
+  var root = adviceDetailScroll;
+  var countEl = root.querySelector('.avd-rhythm-count');
+  var phaseEl = root.querySelector('.avd-phase');
+  var vizEl   = root.querySelector('.avd-rhythm-viz');
+  var btnEl   = root.querySelector('.avd-start');
+  var doneEl  = root.querySelector('.avd-done-tip');
+  var dotEls = [], barEl = null;
+  var running = false, finished = false, cur = 0, left = r.total;
+
+  if(r.mode === 'reps'){
+    var dots = '';
+    for(var i = 0; i < r.total; i++) dots += '<span class="avd-dot"></span>';
+    vizEl.innerHTML = '<div class="avd-track">' + dots + '</div>';
+    dotEls = Array.prototype.slice.call(vizEl.querySelectorAll('.avd-dot'));
+  }else{
+    vizEl.innerHTML = '<div class="avd-bar"><div class="avd-bar-fill"></div></div>';
+    barEl = vizEl.querySelector('.avd-bar-fill');
+  }
+
+  function paintIdle(){
+    countEl.classList.remove('done');
+    countEl.textContent = r.mode==='reps' ? '共 ' + r.total + ' 次' : '共 ' + r.total + ' 秒';
+    phaseEl.textContent = '';
+    doneEl.classList.remove('show');
+    btnEl.textContent = '开始跟练';
+    btnEl.classList.remove('ghost');
+    if(r.mode === 'reps') dotEls.forEach(function(d){ d.classList.remove('on'); });
+    else barEl.style.width = '0%';
+  }
+
+  function finish(){
+    running = false; finished = true; stopAdvRhythm();
+    phaseEl.textContent = '';
+    countEl.classList.add('done');
+    countEl.textContent = '完成';
+    doneEl.classList.add('show');
+    btnEl.textContent = '再做一次';
+    btnEl.classList.remove('ghost');
+  }
+
+  function repLoop(){
+    cur += 1;
+    if(cur > r.total){ finish(); return; }
+    dotEls[cur-1].classList.add('on');
+    countEl.textContent = cur + ' / ' + r.total;
+    phaseEl.textContent = '缓慢发力，保持 ' + r.active + ' 秒';
+    advRhythmTimer = setTimeout(function(){
+      if(cur < r.total) phaseEl.textContent = '回位放松';
+      advRhythmTimer = setTimeout(repLoop, r.rest * 1000);
+    }, r.active * 1000);
+  }
+
+  function holdTick(){
+    left -= 1;
+    if(left < 0){ finish(); return; }
+    barEl.style.width = Math.round((r.total - left) / r.total * 100) + '%';
+    countEl.textContent = '还剩 ' + left + ' 秒';
+    phaseEl.textContent = left <= 3 ? '最后坚持一下' : '保持住，自然呼吸';
+    advRhythmTimer = setTimeout(holdTick, 1000);
+  }
+
+  function start(){
+    running = true; finished = false;
+    cur = 0; left = r.total;
+    countEl.classList.remove('done');
+    doneEl.classList.remove('show');
+    btnEl.textContent = '结束';
+    btnEl.classList.add('ghost');
+    if(r.mode === 'reps') repLoop();
+    else { barEl.style.width = '0%'; countEl.textContent = '还剩 ' + left + ' 秒'; phaseEl.textContent = '保持住，自然呼吸'; advRhythmTimer = setTimeout(holdTick, 1000); }
+  }
+
+  btnEl.addEventListener('click', function(){
+    if(!running && !finished) start();
+    else if(running){ stopAdvRhythm(); running = false; paintIdle(); }
+    else { paintIdle(); start(); }
   });
 }
 
