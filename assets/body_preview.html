@@ -40,30 +40,29 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .m.sel{fill:#F6F0E9;stroke:#E3D5C8}
 
 /* ── 目录式诊断：四大区肌肉底色 + 轮廓垫色 + 隐形点击热层（docs/13 修订） ─────── */
-/* 区色：卡其暖调四色，各配同系深一档描边；仅诊断第一页使用（首页/结果页克隆时剥离） */
-#stage{background:#FBF7F1} /* 诊断页1 垫色透明度透出暖白底，保持卡其色系纯净 */
-#stage .m.r-neck{fill:#F4E9DD;stroke:#C5B09C}  /* 肩颈 米杏 */
-#stage .m.r-arm{fill:#F0D9CE;stroke:#C29B8B}   /* 肩臂 蜜桃 */
-#stage .m.r-back{fill:#DDC9BC;stroke:#B89A87}  /* 腰腹 浅驼 */
-#stage .m.r-leg{fill:#D2B9A4;stroke:#A6886E}   /* 臀腿 深卡其 */
+/* 区色：柔彩四色（紫/青/粉/浅蓝），各配同系深一档描边；仅诊断第一页使用（首页/结果页克隆时剥离） */
+#stage{background:#F7F8FA} /* 诊断页1 垫色透明度透出中性冷白底，保持柔彩色系纯净 */
+#stage .m.r-neck{fill:#E7CDEE;stroke:#B48FC7}  /* 肩颈 紫 */
+#stage .m.r-arm{fill:#B0E1EC;stroke:#79B3C6}   /* 肩臂 青 */
+#stage .m.r-back{fill:#EFB9C3;stroke:#D28C9B}  /* 腰腹 粉 */
+#stage .m.r-leg{fill:#AABDDA;stroke:#7E93C2}   /* 臀腿 浅蓝 */
 /* 跨区肌肉的第二区半透明叠层（与底色自然混色）；叠层无 .m 类，fill 需单独给 */
 .r-overlay{fill-opacity:.55;stroke:none;pointer-events:none;transition:opacity .15s}
-#stage .r-overlay.r-neck{fill:#F4E9DD}
-#stage .r-overlay.r-arm{fill:#F0D9CE}
-#stage .r-overlay.r-back{fill:#DDC9BC}
-#stage .r-overlay.r-leg{fill:#D2B9A4}
+#stage .r-overlay.r-neck{fill:#E7CDEE}
+#stage .r-overlay.r-arm{fill:#B0E1EC}
+#stage .r-overlay.r-back{fill:#EFB9C3}
+#stage .r-overlay.r-leg{fill:#AABDDA}
 /* 轮廓内区域垫色块：头→肩颈、手→肩臂、脚→臀腿、躯干按区分段；JS 注入并被轮廓 clipPath 裁切 */
-.rb-neck{fill:#F4E9DD}
-.rb-arm{fill:#F0D9CE}
-.rb-back{fill:#DDC9BC}
-.rb-leg{fill:#D2B9A4}
-/* 默认 60% 半透明；点选某区后：本区肌肉+垫色实心，其余三区压淡 */
-#stage [data-paint], #stage .region-base > *{opacity:.6;transition:opacity .15s ease-out}
-#stage.has-sel [data-paint], #stage.has-sel .region-base > *{opacity:.15}
-#stage.sel-neck [data-paint~="neck"], #stage.sel-neck .region-base > .rb-neck,
-#stage.sel-arm  [data-paint~="arm"],  #stage.sel-arm  .region-base > .rb-arm,
-#stage.sel-back [data-paint~="back"], #stage.sel-back .region-base > .rb-back,
-#stage.sel-leg  [data-paint~="leg"],  #stage.sel-leg  .region-base > .rb-leg{opacity:1}
+.rb-neck{fill:#E7CDEE}
+.rb-arm{fill:#B0E1EC}
+.rb-back{fill:#EFB9C3}
+.rb-leg{fill:#AABDDA}
+/* 默认 60% 半透明（含头）；点击某区弹出抽屉时仅本区肌肉实心，底色全程不变、其余区不压淡；抽屉关闭即恢复 */
+#stage [data-paint], #stage [data-region-fill], #stage .region-base > *{opacity:.6;transition:opacity .15s ease-out}
+#stage.peek-neck [data-paint~="neck"],
+#stage.peek-arm  [data-paint~="arm"],
+#stage.peek-back [data-paint~="back"],
+#stage.peek-leg  [data-paint~="leg"]{opacity:1}
 /* 隐形大形状热层：保留点击命中，不产生任何视觉（pointer-events 需压过 .stage .zoom-wrap svg path 的 visiblePainted） */
 #stage .hz-root .hz{fill:none;stroke:none;pointer-events:all;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
 
@@ -1048,7 +1047,7 @@ function paintRegionBase(svg, side, uid){
   // 头 group（head-front/head-back）在肌肉层之上，单独归肩颈色（描边保持与装饰线一致）
   var headPath = svg.querySelector('g[id^="head-"] path');
   if(headPath){
-    headPath.setAttribute('fill', '#F4E9DD');
+    headPath.setAttribute('fill', '#E7CDEE');
     headPath.setAttribute('data-region-fill', '1');
   }
 }
@@ -1086,18 +1085,6 @@ function stripRegionPaint(root){
     el.classList.remove('r-neck', 'r-arm', 'r-back', 'r-leg');
   });
 }
-// 单选后：#stage 打亮选中区、压淡其余区
-function paintSelection(){
-  var st = document.getElementById('stage');
-  if(!st) return;
-  ['neck', 'arm', 'back', 'leg'].forEach(function(r){ st.classList.remove('sel-' + r); });
-  st.classList.remove('has-sel');
-  if(selectedSymptoms.length && SYMPTOM_BY_ID){
-    var s = SYMPTOM_BY_ID[selectedSymptoms[0]];
-    if(s) st.classList.add('has-sel', 'sel-' + s.region);
-  }
-}
-
 /* ── 症状目录底部抽屉（全局单选，点别的直接替换） ──────────────── */
 var symMask = document.getElementById('symMask');
 var symDrawer = document.getElementById('symDrawer');
@@ -1146,12 +1133,20 @@ function openDrawer(region){
   symMask.classList.add('show');
   symDrawer.classList.add('show');
   symDrawer.setAttribute('aria-hidden', 'false');
+  /* 点击区域即时反馈：仅本区肌肉实心（底色不变），抽屉关闭时恢复 */
+  var st = document.getElementById('stage');
+  if(st){
+    st.classList.remove('peek-neck', 'peek-arm', 'peek-back', 'peek-leg');
+    st.classList.add('peek-' + region);
+  }
 }
 function closeDrawer(){
   symMask.classList.remove('show');
   symDrawer.classList.remove('show');
   symDrawer.setAttribute('aria-hidden', 'true');
   drawerRegion = null;
+  var st = document.getElementById('stage');
+  if(st) st.classList.remove('peek-neck', 'peek-arm', 'peek-back', 'peek-leg');
 }
 symMask.addEventListener('click', closeDrawer);
 document.getElementById('sdClose').addEventListener('click', closeDrawer);
@@ -1171,7 +1166,6 @@ function toggleSymptom(id){
     added = true;
   }
   refresh();
-  paintSelection();
   renderSdList();
   if(added) closeDrawer();
 }
@@ -1195,7 +1189,6 @@ function setupCatalogUi(){
     });
   });
   refresh();
-  paintSelection();
 }
 
 // 正/背面切换
@@ -1749,7 +1742,6 @@ function resetFlow(){
   muscleStates = {};
   inferredIds = {};
   refresh();
-  paintSelection();
   clearLayerPerspective();
   hideResultAi();
   sheetMask.classList.remove('show');
