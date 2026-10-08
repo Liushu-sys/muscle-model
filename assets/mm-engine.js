@@ -682,6 +682,228 @@ var REGION_LABEL = {
   leg: "\u4E0B\u80A2",
   arm: "\u4E0A\u80A2"
 };
+// \u533A\u57DF\u2192\u5019\u9009\u808C\u8089\u6620\u5C04\u8868\uFF08\u53EA\u8D1F\u8D23\u7B5B\u9009\uFF0C\u4E0D\u5224\u5B9A\u72B6\u6001\uFF09
+var REGION_CANDIDATES = {
+  neck_shoulder: {
+    name: "\u9888\u80A9",
+    candidates: [
+      { id: "trapezius_upper",     relation: "local",     note: "\u9888\u4FA7\u5230\u80A9\u90E8\uFF0C\u6700\u5E38\u89C1\u4E0D\u9002\u70B9" },
+      { id: "levator_scapulae",    relation: "local",     note: "\u9888\u5230\u80A9\u80DB\u9AA8\u4E0A\u89D2" },
+      { id: "sternocleidomastoid",relation: "local",     note: "\u9885\u524D\u5916\u4FA7" },
+      { id: "suboccipital",        relation: "local",     note: "\u540E\u8111\u52FA\u4E0E\u9885\u4EA4\u754C\u5904" },
+      { id: "splenius_capitis",    relation: "local",     note: "\u540E\u9885\u4E24\u4FA7" },
+      { id: "scalenes",            relation: "local",     note: "\u9885\u90E8\u6DF1\u5C42" },
+      { id: "deep_neck_flexor",    relation: "stabilizer",note: "\u9885\u6DF1\u5C42\u7A33\u5B9A\u808C\uFF0C\u4E3B\u89C2\u65E0\u529B\u4E0D\u80FD\u5224\u5B9A\u5176\u5F31" },
+      { id: "pectoralis_minor",    relation: "referred",  note: "\u80F8\u524D\u6DF1\u5C42\u7D27\u5F20\u53EF\u7275\u6D89\u81F3\u9885\u80A9" }
+    ]
+  },
+  upper_back: {
+    name: "\u80F8\u80CC",
+    candidates: [
+      { id: "pectoralis_major",    relation: "local",    note: "\u80F8\u524D\u4E3B\u529B" },
+      { id: "pectoralis_minor",    relation: "local",    note: "\u80F8\u5927\u808C\u6DF1\u5C42" },
+      { id: "subscapularis",       relation: "local",    note: "\u80A9\u80DB\u9AA8\u524D\u9762" },
+      { id: "serratus_anterior",   relation: "local",    note: "\u80F8\u5ED3\u4FA7\u9762" },
+      { id: "rhomboid",            relation: "local",    note: "\u4E24\u80A9\u80DB\u9AA8\u4E4B\u95F4" },
+      { id: "trapezius_middle",     relation: "local",    note: "\u80A9\u80DB\u9AA8\u5185\u4FA7" },
+      { id: "trapezius_lower",      relation: "local",    note: "\u80F8\u80CC\u4E0B\u90E8" },
+      { id: "latissimus_dorsi",    relation: "local",    note: "\u814B\u4E0B\u540E\u65B9" },
+      { id: "infraspinatus",       relation: "local",    note: "\u80A9\u80DB\u9AA8\u540E\u9762" },
+      { id: "teres_major",         relation: "local",    note: "\u80A9\u80DB\u9AA8\u4E0B\u65B9" },
+      { id: "teres_minor",         relation: "local",    note: "\u80A9\u80DB\u9AA8\u540E\u4E0B" },
+      { id: "supraspinatus",       relation: "local",    note: "\u80A9\u80DB\u9AA8\u4E0A\u65B9" }
+    ]
+  },
+  low_back_hip: {
+    name: "\u8170\u9AA8\u76C6",
+    candidates: [
+      { id: "erector_spinae",      relation: "local",    note: "\u810A\u67F1\u4E24\u4FA7\u7AD6\u808C" },
+      { id: "multifidus",         relation: "stabilizer",note: "\u810A\u67F1\u6DF1\u5C42\u7A33\u5B9A" },
+      { id: "quadratus_lumborum", relation: "local",    note: "\u8170\u90E8\u4E24\u4FA7\u6DF1\u5C42" },
+      { id: "latissimus_dorsi",    relation: "local",    note: "\u8170\u80CC\u533A\u5BBD\u5C3F\u90E8" },
+      { id: "obliquus_externus",  relation: "local",    note: "\u8179\u90E8\u4FA7\u9762\u6D45\u5C42" },
+      { id: "obliquus_internus",  relation: "local",    note: "\u8179\u90E8\u6DF1\u5C42" },
+      { id: "rectus_abdominis",   relation: "local",    note: "\u8179\u90E8\u6B63\u4E2D" },
+      { id: "transversus_abdominis",relation: "stabilizer",note: "\u8179\u90E8\u6700\u6DF1\u5C42\u7A33\u5B9A" },
+      { id: "iliopsoas",          relation: "local",    note: "\u8170\u5927\u808C\u8FDE\u63A5\u810A\u67F1\u548C\u80A1\u9AA8" },
+      { id: "piriformis",         relation: "local",    note: "\u81C0\u90E8\u6DF1\u5C42" },
+      { id: "gluteus_maximus",    relation: "local",    note: "\u81C0\u90E8\u4E3B\u529B" },
+      { id: "gluteus_medius",     relation: "local",    note: "\u81C0\u90E8\u4FA7\u9762" },
+      { id: "tensor_fasciae_latae",relation: "local",   note: "\u9ADB\u9AA8\u5916\u4FA7" }
+    ]
+  },
+  leg: {
+    name: "\u4E0B\u80A2",
+    candidates: [
+      { id: "quadriceps",          relation: "local",    note: "\u5927\u817F\u524D\u4FA7" },
+      { id: "hamstrings",          relation: "local",    note: "\u5927\u817F\u540E\u4FA7" },
+      { id: "sartorius",           relation: "local",    note: "\u5927\u817F\u5185\u4FA7\u7EC6\u957F" },
+      { id: "hip_adductors",      relation: "local",    note: "\u5927\u817F\u5185\u4FA7" },
+      { id: "iliotibial_tract",    relation: "local",    note: "\u5927\u817F\u5916\u4FA7\u7B80" },
+      { id: "gastrocnemius",       relation: "local",    note: "\u5C0F\u817F\u540E\u4FA7\u6D45\u5C42" },
+      { id: "soleus",              relation: "local",    note: "\u5C0F\u817F\u540E\u4FA7\u6DF1\u5C42" },
+      { id: "tibialis_anterior",   relation: "local",    note: "\u5C0F\u817F\u524D\u4FA7" },
+      { id: "tibialis_posterior",  relation: "stabilizer",note: "\u5C0F\u817F\u6DF1\u5C42\u7A33\u5B9A" },
+      { id: "fibularis",           relation: "local",    note: "\u5C0F\u817F\u5916\u4FA7" }
+    ]
+  },
+  arm: {
+    name: "\u4E0A\u80A2",
+    candidates: [
+      { id: "deltoid",             relation: "local",    note: "\u80A9\u90E8\u4E09\u89D2\u808C" },
+      { id: "biceps_brachii",      relation: "local",    note: "\u4E0A\u81C2\u524D\u4FA7" },
+      { id: "brachioradialis",     relation: "local",    note: "\u524D\u81C2\u5C48\u808C" },
+      { id: "triceps_brachii",     relation: "local",    note: "\u4E0A\u81C2\u540E\u4FA7" },
+      { id: "forearm_flexors",     relation: "local",    note: "\u524D\u81C2\u5C48\u808C\u7FA4" },
+      { id: "forearm_extensors",   relation: "local",    note: "\u540E\u81C2\u4F38\u808C\u7FA4" }
+    ]
+  }
+};
+// \u6309 SVG \u5750\u6807\u5224\u5B9A\u89E3\u5256\u5B66\u4FA7\u522B\uFF08\u6B63\u9762\u5DE6\u4FA7\u5C4F\u5E55=\u4EBA\u4F53\u53F3\u4FA7\uFF0C\u80CC\u9762\u5DE6\u4FA7\u5C4F\u5E55=\u4EBA\u4F53\u5DE6\u4FA7\uFF09
+function getSide(svgX, view) {
+  var isLeftOfCenter = svgX < 100;
+  if (Math.abs(svgX - 100) < 5) return "midline";
+  if (view === "front") {
+    return isLeftOfCenter ? "right" : "left";
+  } else {
+    return isLeftOfCenter ? "left" : "right";
+  }
+}
+// 简单感觉词→关键词映射，用于和模式 senses 做模糊匹配
+// 注意：这只是"线索"，不直接决定肌肉状态
+// 关键词必须≥2字，避免单字误匹配（如"酸"会匹配所有含"酸"的 senses）
+var FEEL_KEYWORDS = {
+  "\u9178\u75DB": ["\u9178\u75DB", "\u53D1\u9178"],      // 酸痛→精确"酸痛"或"发酸"
+  "\u50F5\u786C": ["\u50F5\u786C", "\u53D1\u50F5", "\u53D1\u7D27"],  // 僵硬→精确"僵硬/发僵/发紧"
+  "\u65E0\u529B": ["\u6CA1\u52B2", "\u6CA1\u529B\u6C14", "\u53D1\u4E0D\u4E0A\u529B", "\u6251\u4E0D\u4F4F"],  // 无力→精确匹配
+  "\u5176\u4ED6": []               // 其他→靠 freeText 直接匹配
+};
+// 检查感觉词能否匹配某条 sense 文本
+// 规则：精确子串匹配 OR 关键词匹配（关键词必须≥2字）
+function feelMatchesSense(feel, sense) {
+  if (!feel || !sense) return false;
+  // 1. 精确子串匹配（feel 或 sense 互含对方完整词）
+  if (sense.indexOf(feel) !== -1 || feel.indexOf(sense) !== -1) return true;
+  // 2. 关键词匹配：从 FEEL_KEYWORDS 取该感觉的关键词，逐个检查是否被 sense 包含
+  var keywords = FEEL_KEYWORDS[feel];
+  if (keywords) {
+    for (var i = 0; i < keywords.length; i++) {
+      if (keywords[i].length >= 2 && sense.indexOf(keywords[i]) !== -1) return true;
+    }
+  }
+  return false;
+}
+// 证据等级定义（非概率，是证据充分度）
+// L1: 命中模式且≥2条独立线索 → 可涂色
+// L2: 命中模式或单条强线索 → 可涂色（虚线）
+// L3: 仅候选映射或理论倾向 → 不涂色
+// L0: 信息不足 → 不涂色
+function analyzeReports(reports, patterns, muscleMap) {
+  var results = [];
+  (reports || []).forEach(function(rep) {
+    var rc = REGION_CANDIDATES[rep.regionId];
+    if (!rc) return;
+    // 预处理：将 freeText 作为强匹配源，简单感觉标签只作为线索
+    var freeText = rep.freeText || '';
+    var hasFreeText = freeText.length > 0;
+    // 步骤1：区域→候选肌肉映射（纯映射，不判定状态）
+    rc.candidates.forEach(function(cand) {
+      var m = muscleMap[cand.id];
+      if (!m) return;
+      var status = "candidate";
+      var evidenceLevel = "L3";  // 默认 L3：仅候选映射
+      var clues = [];
+      // 步骤2：感觉词与肌肉 senses 匹配（只产生线索，不直接定状态）
+      if (rep.feel) {
+        if (m.senses && m.senses.some(function(s) { return feelMatchesSense(rep.feel, s); })) {
+          clues.push("\u611F\u89C9\u8BCD\u4E0E\u8BE5\u808C\u8089\u7684\u5E38\u89C1\u75C7\u72B6\u5339\u914D");
+        }
+      }
+      // 步骤3：模式匹配（只有 freeText 精确匹配模式 senses 才决定状态）
+      // 简单感觉标签（酸痛/僵硬/无力）只产生线索，不触发状态变更
+      var inTight = false, inWeak = false;
+      var patternHits = [];
+      (patterns || []).forEach(function(pt) {
+        var inThisTight = (pt.tight || []).some(function(x) { return (typeof x === "string" ? x : x.id) === cand.id; });
+        var inThisWeak = (pt.weak || []).some(function(x) { return (typeof x === "string" ? x : x.id) === cand.id; });
+        var inThisInferredTight = (pt.inferredTight || []).some(function(x) { return (typeof x === "string" ? x : x.id) === cand.id; });
+        var inThisInferredWeak = (pt.inferredWeak || []).some(function(x) { return (typeof x === "string" ? x : x.id) === cand.id; });
+        // 只有 freeText 精确匹配模式 senses 才触发状态变更
+        var senseHit = false;
+        if (hasFreeText && pt.senses) {
+          senseHit = pt.senses.some(function(s) {
+            return s.indexOf(freeText) !== -1 || freeText.indexOf(s) !== -1;
+          });
+        }
+        if (senseHit) {
+          if (inThisTight) { inTight = true; patternHits.push({id: pt.id, role: "tight", bookPage: pt.bookPage}); clues.push("\u547D\u4E2D" + pt.id + "\u6A21\u5F0F\u7684\u7D27\u5F20\u808C\u7EC4"); }
+          if (inThisWeak) { inWeak = true; patternHits.push({id: pt.id, role: "weak", bookPage: pt.bookPage}); clues.push("\u547D\u4E2D" + pt.id + "\u6A21\u5F0F\u7684\u8584\u5F31\u808C\u7EC4"); }
+          if (inThisInferredTight) { patternHits.push({id: pt.id, role: "inferred_tight", bookPage: pt.bookPage}); clues.push("\u63A8\u65AD\u53EF\u80FD\u5C5E\u4E8E" + pt.id + "\u6A21\u5F0F\u7684\u7D27\u5F20\u808C\u7EC4\uFF08\u63A8\u65AD\u9879\uFF0C\u975E\u4E66\u7C4D\u539F\u6587\u76F4\u63A5\u5217\u51FA\uFF09"); }
+          if (inThisInferredWeak) { patternHits.push({id: pt.id, role: "inferred_weak", bookPage: pt.bookPage}); clues.push("\u63A8\u65AD\u53EF\u80FD\u5C5E\u4E8E" + pt.id + "\u6A21\u5F0F\u7684\u8584\u5F31\u808C\u7EC4\uFF08\u63A8\u65AD\u9879\uFF09"); }
+        }
+      });
+      // 步骤4：状态判定（基于模式命中，不基于 m.type）
+      var clueCount = clues.length;
+      if (inTight && !inWeak) {
+        status = "possibly_tight";
+        evidenceLevel = clueCount >= 2 ? "L1" : "L2";
+      } else if (inWeak && !inTight) {
+        status = "possibly_weak";
+        evidenceLevel = clueCount >= 2 ? "L1" : "L2";
+      } else if (inTight && inWeak) {
+        status = "candidate";  // 冲突，降级
+        evidenceLevel = "L2";
+        clues.push("\u8BE5\u808C\u8089\u5728\u4E0D\u540C\u6A21\u5F0F\u4E2D\u627F\u62C5\u4E0D\u540C\u89D2\u8272\uFF0C\u5F53\u524D\u4FE1\u606F\u4E0D\u8DB3\u4EE5\u5224\u65AD");
+      } else {
+        status = "candidate";
+        evidenceLevel = "L3";
+      }
+      // 步骤5：保护——深层稳定肌不靠主观感觉判弱
+      if (cand.relation === "stabilizer" && status === "possibly_weak") {
+        status = "candidate";
+        evidenceLevel = "L3";
+        clues.push("\u8BE5\u808C\u8089\u4E3A\u6DF1\u5C42\u7A33\u5B9A\u808C\uFF0C\u9700\u4E13\u4E1A\u8BC4\u4F30\u624D\u80FD\u5224\u5B9A\u5176\u72B6\u6001");
+      }
+      // 步骤6：无任何线索→unknown
+      if (clueCount === 0 && !inTight && !inWeak) {
+        status = "unknown";
+        evidenceLevel = "L0";
+      }
+      // 位置 hint
+      if (rep.clickHintMuscleId === cand.id) {
+        clues.push("\u7528\u6237\u70B9\u51FB\u4F4D\u7F6E\u76F4\u63A5\u4F4D\u4E8E\u8BE5\u808C\u8089\u533A\u57DF");
+      }
+      results.push({
+        muscleId: cand.id,
+        muscleName: m.name,
+        region: rep.regionId,
+        side: rep.side,
+        status: status,
+        evidenceLevel: evidenceLevel,
+        clues: clues,
+        relation: cand.relation,
+        patternHits: patternHits,
+        allowColor: status === "possibly_tight" || status === "possibly_weak"
+      });
+    });
+  });
+  // 步骤7：去重——同一肌肉同一侧别取最高优先级
+  var seen = {};
+  results.forEach(function(r) {
+    var key = r.muscleId + "|" + (r.side || "midline");
+    if (!seen[key] || priorityOf(r.status) > priorityOf(seen[key].status)) {
+      seen[key] = r;
+    }
+  });
+  var deduped = [];
+  Object.keys(seen).forEach(function(k) { deduped.push(seen[k]); });
+  return deduped;
+}
+function priorityOf(status) {
+  if (status === "possibly_tight" || status === "possibly_weak") return 3;
+  if (status === "candidate") return 2;
+  return 1;
+}
 var MUSCLE_IDS = new Set(MUSCLES.map((m) => m.id));
 var MUSCLE_MAP = Object.fromEntries(MUSCLES.map((m) => [m.id, m]));
 function filterByLibrary(ids = []) {
@@ -2052,16 +2274,19 @@ export {
   MUSCLE_MAP,
   PATTERNS,
   RED_FLAGS,
+  REGION_CANDIDATES,
   REGION_LABEL,
   SCENE_HINT,
   SCENE_LABEL,
   actionTargetLabel,
   actionTargetName,
+  analyzeReports,
   buildExplainCard,
   buildExplanation,
   buildSystemPrompt,
   dedupeConflict,
   filterByLibrary,
+  getSide,
   hitRedFlag,
   matchPatterns,
   matchPatternsBySense,

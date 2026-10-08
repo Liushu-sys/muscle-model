@@ -692,7 +692,8 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
 var parseLocal = null, buildExplainCard = null, MUSCLE_MAP = null, REGION_LABEL = null;
 var pickActions = null, SCENE_LABEL = null, SCENE_HINT = null, PATTERNS = null, ACTIONS = null;
-var engineReady = import('./mm-engine.js?v=252').then(function(m){
+var REGION_CANDIDATES = null, getSide = null, analyzeReports = null, hitRedFlag = null;
+var engineReady = import('./mm-engine.js?v=254').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
   MUSCLE_MAP = m.MUSCLE_MAP;
@@ -702,6 +703,10 @@ var engineReady = import('./mm-engine.js?v=252').then(function(m){
   SCENE_HINT = m.SCENE_HINT;
   PATTERNS = m.PATTERNS;
   ACTIONS = m.ACTIONS;
+  REGION_CANDIDATES = m.REGION_CANDIDATES;
+  getSide = m.getSide;
+  analyzeReports = m.analyzeReports;
+  hitRedFlag = m.hitRedFlag;
   console.log('[body-map] 引擎加载完成');
 }).catch(function(err){
   console.error('[body-map] 引擎加载失败（点选仍可用，诊断不可用）:', err);
@@ -841,15 +846,33 @@ function bubble(text){
 
 // 小红点涂抹模式：点击肌肉上任意位置，在该位置放置/移除小红点
 // 红点作为 SVG circle 放在 SVG 内部，自动跟随缩放和正反面切换
-var dotMarks = [];  // [{el, muscleId, muscleCn, svgX, svgY, view, feel}]
+var dotMarks = [];  // [{el, regionId, side, feel, freeText, clickHintMuscleId, muscleCn, svgX, svgY, view}]
 var dotIdCounter = 0;
 
-function addDotMark(svgX, svgY, muscleId, muscleCn, view){
+// 按 SVG 坐标判定区域
+function getRegionFromPoint(svgX, svgY, view) {
+  // 上肢：x 在两侧边缘
+  if (svgX < 35 || svgX > 165) {
+    // 但如果是肩部附近（y < 55），归为颈肩
+    if (svgY < 55) return 'neck_shoulder';
+    return 'arm';
+  }
+  if (svgY < 55) return 'neck_shoulder';
+  if (svgY < 140) return 'upper_back';
+  if (svgY < 220) return 'low_back_hip';
+  return 'leg';
+}
+
+function addDotMark(svgX, svgY, clickHintMuscleId, muscleCn, view){
   // 找到当前激活的 SVG
   var stageEl = document.getElementById('stage');
   var activeCard = stageEl.querySelector('.card:not([style*="none"])');
   var svg = activeCard ? activeCard.querySelector('svg') : null;
   if(!svg) return null;
+
+  var regionId = getRegionFromPoint(svgX, svgY, view);
+  var side = getSide ? getSide(svgX, view) : 'midline';
+  var selKey = regionId + '|' + side;
 
   var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   dot.setAttribute('class', 'dot-mark');
@@ -859,12 +882,13 @@ function addDotMark(svgX, svgY, muscleId, muscleCn, view){
   // 放置瞬间的 Dock 式回弹放大：pop 跑完后交给 dotBlink 循环
   dot.style.animation = 'dotPop .34s ease-out, dotBlink 1.2s ease-in-out .34s infinite';
   dot.dataset.dotId = 'dot-' + (dotIdCounter++);
-  dot.dataset.muscleId = muscleId;
+  dot.dataset.regionId = regionId;
+  dot.dataset.side = side;
   dot.dataset.view = view;
   svg.appendChild(dot);
 
-  dotMarks.push({el: dot, muscleId: muscleId, muscleCn: muscleCn, svgX: svgX, svgY: svgY, view: view, feel: null});
-  sel[muscleId] = true;
+  dotMarks.push({el: dot, regionId: regionId, side: side, feel: null, freeText: null, clickHintMuscleId: clickHintMuscleId, muscleCn: muscleCn, svgX: svgX, svgY: svgY, view: view});
+  sel[selKey] = true;
   refresh();
 
   // 点击红点本身取消
@@ -879,11 +903,11 @@ function removeDotMark(dotId){
   var idx = dotMarks.findIndex(function(d){ return d.el.dataset.dotId === dotId; });
   if(idx === -1) return;
   var dot = dotMarks[idx];
-  var muscleId = dot.muscleId;
+  var selKey = dot.regionId + '|' + dot.side;
   dot.el.remove();
   dotMarks.splice(idx, 1);
-  var stillHas = dotMarks.some(function(d){ return d.muscleId === muscleId; });
-  if(!stillHas) delete sel[muscleId];
+  var stillHas = dotMarks.some(function(d){ return (d.regionId + '|' + d.side) === selKey; });
+  if(!stillHas) delete sel[selKey];
   if(feelState.dotId === dotId) hideFeelCard(true);
   clearLayerPerspective();
   bubble('已取消标记');
@@ -927,12 +951,15 @@ function hideFeelCard(instant){
 }
 
 // 选中感觉（或点外部放弃）：写入红点，卡片缩回
-function pickFeel(feel){
+function pickFeel(feel, freeText){
   var d = dotMarks.find(function(x){ return x.el.dataset.dotId === feelState.dotId; });
-  if(d) d.feel = feel;
-  var cn = d ? d.muscleCn : '';
+  if(d){
+    d.feel = feel;
+    d.freeText = freeText || null;
+  }
+  var regionLabel = d ? (REGION_LABEL && REGION_LABEL[d.regionId] ? REGION_LABEL[d.regionId] : '') : '';
   hideFeelCard();
-  if(cn) bubble(cn + ' · ' + feel);
+  if(regionLabel) bubble(regionLabel + ' · ' + feel);
 }
 
 function renderFeelOptions(){
@@ -958,10 +985,11 @@ function renderFeelOther(){
   var input = feelCardEl.querySelector('#fcInput');
   feelCardEl.querySelector('.fc-confirm').addEventListener('click', function(ev){
     ev.stopPropagation();
-    pickFeel(input.value.trim() || '其他');
+    var txt = input.value.trim();
+    pickFeel(txt ? '其他' : '其他', txt);
   });
   input.addEventListener('keydown', function(ev){
-    if(ev.key === 'Enter'){ ev.preventDefault(); pickFeel(input.value.trim() || '其他'); }
+    if(ev.key === 'Enter'){ ev.preventDefault(); var txt = input.value.trim(); pickFeel('其他', txt); }
   });
   setTimeout(function(){ input.focus(); }, 180);
 }
@@ -977,27 +1005,35 @@ document.addEventListener('click', function(ev){
   if(d && !d.feel) removeDotMark(dotId);
 }, true);
 
-// 点击肌肉：在该位置放置小红点 + 弹出感觉卡片
+// 点击肌肉或身体轮廓：在该位置放置小红点 + 弹出感觉卡片
+// 肌肉点击降级为位置 hint，正式记录的是区域
+function handleBodyClick(ev, muscleEl){
+  if(zoom && zoom.suppressTap){ return; }
+  var id = muscleEl ? muscleEl.dataset.id : null;
+  var cn = muscleEl ? muscleEl.dataset.cn : '';
+  // 获取当前激活的 SVG 和视图
+  var stageEl = document.getElementById('stage');
+  var activeCard = stageEl.querySelector('.card:not([style*="none"])');
+  if(!activeCard) return;
+  var svg = activeCard.querySelector('svg');
+  var view = activeCard.classList.contains('front') ? 'front' : 'back';
+  // 屏幕坐标转 SVG 坐标
+  var pt = svg.createSVGPoint();
+  pt.x = ev.clientX;
+  pt.y = ev.clientY;
+  var svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+  var dotId = addDotMark(svgP.x, svgP.y, id, cn, view);
+  if(dotId) showFeelCard(dotId, ev.clientX, ev.clientY);
+  if(muscleEl) applyLayeredPerspective(muscleEl, view);
+}
+// 绑定肌肉路径点击
 all().forEach(function(e){
-  e.addEventListener('click', function(ev){
-    if(zoom && zoom.suppressTap){ return; }
-    var id = e.dataset.id;
-    var cn = e.dataset.cn;
-    // 获取当前激活的 SVG 和视图
-    var stageEl = document.getElementById('stage');
-    var activeCard = stageEl.querySelector('.card:not([style*="none"])');
-    if(!activeCard) return;
-    var svg = activeCard.querySelector('svg');
-    var view = activeCard.classList.contains('front') ? 'front' : 'back';
-    // 屏幕坐标转 SVG 坐标
-    var pt = svg.createSVGPoint();
-    pt.x = ev.clientX;
-    pt.y = ev.clientY;
-    var svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-    var dotId = addDotMark(svgP.x, svgP.y, id, cn, view);
-    if(dotId) showFeelCard(dotId, ev.clientX, ev.clientY);
-    applyLayeredPerspective(e, view);
-  });
+  e.addEventListener('click', function(ev){ handleBodyClick(ev, e); });
+});
+// 绑定身体轮廓点击（点空白也有响应）
+document.querySelectorAll('#stage svg > path:not(.m)').forEach(function(e){
+  e.style.pointerEvents = 'auto';
+  e.addEventListener('click', function(ev){ handleBodyClick(ev, null); });
 });
 
 // 正/背面切换
@@ -1311,53 +1347,72 @@ var currentResult = null;
 var muscleStates = {};
 
 function runDiagnosis(){
-  var ids = Object.keys(sel);
-  if(ids.length === 0) return;
-  if(!parseLocal || !MUSCLE_MAP){
+  if(Object.keys(sel).length === 0) return;
+  if(!analyzeReports || !MUSCLE_MAP){
     bubble('诊断引擎还没加载好，请稍等一秒再试');
     return;
   }
-  // 每个红点选的感觉（酸痛/僵硬/无力/自定义）拼成感受文本，交给诊断引擎
-  var feels = dotMarks.map(function(d){ return d.feel; }).filter(Boolean).join('，');
-  var senses = ids.map(function(id){
-    var m = MUSCLE_MAP[id];
-    return m ? (m.senses && m.senses[0] ? m.senses[0] : m.name + '酸痛') : '';
-  }).filter(Boolean).join('，');
-  var input = feels ? feels + '；' + senses : senses;
-  var res = parseLocal(input, '', undefined);
-  currentResult = res;
+  // 步骤1：构造区域报告（区域+侧别+感觉+自定义文字绑定）
+  var reports = dotMarks.map(function(d){
+    return {
+      regionId: d.regionId,
+      side: d.side,
+      feel: d.feel,
+      freeText: d.freeText,
+      clickHintMuscleId: d.clickHintMuscleId
+    };
+  });
 
+  // 步骤2：红旗筛查——命中后优先展示安全提示，限制后续针对性建议
+  var redFlagHits = [];
+  reports.forEach(function(r){
+    if(r.freeText && hitRedFlag) {
+      var hit = hitRedFlag(r.freeText);
+      if(hit) redFlagHits.push({word: hit, region: r.regionId, side: r.side});
+    }
+  });
+  // 红旗命中→不进入分析页，显示安全提示
+  if(redFlagHits.length > 0){
+    showRedFlagWarning(redFlagHits);
+    return;
+  }
+
+  // 步骤3：区域→候选肌肉→状态推断（possibly_tight/possibly_weak/candidate/unknown + 证据等级）
+  var analysisResults = analyzeReports(reports, PATTERNS, MUSCLE_MAP);
+
+  // 步骤4：构建统一 diagnosisResult（单一事实源，页2/页3统一读取）
+  currentResult = {
+    reports: reports,                    // 用户原始输入
+    analysis: analysisResults,            // 每块候选肌肉的分析结果
+    redFlags: redFlagHits,                // 安全标记
+    // 整体分析文案
+    patternText: buildPatternSummary(analysisResults, reports),
+    // 统计
+    stats: {
+      possiblyTight: analysisResults.filter(function(r){return r.status === 'possibly_tight';}).length,
+      possiblyWeak: analysisResults.filter(function(r){return r.status === 'possibly_weak';}).length,
+      candidate: analysisResults.filter(function(r){return r.status === 'candidate';}).length,
+      unknown: analysisResults.filter(function(r){return r.status === 'unknown';}).length
+    }
+  };
+
+  // muscleStates 保留给页2涂色/页3动作匹配用，值域：tight/weak
+  // 只有 allowColor=true 且 evidenceLevel L1/L2 才涂色
   muscleStates = {};
-  (res.tight || []).forEach(function(r){ muscleStates[r.muscle.id] = 'tight'; });
-  (res.weak  || []).forEach(function(r){ muscleStates[r.muscle.id] = 'weak';  });
-
-  // ── 肌肉级兜底：用户点的每一块肌肉都要有结论 ──
-  // 模式匹配按感受词触发整组，会漏掉用户实际点的那块。
-  // ①反查模式库（这块肌肉在哪个模式的过劳/过弱组）
-  // ②都不在就按肌肉自身的 type 倾向（书里的常识分级）
-  // 兜底结果标 inferred，图上用虚线描边区分。
   inferredIds = {};
-  Object.keys(sel).forEach(function(id){
-    if(muscleStates[id]) return;
-    var m = MUSCLE_MAP[id];
-    if(!m) return;
-    var inTight = false, inWeak = false;
-    (PATTERNS || []).forEach(function(pt){
-      (pt.tight || []).forEach(function(x){ if((typeof x === 'string' ? x : x.id) === id) inTight = true; });
-      (pt.weak  || []).forEach(function(x){ if((typeof x === 'string' ? x : x.id) === id) inWeak  = true; });
-    });
-    var status;
-    if(inTight && inWeak) status = m.type === 'weak' ? 'weak' : 'tight';
-    else if(inTight)      status = 'tight';
-    else if(inWeak)       status = 'weak';
-    else                  status = m.type === 'weak' ? 'weak' : 'tight';
-    muscleStates[id] = status;
-    inferredIds[id] = true;
+  analysisResults.forEach(function(r){
+    if(r.allowColor && (r.evidenceLevel === 'L1' || r.evidenceLevel === 'L2')){
+      if(r.status === 'possibly_tight') muscleStates[r.muscleId] = 'tight';
+      else if(r.status === 'possibly_weak') muscleStates[r.muscleId] = 'weak';
+      if(r.evidenceLevel === 'L2') inferredIds[r.muscleId] = true; // L2 用虚线
+    } else {
+      inferredIds[r.muscleId] = true; // L3/L0/candidate/unknown 不涂色
+    }
   });
 
   cloneResultSvgs();
   applyResultColors();
-  buildAiSummary(res);
+  buildAiSummary(currentResult);
   pageSelect.style.display = 'none';
   pageResult.style.display = 'flex';
   applyResultAutoPerspective();
@@ -1406,8 +1461,10 @@ function applyResultColors(){
     var st = muscleStates[el.dataset.id];
     if(st){
       el.classList.add(st);
+      // 只对 possibly_tight/possibly_weak 的 inferred 肌肉加虚线
       if(inferredIds[el.dataset.id]) el.classList.add('inferred');
     }
+    // candidate/unknown 的肌肉不着色、不加虚线——不涂色即"暂无法判断"
   });
 }
 
@@ -1439,37 +1496,109 @@ function buildBodyPatternText(){
   if(!busy.length && !slack.length) return '';
   var t = '';
   if(busy.length){
-    t += '你的' + busy.map(function(x){ return x.name + '区域'; }).join('、') + '目前负担偏高';
-    if(slack.length) t += '，而' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群参与不足';
-    t += '，可能使其他肌肉承担更多代偿工作，从而导致相关区域出现酸痛和紧张。';
+    t += '你的' + busy.map(function(x){ return x.name + '区域'; }).join('、') + '可能存在负担偏高';
+    if(slack.length) t += '，而' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群可能参与不足';
+    t += '，这可能使其他肌肉承担更多代偿工作，从而导致相关区域出现不适。';
   } else if(slack.length){
-    t += '你的' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群参与不足，可能影响相关区域的稳定，使其他肌肉承担更多代偿工作。';
+    t += '你的' + slack.map(function(x){ return x.name + '区域'; }).join('、') + '部分肌群可能参与不足，这可能影响相关区域的稳定。';
   }
   return t;
 }
 
+// 红旗安全提示
+function showRedFlagWarning(hits){
+  var words = hits.map(function(h){ return '"' + h.word + '"'; }).join('、');
+  var regionText = hits.map(function(h){
+    var rn = (REGION_LABEL && REGION_LABEL[h.region]) || '相关';
+    return rn + (h.side === 'left' ? '左侧' : h.side === 'right' ? '右侧' : '');
+  }).join('、');
+  var html = '<div style="text-align:center;padding:24px 20px">';
+  html += '<div style="font-size:48px;margin-bottom:12px">⚠️</div>';
+  html += '<h3 style="margin:0 0 8px;font-size:18px;color:#C0392B">建议尽快就医</h3>';
+  html += '<p style="color:#6E7778;font-size:14px;line-height:1.7;margin:0 0 16px">你在' + regionText + '区域描述中提到了' + words + '，这些可能需要专业医生进一步检查。</p>';
+  html += '<p style="color:#A2ABAC;font-size:12.5px;line-height:1.6;margin:0 0 20px">以上提示基于谨慎原则，不构成医学诊断。如果你的症状持续或加重，请及时就诊。</p>';
+  html += '<button type="button" style="background:#E0703F;color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:15px;font-weight:600;cursor:pointer" onclick="document.getElementById(\'redFlagModal\').style.display=\'none\'">知道了</button>';
+  html += '</div>';
+  var modal = document.getElementById('redFlagModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'redFlagModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:340px;margin:20px;box-shadow:0 8px 32px rgba(0,0,0,.15)">' + html + '</div>';
+  modal.style.display = 'flex';
+  modal.querySelector('button').addEventListener('click', function(){ modal.style.display = 'none'; });
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
+}
+
+// 整体分析文案：基于统一结果生成
+function buildPatternSummary(analysis, reports){
+  var regions = {};
+  (reports || []).forEach(function(r){
+    var rn = (REGION_LABEL && REGION_LABEL[r.regionId]) || r.regionId;
+    var sideText = r.side === 'left' ? '左侧' : r.side === 'right' ? '右侧' : '';
+    var key = sideText + rn;
+    if(!regions[key]) regions[key] = {feel: r.feel || '未选感觉', freeText: r.freeText};
+  });
+  var tightMuscles = analysis.filter(function(r){ return r.status === 'possibly_tight'; });
+  var weakMuscles = analysis.filter(function(r){ return r.status === 'possibly_weak'; });
+  var candidateMuscles = analysis.filter(function(r){ return r.status === 'candidate'; });
+  var unknownMuscles = analysis.filter(function(r){ return r.status === 'unknown'; });
+
+  var parts = [];
+  // 用户报告
+  var reportParts = Object.keys(regions).map(function(k){
+    var r = regions[k];
+    var feelText = r.freeText ? r.freeText : r.feel;
+    return k + '（' + feelText + '）';
+  });
+  if(reportParts.length) parts.push('你在' + reportParts.join('、') + '报告了不适。');
+  // 可能过劳
+  if(tightMuscles.length){
+    var names = tightMuscles.map(function(r){ return r.muscleName; });
+    parts.push('该区域的' + names.join('、') + '可能存在负担偏高');
+  }
+  // 可能偏弱
+  if(weakMuscles.length){
+    var names2 = weakMuscles.map(function(r){ return r.muscleName; });
+    parts.push((tightMuscles.length ? '，' : '该区域的') + names2.join('、') + '可能参与不足');
+  }
+  if(tightMuscles.length || weakMuscles.length){
+    parts.push('。以上判断基于模式匹配，是可能性分析，不是确诊。');
+  }
+  // 候选/信息不足
+  var notColored = candidateMuscles.length + unknownMuscles.length;
+  if(notColored > 0){
+    parts.push('另有' + notColored + '块候选肌肉当前信息不足以判断状态，未着色。');
+  }
+  if(!tightMuscles.length && !weakMuscles.length && notColored > 0){
+    parts.push('仅凭当前信息无法给出明确的肌肉状态判断，建议咨询专业人士或补充更多症状描述。');
+  }
+  return parts.join('');
+}
+
 function buildAiSummary(res){
   var html = '';
-  // 结果：计数
-  var tightIds = Object.keys(muscleStates).filter(function(id){ return muscleStates[id] === 'tight'; });
-  var weakIds  = Object.keys(muscleStates).filter(function(id){ return muscleStates[id] === 'weak'; });
-  var inferredN = Object.keys(inferredIds).length;
+  var stats = res.stats || {};
+  var tightN = stats.possiblyTight || 0;
+  var weakN = stats.possiblyWeak || 0;
+  var candidateN = (stats.candidate || 0) + (stats.unknown || 0);
   html += '<h4>身体整体分析</h4>';
   html += '<div style="display:flex;gap:24px;margin:12px 0 16px">';
-  html += '<div><div style="font-size:32px;font-weight:800;color:#E0703F;line-height:1">' + tightIds.length + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块肌肉过劳</div></div>';
-  html += '<div><div style="font-size:32px;font-weight:800;color:#9B7CB8;line-height:1">' + weakIds.length + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块肌肉偏弱</div></div>';
+  html += '<div><div style="font-size:32px;font-weight:800;color:#E0703F;line-height:1">' + tightN + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块可能过劳</div></div>';
+  html += '<div><div style="font-size:32px;font-weight:800;color:#9B7CB8;line-height:1">' + weakN + '</div><div style="font-size:13px;color:#6E7778;margin-top:2px">块可能偏弱</div></div>';
   html += '</div>';
-  // 计数分层：用户指出的 vs 关联分析发现的
-  var clickedN = Object.keys(sel).length;
-  var assocN = Math.max(0, tightIds.length + weakIds.length - clickedN);
-  html += '<p style="color:#6E7778;font-size:12.5px;margin:-6px 0 12px">你指出的 ' + clickedN + ' 处不适 · 关联分析发现 ' + assocN + ' 块相关肌肉</p>';
-  if(inferredN > 0) html += '<p style="color:#A2ABAC;font-size:12.5px;margin-bottom:12px">其中 ' + inferredN + ' 处按肌肉常见倾向推断（图上虚线描边标记）。</p>';
-  // 身体模式
-  var pattern = buildBodyPatternText();
-  if(pattern){
+  var clickedN = (res.reports || []).length;
+  var assocN = Math.max(0, tightN + weakN - clickedN);
+  html += '<p style="color:#6E7778;font-size:12.5px;margin:-6px 0 12px">你指出的 ' + clickedN + ' 处不适 · 关联分析发现 ' + assocN + ' 块可能相关的肌肉</p>';
+  if(candidateN > 0) html += '<p style="color:#A2ABAC;font-size:12.5px;margin-bottom:12px">另有 ' + candidateN + ' 块候选肌肉当前信息不足以判断，未着色。</p>';
+  // 身体模式文案（来自统一结果）
+  var patternText = res.patternText || '';
+  if(patternText){
     html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #edf0ef">';
-    html += '<h5 style="margin:0 0 6px;font-size:13px;font-weight:700;color:#6E7778;text-transform:uppercase;letter-spacing:.3px">身体模式</h5>';
-    html += '<p style="margin:0;font-size:14px;line-height:1.7;color:#1D2122">' + pattern + '</p>';
+    html += '<h5 style="margin:0 0 6px;font-size:13px;font-weight:700;color:#6E7778;text-transform:uppercase;letter-spacing:.3px">分析说明</h5>';
+    html += '<p style="margin:0;font-size:14px;line-height:1.7;color:#1D2122">' + patternText + '</p>';
     html += '</div>';
   }
   html += '<p style="color:#A2ABAC;font-size:12.5px;margin-top:14px">如想详细了解肌肉功能，点击对应肌肉进行了解。</p>';
@@ -2078,21 +2207,43 @@ function bindAdviceRhythm(root, r){
 function openSheet(id){
   var m = MUSCLE_MAP[id];
   if(!m) return;
-  var st = muscleStates[id] || 'neutral';
-  var tagCls = st === 'tight' ? 'tight' : st === 'weak' ? 'weak' : '';
-  var tagTxt = st === 'tight' ? '过劳' : st === 'weak' ? '偏弱' : '';
+  // 从统一结果中查找该肌肉的分析
+  var analysis = currentResult && currentResult.analysis ? currentResult.analysis.find(function(r){ return r.muscleId === id; }) : null;
+  var st = analysis ? analysis.status : (muscleStates[id] ? muscleStates[id] : 'neutral');
+  var evLevel = analysis ? analysis.evidenceLevel : null;
+  var clues = analysis ? analysis.clues : [];
+  var tagCls = st === 'possibly_tight' || st === 'tight' ? 'tight' : st === 'possibly_weak' || st === 'weak' ? 'weak' : '';
+  var tagTxt = (st === 'possibly_tight' || st === 'tight') ? '可能过劳' : (st === 'possibly_weak' || st === 'weak') ? '可能偏弱' : (st === 'candidate' ? '候选' : (st === 'unknown' ? '暂无法判断' : ''));
   var regionName = (REGION_LABEL && REGION_LABEL[m.region]) || '相关';
 
   var h = '<h3>' + m.name + '</h3>';
   if(tagTxt) h += '<span class="sheet-tag ' + tagCls + '">' + tagTxt + '</span>';
-  if(inferredIds[id]) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">推断</span>';
+  if(evLevel) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">证据' + evLevel + '</span>';
 
-  // 主要功能（复用引擎里的一句话科普描述）
+  // 主要功能
   h += '<div class="sec"><h5>主要功能</h5><p>' + (m.desc || '参与' + regionName + '区域的活动与稳定。') + '</p></div>';
 
-  // 固定结构：无论当前状态都显示「如果过劳 / 如果偏弱」
-  h += '<div class="sec"><h5>如果过劳</h5><p>可能使' + regionName + '区域持续紧张，更容易出现酸胀和不适。</p></div>';
-  h += '<div class="sec"><h5>如果偏弱</h5><p>可能影响' + regionName + '区域的稳定，使其他肌肉承担更多代偿工作。</p></div>';
+  // 分析依据
+  if(clues.length){
+    h += '<div class="sec"><h5>分析依据</h5><ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.8;color:#6E7778">';
+    clues.forEach(function(c){ h += '<li>' + c + '</li>'; });
+    h += '</ul></div>';
+  }
+
+  // 根据状态显示不同分析内容
+  if(st === 'possibly_tight' || st === 'tight'){
+    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉可能存在负担偏高，使' + regionName + '区域更容易出现不适。</p></div>';
+  } else if(st === 'possibly_weak' || st === 'weak'){
+    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉可能参与不足，影响' + regionName + '区域的稳定。</p></div>';
+  } else if(st === 'candidate'){
+    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉是' + regionName + '区域的候选肌肉，但当前信息不足以判断其状态，建议咨询专业人士。</p></div>';
+  } else {
+    h += '<div class="sec"><h5>可能的关联</h5><p>该肌肉可能与' + regionName + '区域的不适有关，但当前信息不足以判断。</p></div>';
+  }
+  // 书页引用
+  if(m.bookPage){
+    h += '<div class="sec"><h5>知识来源</h5><p style="font-size:12.5px;color:#A2ABAC">参考：《基础肌动学》p.' + m.bookPage + '</p></div>';
+  }
 
   sheetBody.innerHTML = h;
   sheetMask.style.display = 'block';
