@@ -238,6 +238,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .tc-stretch b{color:#E0703F;font-weight:600}
 .tc-disclaim{margin:10px 0 2px;padding-top:10px;border-top:1px solid #EDF0EF;font-size:11.5px;color:#A2ABAC;line-height:1.6;text-align:center}
 .tc-tip{color:#A2ABAC;font-size:12px;margin:8px 0 0}
+/* docs/13 症状解释卡：机制解释 + 安全提示 */
+.tc-explain{margin:0 0 9px;font-size:12.5px;line-height:1.7;color:#4A5254}
+.tc-flag{margin:9px 0 0;padding:8px 10px;border-radius:0 8px 8px 0;border-left:3px solid #D9A35C;background:#FBF6EE;font-size:12px;line-height:1.65;color:#8A6A36}
 
 /* 第二页：整体分析入口 + 底部 CTA */
 .overview-bar{padding:10px 16px 0;flex-shrink:0}
@@ -769,7 +772,8 @@ var BODY_SLOTS = null, FRAMEWORKS = null, DIAGNOSIS_DISCLAIMER = '', BOOK_REF = 
 var SLOT_BY_ID = null;
 // docs/13 目录式诊断
 var REGIONS4 = null, SYMPTOMS = null, SYMPTOM_BY_ID = null, MUTEX_PAIRS = null, mutexBlocked = null;
-var engineReady = import('./mm-engine.js?v=256').then(function(m){
+var symptomUnion = null, actionPackageFor = null;
+var engineReady = import('./mm-engine.js?v=257').then(function(m){
   parseLocal = m.parseLocal;
   buildExplainCard = m.buildExplainCard;
   MUSCLE_MAP = m.MUSCLE_MAP;
@@ -796,8 +800,10 @@ var engineReady = import('./mm-engine.js?v=256').then(function(m){
   SYMPTOM_BY_ID = m.SYMPTOM_BY_ID;
   MUTEX_PAIRS = m.MUTEX_PAIRS;
   mutexBlocked = m.mutexBlocked;
+  symptomUnion = m.symptomUnion;
+  actionPackageFor = m.actionPackageFor;
   setupCatalogUi();
-  console.log('[body-map] 引擎加载完成（目录式症状 v256）');
+  console.log('[body-map] 引擎加载完成（目录式症状 v257）');
 }).catch(function(err){
   console.error('[body-map] 引擎加载失败（点选仍可用，诊断不可用）:', err);
 });
@@ -1483,8 +1489,30 @@ var muscleStates = {};
 
 function runDiagnosis(){
   if(selectedSymptoms.length === 0) return;
-  // docs/13 阶段C 接入：symptomUnion 涂色 + 症状解释卡（buildSymptomCard）
-  bubble('身体分析页正在接入中，下一步就好');
+  // docs/13 阶段C：目录式确定性涂色——症状并集 → 肌肉状态
+  var union = symptomUnion(selectedSymptoms);
+  currentResult = {
+    symptomIds: union.symptomIds,
+    colored: union.colored,
+    stretchOnly: union.stretchOnly,
+    conflicts: union.conflicts
+  };
+  // 涂色以 paint target 为键（rectus_femoris 与 quadriceps 同色块）
+  muscleStates = {};
+  inferredIds = {};
+  union.colored.forEach(function(c){
+    muscleStates[c.targetId] = c.state;
+    if(c.level === 'inferred') inferredIds[c.targetId] = true;
+  });
+  hideResultAi();
+  cloneResultSvgs();
+  applyResultColors();
+  buildAiSummary(currentResult);
+  pageSelect.style.display = 'none';
+  pageResult.style.display = 'flex';
+  if(zoomResult) zoomResult.reset();
+  setStageView(document.getElementById('stage-result'), 'front');
+  applyResultAutoPerspective();
 }
 
 var resultCloned = false;
@@ -1691,33 +1719,75 @@ function buildTypeCard(hit){
   return h;
 }
 
+// 单条症状解释卡（docs/13 §3：区域标签/专业名/通俗表现/机制解释/紧弱双栏/依据/免责/红旗）
+function buildSymptomCard(s){
+  var h = '<div class="type-card">';
+  // 1 区域标签
+  h += '<span class="tc-frame">' + regionName(s.region) + '</span>';
+  // 2 专业名
+  h += '<h5 class="tc-name">' + s.proName + '</h5>';
+  // 3 通俗表现
+  h += '<p class="tc-plain">' + s.manifest + '</p>';
+  // 4 机制解释
+  h += '<p class="tc-explain">' + s.explain + '</p>';
+  // 5 双栏名单（推断项灰字）
+  h += '<div class="tc-cols">'
+    + '<div class="tc-col t"><h6>常见偏紧</h6><p>' + typeColNames(s.tight, s.inferredTight) + '</p></div>'
+    + '<div class="tc-col w"><h6>常见偏弱</h6><p>' + typeColNames(s.weak, s.inferredWeak) + '</p></div>'
+    + '</div>';
+  // 可配合牵伸：不是本症状判定的紧张侧，图上不标红
+  if(s.stretchOnly && s.stretchOnly.length){
+    h += '<p class="tc-stretch">可配合牵伸：<b>' + s.stretchOnly.map(muscleCn).join('、')
+      + '</b>（放松建议，不属于本症状判定的紧张侧，图上不标红）</p>';
+  }
+  // 6 依据：书内模式取原文金句+页码；综合/文献症状取 evidenceNote
+  var p = s.sourcePattern ? (PATTERNS.find(function(x){ return x.id === s.sourcePattern; }) || null) : null;
+  var quote = '', src = '';
+  if(s.evidence === 'book' && p && p.note){
+    quote = '“' + p.note + '”';
+    src = BOOK_REF + ' p.' + p.bookPage;
+  }else if(s.evidenceNote){
+    // evidenceNote 为自包含文案（已含书引/文献），不再追加独立页码行
+    quote = s.evidenceNote;
+  }
+  if(quote){
+    h += '<div class="tc-quote">' + quote + (src ? '<span class="src">' + src + '</span>' : '') + '</div>';
+  }
+  // 红旗安全提示（静态文案）
+  if(s.redFlag){
+    h += '<p class="tc-flag">⚠️ ' + s.redFlag + '</p>';
+  }
+  // 7 固定免责声明
+  h += '<p class="tc-disclaim">' + DIAGNOSIS_DISCLAIMER + '</p>';
+  h += '</div>';
+  return h;
+}
+
 function buildAiSummary(res){
+  var tightTargets = {}, weakTargets = {};
+  (res.colored || []).forEach(function(c){
+    if(c.state === 'tight') tightTargets[c.targetId] = true;
+    else if(c.state === 'weak') weakTargets[c.targetId] = true;
+  });
+  var tightN = Object.keys(tightTargets).length;
+  var weakN = Object.keys(weakTargets).length;
   var html = '';
-  var stats = res.stats || {};
-  var tightN = stats.possiblyTight || 0;
-  var weakN = stats.possiblyWeak || 0;
   html += '<h4>身体整体分析</h4>';
   html += '<div class="tc-stats">';
   html += '<div><div class="n t">' + tightN + '</div><div class="l">块常见偏紧</div></div>';
   html += '<div><div class="n w">' + weakN + '</div><div class="l">块常见偏弱</div></div>';
   html += '</div>';
-  var clickedN = (res.reports || []).length;
-  var relatedN = (res.colored || []).length;
-  html += '<p class="tc-countline">你指出的 ' + clickedN + ' 处不适 · 这些失衡模式常见涉及 ' + relatedN + ' 块肌肉</p>';
+  html += '<p class="tc-countline">选了 ' + (res.symptomIds || []).length + ' 个症状 · 共涉及 '
+    + tightN + ' 块偏紧、' + weakN + ' 块偏弱（已去重）</p>';
 
-  // 类型卡：按点击顺序，同类型（跨侧别）只出一张
-  var seenPattern = {};
-  var cards = '';
-  var cardCount = 0;
-  (res.hits || []).forEach(function(hit){
-    if(seenPattern[hit.patternId]) return;
-    seenPattern[hit.patternId] = true;
-    cards += buildTypeCard(hit);
-    cardCount++;
-  });
+  // 症状解释卡：按用户选择顺序
+  var cards = (res.symptomIds || []).map(function(sid){
+    var s = SYMPTOM_BY_ID[sid];
+    return s ? buildSymptomCard(s) : '';
+  }).join('');
   html += cards;
-  if(!cardCount){
-    html += '<p style="color:#A2ABAC;font-size:13px">还没有可展示的失衡模式，请返回上一页标记不适位置。</p>';
+  if(!cards){
+    html += '<p style="color:#A2ABAC;font-size:13px">还没有选择症状，请返回上一页选择你的情况。</p>';
   }
   html += '<p class="tc-tip">虚线/灰色标注为资料推断项；如想了解单块肌肉功能，点击图上肌肉查看。</p>';
   aiCard.innerHTML = html;
@@ -2337,14 +2407,17 @@ function openSheet(id){
 
   var st = coloredEntry ? coloredEntry.state : 'neutral';
   var isInferred = coloredEntry && coloredEntry.level === 'inferred';
+  // docs/13：关联症状短名（可能同时出现在多个被选症状中，去重展示）
   var typeShort = '';
-  if(coloredEntry && currentResult.hits){
-    for(var j = 0; j < currentResult.hits.length; j++){
-      if(currentResult.hits[j].patternId === coloredEntry.patternId){
-        typeShort = SLOT_BY_ID[currentResult.hits[j].slotId].short;
-        break;
-      }
-    }
+  if(coloredEntry){
+    var sids = coloredEntry.symptomIds && coloredEntry.symptomIds.length
+      ? coloredEntry.symptomIds : [coloredEntry.symptomId];
+    var names = [];
+    sids.forEach(function(sid){
+      var s = SYMPTOM_BY_ID ? SYMPTOM_BY_ID[sid] : null;
+      if(s && names.indexOf(shortMenu(s)) === -1) names.push(shortMenu(s));
+    });
+    typeShort = names.join('、');
   }
   var isStabilizer = (realId === 'multifidus' || realId === 'quadratus_lumborum');
   var tagCls = st === 'tight' ? 'tight' : st === 'weak' ? 'weak' : '';
