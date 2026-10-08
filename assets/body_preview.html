@@ -39,30 +39,19 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 选择页：不再整块肌肉变色，改为小红点标记 */
 .m.sel{fill:#F6F0E9;stroke:#E3D5C8}
 
-/* ── 目录式诊断：四大区肌肉底色 + 轮廓垫色 + 隐形点击热层（docs/13 修订） ─────── */
-/* 区色：柔彩四色（紫/青/粉/浅蓝），各配同系深一档描边；仅诊断第一页使用（首页/结果页克隆时剥离） */
-#stage{background:#F7F8FA} /* 诊断页1 垫色透明度透出中性冷白底，保持柔彩色系纯净 */
-#stage .m.r-neck{fill:#E7CDEE;stroke:#B48FC7}  /* 肩颈 紫 */
-#stage .m.r-arm{fill:#B0E1EC;stroke:#79B3C6}   /* 肩臂 青 */
-#stage .m.r-back{fill:#EFB9C3;stroke:#D28C9B}  /* 腰腹 粉 */
-#stage .m.r-leg{fill:#AABDDA;stroke:#7E93C2}   /* 臀腿 浅蓝 */
-/* 跨区肌肉的第二区半透明叠层（与底色自然混色）；叠层无 .m 类，fill 需单独给 */
-.r-overlay{fill-opacity:.55;stroke:none;pointer-events:none;transition:opacity .15s}
-#stage .r-overlay.r-neck{fill:#E7CDEE}
-#stage .r-overlay.r-arm{fill:#B0E1EC}
-#stage .r-overlay.r-back{fill:#EFB9C3}
-#stage .r-overlay.r-leg{fill:#AABDDA}
-/* 轮廓内区域垫色块：头→肩颈、手→肩臂、脚→臀腿、躯干按区分段；JS 注入并被轮廓 clipPath 裁切 */
-.rb-neck{fill:#E7CDEE}
-.rb-arm{fill:#B0E1EC}
-.rb-back{fill:#EFB9C3}
-.rb-leg{fill:#AABDDA}
-/* 默认 60% 半透明（含头）；点击某区弹出抽屉时仅本区肌肉实心，底色全程不变、其余区不压淡；抽屉关闭即恢复 */
-#stage [data-paint], #stage [data-region-fill], #stage .region-base > *{opacity:.6;transition:opacity .15s ease-out}
-#stage.peek-neck [data-paint~="neck"],
-#stage.peek-arm  [data-paint~="arm"],
-#stage.peek-back [data-paint~="back"],
-#stage.peek-leg  [data-paint~="leg"]{opacity:1}
+/* ── 目录式诊断：区域标签 + 点击区域主题色即时反馈 + 隐形点击热层（docs/13 修订） ─────── */
+/* 肌肉外观与首页一致（原色皮肤）；点击某区弹出抽屉时本区肌肉染主题色实心（同首页 .hm-sel），抽屉关闭即恢复 */
+.r-overlay{fill:#4198AC;stroke:none;pointer-events:none;opacity:0;transition:opacity .15s}
+#stage.peek-neck .m[data-paint~="neck"],
+#stage.peek-arm  .m[data-paint~="arm"],
+#stage.peek-back .m[data-paint~="back"],
+#stage.peek-leg  .m[data-paint~="leg"]{fill:#4198AC;stroke:#337F92;stroke-width:.7}
+#stage.peek-neck .r-overlay[data-paint~="neck"],
+#stage.peek-arm  .r-overlay[data-paint~="arm"],
+#stage.peek-back .r-overlay[data-paint~="back"],
+#stage.peek-leg  .r-overlay[data-paint~="leg"]{opacity:1}
+/* 区域标签：固定四枚，正背面均显示（背面按解剖左右镜像），pointer-events:none 不拦截任何点击 */
+.region-label{font-family:inherit;font-size:7.5px;font-weight:600;fill:#337F92;paint-order:stroke;stroke:#fff;stroke-width:2.2;stroke-linejoin:round;text-anchor:middle;opacity:.85}
 /* 隐形大形状热层：保留点击命中，不产生任何视觉（pointer-events 需压过 .stage .zoom-wrap svg path 的 visiblePainted） */
 #stage .hz-root .hz{fill:none;stroke:none;pointer-events:all;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent}
 
@@ -995,61 +984,33 @@ function buildRegionPaintMap(){
   });
   return m;
 }
-/* ── 轮廓内区域垫色：透明大轮廓 + clipPath 裁切的四区垫色块；头 group 单独归肩颈（仅诊断第一页，克隆时剥离） ── */
-var REGION_BASE_RECTS = {
-  // 正面：肩颈盖头+颈+胸廓，腰腹到裤线，臀腿到脚底；邻区微重叠防缝隙
+/* ── 区域标签：固定四枚，正背面均显示（背面按人体解剖左右镜像）；仅诊断第一页，克隆时剥离 ── */
+var REGION_LABELS = {
   front: [
-    { cls: 'rb-neck', x: 46, y: -2, w: 108, h: 118 },
-    { cls: 'rb-arm',  x: -2, y: 52, w: 58, h: 278 },
-    { cls: 'rb-arm',  x: 144, y: 52, w: 58, h: 278 },
-    { cls: 'rb-back', x: 46, y: 110, w: 108, h: 86 },
-    { cls: 'rb-leg',  x: 34, y: 188, w: 132, h: 274 }
+    { t: '肩颈区', x: 100, y: 62  },  // 脖子中间
+    { t: '肩臂区', x: 168, y: 160 },  // 人体左肘（正面＝画面右侧）
+    { t: '腰腹区', x: 100, y: 155 },  // 肚子中间
+    { t: '臀腿区', x: 72,  y: 250 }   // 人体右大腿（正面＝画面左侧）
   ],
-  // 背面：肩颈盖头+颈+上背（斜方肌区），腰背带更靠上开始
   back: [
-    { cls: 'rb-neck', x: 46, y: -2, w: 108, h: 100 },
-    { cls: 'rb-arm',  x: -2, y: 52, w: 58, h: 278 },
-    { cls: 'rb-arm',  x: 144, y: 52, w: 58, h: 278 },
-    { cls: 'rb-back', x: 46, y: 92, w: 108, h: 104 },
-    { cls: 'rb-leg',  x: 34, y: 188, w: 132, h: 274 }
+    { t: '肩颈区', x: 100, y: 62  },
+    { t: '肩臂区', x: 32,  y: 160 },  // 背面镜像：左肘在画面左侧
+    { t: '腰腹区', x: 100, y: 150 },
+    { t: '臀腿区', x: 128, y: 250 }   // 背面镜像：右大腿在画面右侧
   ]
 };
-function paintRegionBase(svg, side, uid){
-  // 大轮廓 = 第一条无 class 的 path（含躯干/手臂/腿脚，头在独立 group）
-  var outline = null, ps = svg.querySelectorAll('path');
-  for(var i = 0; i < ps.length; i++){
-    if(!ps[i].getAttribute('class')){ outline = ps[i]; break; }
-  }
-  if(!outline) return;
-  outline.setAttribute('fill', 'transparent');
-  outline.setAttribute('data-region-outline', '1');
-  var defs = document.createElementNS(SVG_NS, 'defs');
-  var cp = document.createElementNS(SVG_NS, 'clipPath');
-  cp.id = 'regionClip-' + uid;
-  var cpPath = outline.cloneNode(false);
-  cpPath.removeAttribute('fill');
-  cpPath.removeAttribute('data-region-outline');
-  cp.appendChild(cpPath);
-  defs.appendChild(cp);
-  svg.insertBefore(defs, svg.firstChild);
+function injectRegionLabels(svg, side){
   var g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('class', 'region-base');
-  g.setAttribute('clip-path', 'url(#regionClip-' + uid + ')');
+  g.setAttribute('class', 'region-labels');
   g.setAttribute('pointer-events', 'none');
-  REGION_BASE_RECTS[side].forEach(function(b){
-    var r = document.createElementNS(SVG_NS, 'rect');
-    r.setAttribute('class', b.cls);
-    r.setAttribute('x', b.x); r.setAttribute('y', b.y);
-    r.setAttribute('width', b.w); r.setAttribute('height', b.h);
-    g.appendChild(r);
+  REGION_LABELS[side].forEach(function(L){
+    var t = document.createElementNS(SVG_NS, 'text');
+    t.setAttribute('class', 'region-label');
+    t.setAttribute('x', L.x); t.setAttribute('y', L.y);
+    t.textContent = L.t;
+    g.appendChild(t);
   });
-  outline.parentNode.insertBefore(g, outline.nextSibling);
-  // 头 group（head-front/head-back）在肌肉层之上，单独归肩颈色（描边保持与装饰线一致）
-  var headPath = svg.querySelector('g[id^="head-"] path');
-  if(headPath){
-    headPath.setAttribute('fill', '#E7CDEE');
-    headPath.setAttribute('data-region-fill', '1');
-  }
+  svg.appendChild(g);
 }
 function paintRegionColors(svg){
   if(!regionPaintMap) regionPaintMap = buildRegionPaintMap();
@@ -1067,19 +1028,10 @@ function paintRegionColors(svg){
     }
   });
 }
-// 从首页/结果页克隆体上剥离分区着色（含垫色块/clipPath/透明轮廓/头色，全部恢复解剖原色）
+// 从首页/结果页克隆体上剥离分区标记（跨区叠层/区域标签/区域类与 data-paint 标记）
 function stripRegionPaint(root){
   root.querySelectorAll('.r-overlay').forEach(function(n){ n.remove(); });
-  root.querySelectorAll('.region-base').forEach(function(n){ n.remove(); });
-  root.querySelectorAll('defs').forEach(function(n){ n.remove(); });
-  root.querySelectorAll('[data-region-outline]').forEach(function(el){
-    el.setAttribute('fill', '#F6F0E9');
-    el.removeAttribute('data-region-outline');
-  });
-  root.querySelectorAll('[data-region-fill]').forEach(function(el){
-    el.setAttribute('fill', '#F6F0E9');
-    el.removeAttribute('data-region-fill');
-  });
+  root.querySelectorAll('.region-labels').forEach(function(n){ n.remove(); });
   root.querySelectorAll('[data-paint]').forEach(function(el){
     el.removeAttribute('data-paint');
     el.classList.remove('r-neck', 'r-arm', 'r-back', 'r-leg');
@@ -1177,7 +1129,7 @@ function setupCatalogUi(){
     if(!card) return;
     var svg = card.querySelector('svg');
     if(!svg || svg.querySelector('.hz-root')) return;
-    paintRegionBase(svg, cardId === 'card-back' ? 'back' : 'front', cardId);
+    injectRegionLabels(svg, cardId === 'card-back' ? 'back' : 'front');
     paintRegionColors(svg);
     svg.appendChild(buildHzSvgGroup());
   });
