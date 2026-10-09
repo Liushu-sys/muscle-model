@@ -296,16 +296,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .adv-action-screen .avd-figure{margin-bottom:0}
 .adv-action-screen .avd-fig{aspect-ratio:auto;height:clamp(86px,13.5vh,118px)}
 .adv-action-screen .avd-fig svg{width:28px;height:28px}
-/* AI 实验版动作屏：双图竖排（上准备下完成），高度固定撑满；文字卡固定较矮 */
-.adv-action-screen .avd-figure-v{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
-.adv-figure-v .avd-fig{flex:1;min-height:0;aspect-ratio:auto}
-.adv-figure-v .avd-fig-img{object-fit:cover;object-position:center top}
-.adv-figure-v .avd-fav-star{right:10px;bottom:14px;z-index:2}
-.adv-action-screen .avd-info{flex:0 0 auto;height:clamp(72px,10.5vh,96px);overflow-y:auto;scrollbar-width:none;padding:10px 12px}
+/* 介绍卡吃掉剩余高度，内容过多时仅卡内滚动，节奏卡始终贴底可见 */
+.adv-action-screen .avd-info{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;margin-bottom:0}
 .adv-action-screen .avd-info::-webkit-scrollbar{display:none}
-.adv-action-screen .avd-name{font-size:15px;margin:0 0 4px}
-.adv-step-inline{color:#337F92;font-weight:700}
-/* 节奏卡始终贴底可见（介绍卡已改为固定高度，不再吃剩余空间） */
 .adv-action-screen .avd-rhythm{flex-shrink:0}
 
 /* 纵滑位置指示点（固定在板块右侧，不随屏滚动） */
@@ -345,11 +338,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 /* 双态示意图：左准备 → 右完成（动作屏内） */
 .avd-figure{display:flex;align-items:stretch;gap:8px;position:relative}
 .avd-fig{flex:1;aspect-ratio:4/3;border-radius:14px;background:#EEF3F3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#93A0A1;position:relative;overflow:hidden}
-/* AI 生成示意图：加载中 shimmer，加载完淡入；标签压在图上 */
-.avd-fig-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s ease;background:linear-gradient(100deg,#EEF3F3 30%,#F7FBFB 50%,#EEF3F3 70%);background-size:200% 100%;animation:ai-shimmer 1.2s linear infinite}
-.avd-fig-img.loaded{opacity:1;animation:none}
-@keyframes ai-shimmer{to{background-position:-200% 0}}
-.avd-fig-label{font-size:11.5px;font-weight:600;position:relative;z-index:1;background:rgba(255,255,255,.82);border-radius:99px;padding:2px 9px;color:#5E7A80}
+.avd-fig-label{font-size:11.5px;font-weight:600}
 .avd-fav-star{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:#F5A623;cursor:pointer;transition:transform .15s ease}
 .avd-fav-star:active{transform:scale(.88)}
 .avd-fav-star svg{width:16px;height:16px;fill:currentColor}
@@ -525,47 +514,64 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .rec-state-k{flex-shrink:0;width:52px;font-size:12px;font-weight:500;color:var(--home-text-3);padding-top:1px}
 .rec-state-v{flex:1;font-size:13px;line-height:1.5;color:var(--home-text-2)}
 .rec-state-v strong{color:var(--home-accent-dark);font-weight:650}
-.rec-note{margin:12px 4px 16px;font-size:12px;line-height:1.6;color:var(--home-text-3)}
-.rec-item{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:13px 15px;box-shadow:0 6px 18px -10px rgba(31,68,77,.08);margin-bottom:9px}
-.rec-time{font-size:13px;font-weight:650;color:var(--home-text);font-variant-numeric:tabular-nums}
-.rec-mid{flex:1;min-width:0}
-.rec-region{font-size:13.5px;font-weight:600;color:var(--home-text)}
-.rec-feel{font-size:11.5px;color:var(--home-text-3);margin-top:1px}
-.rec-go{font-size:12px;font-weight:600;color:var(--home-accent);white-space:nowrap}
 
-/* ── 收藏页：三个动作卡片撑满整页（视觉对齐诊断页第三页动作卡） ── */
-#page-fav .app-body{display:flex;flex-direction:column;overflow:hidden}
-.fav-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none;flex-shrink:0}
-.fav-tabs::-webkit-scrollbar{display:none}
-.fav-tab{flex-shrink:0;padding:7px 16px;border:0;border-radius:99px;background:rgba(65,152,172,.1);color:var(--home-text-2);font:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .16s,color .16s}
-.fav-tab.active{background:var(--home-accent);color:#fff;font-weight:600;box-shadow:0 4px 12px -4px rgba(65,152,172,.4)}
-.fav-list{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
-.fav-card{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
-.fav-imgs{position:relative;display:flex;gap:8px;flex:1;min-height:0}
-.fav-img{flex:1;border-radius:12px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--home-accent-dark)}
-.fav-img svg{width:34px;height:34px}
-.fav-img-label{font-size:11px;font-weight:600;color:var(--home-text-3)}
-.fav-name-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.fav-name{font-size:15px;font-weight:700;color:var(--home-text)}
-/* 收藏详情 overlay：复刻 AI 动作推荐屏（上图下文+跟练卡），底部导航 z-20 保持可见可点 */
-.fav-detail{position:absolute;inset:0;z-index:15;background:linear-gradient(0deg,#F2F8F7 0%,#FAFDFD 70%,#FFFFFF 100%);display:flex;flex-direction:column}
-.fav-detail[hidden]{display:none}
-.fav-detail-head{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
-.fav-detail-back{width:34px;height:34px;border-radius:50%;border:0;background:#fff;color:#1D2122;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px -2px rgba(31,68,77,.18)}
-.fav-detail-back svg{width:18px;height:18px}
-.fav-detail-title{font-size:15px;font-weight:700;color:var(--home-text)}
-.fav-detail-body{flex:1;min-height:0;position:relative}
-.fav-detail-body .adv-pane-actions{height:100%}
-/* 动作示意图标签：左下角（仅 AI 动作页与收藏详情，不影响旧页面） */
-#ai-action-list .avd-fig-label,#fav-detail-body .avd-fig-label{position:absolute;left:10px;bottom:10px;top:auto}
-.fav-desc{font-size:12.5px;line-height:1.5;color:var(--home-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fav-star{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:#F5A623;pointer-events:none}
-.fav-star svg{width:16px;height:16px;fill:currentColor}
-.fav-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:var(--home-text-3)}
+/* ── 我的行动（原收藏页）：分类卡 + 待完成/已完成 ── */
+#page-fav .app-body{display:flex;flex-direction:column;overflow-y:auto;padding-top:0}
+#page-fav .app-header{position:static;flex-shrink:0;padding:max(16px,env(safe-area-inset-top)) 0 14px}
+#page-fav .app-subtitle{margin-top:8px}
+/* 分类方块卡 */
+.act-cats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;flex-shrink:0}
+.act-cat{border:0;border-radius:16px;padding:11px 4px 10px;background:#fff;box-shadow:0 6px 18px -10px rgba(36,36,60,.08);display:flex;flex-direction:column;align-items:center;gap:5px;font:inherit;cursor:pointer;color:var(--home-text-2);transition:background .16s,color .16s,transform .12s}
+.act-cat svg{width:21px;height:21px;color:var(--home-text-3)}
+.act-cat .n{font-size:12px;font-weight:600}
+.act-cat.active{background:var(--home-accent);color:#24243C}
+.act-cat.active svg{color:#24243C}
+.act-cat:active{transform:scale(.95)}
+/* 区块标题 */
+.act-sec-head{display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 10px;flex-shrink:0}
+.act-sec-title{font-size:13.5px;font-weight:700;color:var(--home-text)}
+.act-sec-count{font-size:11.5px;color:var(--home-text-3)}
+/* 待完成：BCCBF9 */
+.act-feat{background:#BCCBF9;border-radius:22px;padding:14px 14px 12px;margin-bottom:10px}
+.act-feat-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.act-feat-name{font-size:16.5px;font-weight:750;letter-spacing:-.01em;color:var(--home-text)}
+.act-tag{flex-shrink:0;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:650;background:rgba(255,255,255,.66);color:#5A6CD6}
+.act-figs{position:relative;display:flex;gap:8px}
+.act-fig{flex:1;aspect-ratio:4/3;border-radius:14px;background:rgba(255,255,255,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#5A6CD6}
+.act-fig svg{width:28px;height:28px}
+.act-fig .l{font-size:10.5px;font-weight:600;color:rgba(90,108,214,.72)}
+/* 动画占位：先留位置，不放内容 */
+.act-fig.anim{border:1.5px dashed rgba(163,182,243,.55);background:rgba(163,182,243,.18)}
+.act-star{width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.85);display:grid;place-items:center;color:#FFBF85;cursor:pointer;transition:transform .15s}
+.act-star:active{transform:scale(.88)}
+.act-star svg{width:16px;height:16px;fill:currentColor}
+.act-figs .act-star{position:absolute;right:6px;bottom:6px}
+.act-row{display:flex;align-items:center;gap:10px;background:#BCCBF9;border-radius:16px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:transform .12s}
+.act-row:active{transform:scale(.98)}
+.act-row-icon{width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.5);display:grid;place-items:center;color:#5A6CD6;flex-shrink:0}
+.act-row-icon svg{width:19px;height:19px}
+.act-row-mid{flex:1;min-width:0}
+.act-row-name{font-size:13.5px;font-weight:650;color:var(--home-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-row-dose{font-size:11px;color:rgba(36,36,60,.55);margin-top:1px}
+.act-row .act-star{background:transparent;flex-shrink:0}
+/* 已完成：D5F77A */
+.act-row.done{background:#D5F77A}
+.act-check{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.55);display:grid;place-items:center;color:var(--home-text)}
+.act-check svg{width:13px;height:13px}
+.act-empty{margin:4px 4px 14px;padding:26px 12px;border-radius:16px;background:#fff;text-align:center;font-size:12.5px;line-height:1.6;color:var(--home-text-3)}
 
-/* ── 我的页 ── */
-.me-profile{display:flex;align-items:center;gap:14px;background:#fff;border-radius:20px;padding:18px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1);margin-top:4px}
-.me-avatar{flex-shrink:0;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,rgba(65,152,172,.24) 0%,rgba(51,127,146,.34) 100%)}
+/* ── 个人中心（原我的页）：标题行+调节图标 / 头像卡 / 三统计卡 / 我的健康管理 ── */
+#page-me .app-body{display:flex;flex-direction:column;overflow-y:auto;padding-top:0}
+#page-me .app-header{position:static;flex-shrink:0;padding:max(16px,env(safe-area-inset-top)) 0 14px}
+#page-me .app-subtitle{margin-top:8px}
+.me-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.me-gear{flex-shrink:0;width:38px;height:38px;border:0;border-radius:50%;background:#E3E9FC;display:grid;place-items:center;color:#5A6CD6;cursor:pointer;transition:transform .15s;pointer-events:auto}
+.me-gear:active{transform:scale(.9)}
+.me-gear svg{width:19px;height:19px}
+/* 头像资料卡 */
+.me-profile{display:flex;align-items:center;gap:14px;background:#fff;border-radius:20px;padding:16px;box-shadow:0 8px 24px -12px rgba(36,36,60,.1);margin-top:4px;flex-shrink:0}
+.me-avatar{flex-shrink:0;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#E3E9FC 0%,#BCCBF9 100%);display:grid;place-items:center;color:#5A6CD6}
+.me-avatar svg{width:28px;height:28px}
 .me-info{flex:1;min-width:0}
 .me-name{font-size:17px;font-weight:700;color:var(--home-text)}
 .me-email{margin-top:2px;font-size:12px;color:var(--home-text-3)}
@@ -596,7 +602,25 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .me-arrow{font-size:15px;color:var(--home-text-3)}
 .me-footer{margin:26px 0 8px;text-align:center;flex-shrink:0}
 .me-footer p{margin:0 0 5px;font-size:11.5px;line-height:1.6;color:var(--home-text-3)}
-/* ══════════ AI 驱动实验流程（ai-flow） ══════════ */
+/* 编辑资料弹卡 */
+.me-edit-mask{position:fixed;inset:0;z-index:80;background:rgba(20,20,40,.45);display:flex;align-items:center;justify-content:center;padding:24px}
+.me-edit-card{width:100%;max-width:340px;background:#fff;border-radius:24px;padding:22px 20px 18px;box-shadow:0 24px 60px -16px rgba(36,36,60,.4)}
+.me-edit-title{font-size:17px;font-weight:700;color:var(--home-text);text-align:center;margin-bottom:18px}
+.me-edit-avatar-row{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px}
+.me-edit-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#E3E9FC 0%,#BCCBF9 100%);display:grid;place-items:center;color:#5A6CD6;overflow:hidden}
+.me-edit-avatar svg{width:32px;height:32px}
+.me-edit-avatar img{width:100%;height:100%;object-fit:cover}
+.me-edit-avatar-btn{border:0;background:#E3E9FC;color:#5A6CD6;border-radius:99px;padding:6px 14px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.me-edit-field{display:block;margin-bottom:12px}
+.me-edit-label{display:block;font-size:12px;font-weight:600;color:var(--home-text-3);margin:0 0 6px 2px}
+.me-edit-field input{width:100%;box-sizing:border-box;border:0;background:#F1F4F6;border-radius:12px;padding:11px 14px;font:inherit;font-size:14.5px;color:var(--home-text)}
+.me-edit-field input:focus{outline:2px solid #A3B6F3}
+.me-edit-actions{display:flex;gap:10px;margin-top:18px}
+.me-edit-actions button{flex:1;border:0;border-radius:99px;padding:11px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.me-edit-cancel{background:#F1F4F6;color:var(--home-text-2)}
+.me-edit-save{background:#A3B6F3;color:#24243C}
+
+/* ══════════ AI 驱动实验流程（ai-flow，首页交互） ══════════ */
 #page-ai-pick,#page-ai-action,#page-ai-science{flex-direction:column;background:#fff}
 .ai-stage{position:relative;flex:1;min-height:0;margin:6px 12px 0;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#E8F3F5 0%,#F3FAFB 100%)}
 .ai-card{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;touch-action:none}
@@ -688,7 +712,17 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .ai-sum-card{background:#E8F3F5;border:1px solid #CFE2E5;border-radius:14px;padding:12px 14px;margin:2px 0 8px;text-align:left}
 .ai-sum-title{font-size:12.5px;font-weight:800;color:#337F92;margin-bottom:4px}
 .ai-sum-card p{margin:0;font-size:13.5px;line-height:1.65;color:#3D4A4D;font-weight:500;text-align:left}
-.ai-sum-tip{margin-top:6px!important;font-size:12px!important;color:#6E8790!important;font-weight:600!important}
+/* AI 相关补充（动作示意图加载态 / 科普解释卡 / 竖排双图） */
+.ai-card h4{margin:0 0 8px;font-size:14px;font-weight:700;color:#337F92}
+.ai-card p{margin:0 0 6px}
+.ai-card .ai-tag{display:inline-block;margin-right:6px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#E8F3F4;color:#337F92}
+.ai-card .ai-red{background:#FDECEB;color:#D8403A}
+.adv-action-screen .avd-figure-v{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.avd-fig-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s ease;background:linear-gradient(100deg,#EEF3F3 30%,#F7FBFB 50%,#EEF3F3 70%);background-size:200% 100%;animation:ai-shimmer 1.2s linear infinite}
+.avd-fig-img.loaded{opacity:1;animation:none}
+@keyframes ai-shimmer{to{background-position:-200% 0}}
+/* AI 动作页示意图标签：左下角胶囊（不影响旧诊断页） */
+#ai-action-list .avd-fig-label{position:absolute;left:10px;bottom:10px;top:auto;background:rgba(255,255,255,.82);border-radius:99px;padding:2px 9px;color:#5E7A80;z-index:1}
 </style></head><body>
 <!-- ===== 首页（自由肌肉探索，默认入口） ===== -->
 <div id="page-home" class="page">
@@ -899,28 +933,16 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 
 <!-- ===== 我的行动（原收藏页） ===== -->
 <div id="page-fav" class="page" style="display:none">
-  <header class="app-header">
-    <div class="app-title">收藏</div>
-    <div class="app-subtitle">把适合你的动作留在这里</div>
-  </header>
   <div class="app-body" id="fav-body">
-    <div class="fav-tabs" id="fav-tabs">
-      <button class="fav-tab active" data-cat="all">全部</button>
-      <button class="fav-tab" data-cat="neck_shoulder">肩颈</button>
-      <button class="fav-tab" data-cat="low_back_hip">腰背</button>
-      <button class="fav-tab" data-cat="leg">臀腿</button>
-      <button class="fav-tab" data-cat="other">其他</button>
-    </div>
-    <div class="fav-list" id="fav-list"></div>
-  </div>
-  <div class="fav-detail" id="fav-detail" hidden>
-    <header class="fav-detail-head">
-      <button type="button" class="fav-detail-back" id="fav-detail-back" aria-label="返回">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
-      </button>
-      <div class="fav-detail-title">动作详情</div>
+    <header class="app-header">
+      <div class="app-title">我的行动</div>
+      <div class="app-subtitle">为身体留下值得坚持的行动</div>
     </header>
-    <div class="fav-detail-body" id="fav-detail-body"></div>
+    <div class="act-cats" id="act-cats"></div>
+    <div class="act-sec-head"><span class="act-sec-title">待完成</span><span class="act-sec-count" id="act-pending-count"></span></div>
+    <div id="act-pending-list"></div>
+    <div class="act-sec-head"><span class="act-sec-title">已完成</span><span class="act-sec-count" id="act-done-count"></span></div>
+    <div id="act-done-list"></div>
   </div>
   <nav class="bottom-nav">
     <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
@@ -1005,7 +1027,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   </nav>
 </div>
 
-<!-- ===== AI 驱动实验流程（三页） ===== -->
+<!-- ===== AI 驱动实验流程（三页，首页交互入口） ===== -->
 <div id="page-ai-pick" class="page" style="display:none">
   <header class="diag-header">
     <button class="back-btn" id="ai-pick-back" aria-label="返回">
@@ -2278,39 +2300,131 @@ var recView = 'week';
 renderCalendar();
 renderRecordSummary();
 
-/* ── 收藏页：分类过滤（mock data） ── */
-var FAV_MOCK = [
-  {id:'scalene_stretch', name:'颈部侧向拉伸', region:'肩颈', cat:'neck_shoulder', desc:'帮助放松颈部紧张区域。', dose:'20–30秒 × 2'},
-  {id:'desk_scap_set',  name:'肩胛稳定训练', region:'肩颈', cat:'neck_shoulder', desc:'帮助提升肩胛区域的参与程度。', dose:'8–10次 × 2'},
-  {id:'wall_angel',     name:'胸椎伸展',     region:'腰背', cat:'low_back_hip',  desc:'帮助缓解长时间保持固定姿势后的紧张感。', dose:'20秒 × 2'}
-];
-function renderFavList(cat){
-  var list = document.getElementById('fav-list');
-  if(!list) return;
-  var items = FAV_MOCK.filter(function(a){ return cat === 'all' || a.cat === cat; });
-  if(!items.length){
-    list.innerHTML = '<div class="fav-empty">这个分类下还没有收藏的动作</div>';
+/* ── 记录页：本周视图（紫色面板）+ 全部视图（照样图） ── */
+// 2026年10月：1日是周四（(1+3)%7=4 ✓）
+function recWeekday(d){ return (d + 3) % 7; }
+function recWeekStart(d){
+  var wd = recWeekday(d);
+  return Math.max(1, Math.min(d - wd, 25));
+}
+function recWeekDays(){
+  var s = recWeekStart(recSelectedDay);
+  var days = [];
+  for(var i = 0; i < 7; i++) days.push(s + i);
+  return days;
+}
+function recEntryHtml(region, time, feel){
+  return '<div class="rec-entry"><div class="rec-entry-icon">' + REC_ENTRY_ICON + '</div>'
+    + '<div class="rec-entry-mid"><div class="rec-entry-title">' + region + '</div><div class="rec-entry-time">' + time + '</div></div>'
+    + '<span class="rec-entry-chip">' + feel + '</span></div>';
+}
+function renderRecordWeek(){
+  var el = document.getElementById('rec-view-week');
+  if(!el) return;
+  var days = recWeekDays();
+  var rec = RECORD_MOCK[recSelectedDay];
+  var h = '';
+  // 周日期条
+  h += '<div class="rec-week-strip">';
+  days.forEach(function(d){
+    var sel = d === recSelectedDay;
+    var has = !!RECORD_MOCK[d];
+    h += '<button type="button" class="rec-wd' + (sel ? ' sel' : '') + (has && !sel ? ' has-dot' : '') + '" data-day="' + d + '">'
+      + '<span class="n">' + d + '</span><span class="t">' + ['日','一','二','三','四','五','六'][recWeekday(d)] + '</span></button>';
+  });
+  h += '</div>';
+  // 紫色面板
+  var feels = rec && rec.times.length ? rec.times.map(function(t){ return t.feel; }) : [];
+  var domFeel = feels[0] || '无记录';
+  var tight = feels.some(function(f){ return f === '酸痛' || f === '僵硬'; });
+  var loose = feels.some(function(f){ return f === '无力'; });
+  var moodHtml = feels.length
+    ? (tight ? '<b>稍紧</b>' : '稍紧') + '<span class="sep">·</span>' + (loose ? '<b>放松</b>' : '放松')
+    : '这一天还没有身体记录';
+  var weekRecDays = days.filter(function(d){ return RECORD_MOCK[d]; });
+  var weekTotal = weekRecDays.reduce(function(s,d){ return s + RECORD_MOCK[d].count; }, 0);
+  var weekAvg = weekRecDays.length ? (weekTotal / weekRecDays.length).toFixed(1) : '0';
+  var maxCount = 4;
+  h += '<div class="rec-panel">'
+    + '<div class="rec-panel-head"><span class="rec-panel-date">10月' + recSelectedDay + '日 · ' + REC_WEEK[recWeekday(recSelectedDay)] + '</span>'
+    + '<span class="rec-panel-chip">' + domFeel + '</span></div>'
+    + '<div class="rec-mood">' + moodHtml + '</div>'
+    + '<div class="rec-chart">';
+  days.forEach(function(d){
+    var c = RECORD_MOCK[d] ? RECORD_MOCK[d].count : 0;
+    var pct = Math.round(c / maxCount * 100);
+    h += '<div class="col"><div class="bar' + (c ? '' : ' zero') + (d === recSelectedDay ? ' sel' : '') + '" style="height:' + (c ? pct : 6) + '%"></div></div>';
+  });
+  h += '</div><div class="rec-chart-labels">';
+  days.forEach(function(d){
+    h += '<span class="lbl' + (d === recSelectedDay ? ' sel' : '') + '">' + d + '</span>';
+  });
+  h += '</div>'
+    + '<div class="rec-panel-foot">'
+    + '<div class="rec-avg">本周均分<b>' + weekAvg + '</b></div>'
+    + '<div class="rec-weeknav"><button type="button" id="rec-week-prev">上周</button><button type="button" id="rec-week-next">下周</button></div>'
+    + '</div>'
+    + '<div class="rec-panel-note">从颈痛到肩颈放松，一切都在慢慢变好。</div>'
+    + '</div>';
+  // 最近记录
+  h += '<div class="rec-list-head"><span class="rec-list-title">最近记录</span>'
+    + '<span class="rec-list-count">本周已记录 <b>' + weekRecDays.length + '</b> 天</span></div>';
+  var entries = rec && rec.times.length ? rec.times : [];
+  if(!entries.length){
+    // 无记录的日子：展示本月最近的 2 条
+    var recent = [];
+    Object.keys(RECORD_MOCK).forEach(function(k){
+      RECORD_MOCK[k].times.forEach(function(t){ recent.push({day:+k, time:t.time, region:t.region, feel:t.feel}); });
+    });
+    recent.sort(function(a,b){ return b.day - a.day || (a.time < b.time ? 1 : -1); });
+    recent.slice(0, 2).forEach(function(t){
+      entries.push({time:'10月' + t.day + '日 · ' + t.time, region:t.region, feel:t.feel});
+    });
+  }
+  entries.forEach(function(t){
+    h += recEntryHtml(t.region, t.time, t.feel);
+  });
+  h += '<button type="button" class="rec-cta" id="rec-cta">＋ 记录此刻的身体感受</button>';
+  el.innerHTML = h;
+  // 交互绑定
+  el.querySelectorAll('.rec-wd').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      recSelectedDay = parseInt(btn.dataset.day, 10);
+      renderRecordWeek();
+    });
+  });
+  var prev = document.getElementById('rec-week-prev');
+  var next = document.getElementById('rec-week-next');
+  if(prev) prev.addEventListener('click', function(){
+    recSelectedDay = Math.max(1, recSelectedDay - 7);
+    renderRecordWeek();
+  });
+  if(next) next.addEventListener('click', function(){
+    recSelectedDay = Math.min(31, recSelectedDay + 7);
+    renderRecordWeek();
+  });
+  var cta = document.getElementById('rec-cta');
+  if(cta) cta.addEventListener('click', function(){ switchTab('home'); });
+}
+function renderRecordAll(){
+  var el = document.getElementById('rec-view-all');
+  if(!el) return;
+  var days = Object.keys(RECORD_MOCK).map(Number).sort(function(a,b){ return b - a; });
+  if(!days.length){
+    el.innerHTML = '<div class="rec-note">还没有任何记录，从一次身体分析开始吧。</div>';
     return;
   }
-  var figIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
   var h = '';
-  items.forEach(function(a){
-    h += '<div class="fav-card" data-aid="' + a.id + '">'
-       + '<div class="fav-imgs">'
-       + '<div class="fav-img">' + figIcon + '<span class="fav-img-label">准备姿势</span></div>'
-       + '<div class="fav-img">' + figIcon + '<span class="fav-img-label">完成动作</span></div>'
-       + '<button class="fav-star" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg></button>'
-       + '</div>'
-       + '<div class="fav-name-row">'
-       + '<div class="fav-name">' + a.name + '</div>'
-       + '</div>'
-       + '<div class="fav-desc">' + a.desc + '</div>'
-       + '</div>';
+  days.forEach(function(d){
+    h += '<div class="rec-entry-day">10月' + d + '日 · ' + REC_WEEK[recWeekday(d)] + '</div>';
+    RECORD_MOCK[d].times.forEach(function(t){
+      h += recEntryHtml(t.region, t.time, t.feel);
+    });
   });
-  list.innerHTML = h;
+  el.innerHTML = h;
 }
-document.getElementById('fav-tabs').addEventListener('click', function(ev){
-  var tab = ev.target.closest('.fav-tab');
+document.getElementById('rec-tabs').addEventListener('click', function(ev){
+  var tab = ev.target.closest('.rec-tab');
   if(!tab) return;
   recView = tab.dataset.view;
   document.querySelectorAll('#rec-tabs .rec-tab').forEach(function(t){ t.classList.toggle('active', t === tab); });
@@ -2429,20 +2543,44 @@ document.getElementById('act-cats').addEventListener('click', function(ev){
   actCat = (actCat === c.dataset.cat) ? null : c.dataset.cat;
   renderActionsPage();
 });
-/* 收藏卡 → 动作详情 overlay（复刻 AI 动作推荐屏） */
-document.getElementById('fav-list').addEventListener('click', function(ev){
-  var card = ev.target.closest('.fav-card');
-  if(!card || !card.dataset.aid) return;
-  var body = document.getElementById('fav-detail-body');
-  if(window.AIFlow && window.AIFlow.renderFavDetail(body, card.dataset.aid)){
-    document.getElementById('fav-detail').hidden = false;
-  }
+// 卡片点击 → 诊断页3看动作；星星 → 取消收藏
+['act-pending-list', 'act-done-list'].forEach(function(lid){
+  document.getElementById(lid).addEventListener('click', function(ev){
+    var star = ev.target.closest('.act-star');
+    var card = ev.target.closest('[data-act-id]');
+    if(!card) return;
+    if(star){
+      ev.stopPropagation();
+      var arr = actFavs();
+      var i = arr.indexOf(card.dataset.actId);
+      if(i !== -1){ arr.splice(i, 1); actSetFavs(arr); }
+      renderActionsPage();
+      return;
+    }
+    openFavAction(card.dataset.actId);
+  });
 });
-document.getElementById('fav-detail-back').addEventListener('click', function(){
-  document.getElementById('fav-detail').hidden = true;
-  if(window.AIFlow) window.AIFlow.closeFavDetail(document.getElementById('fav-detail-body'));
-});
-renderFavList('all');
+// 从「我的行动」进入诊断页3：只渲染该动作一屏，返回回到本页
+var advFromFav = false;
+function openFavAction(id){
+  var a = actMetaById()[id];
+  if(!a) return;
+  advFromFav = true;
+  stopAllAdvRhythms();
+  advRhythms = [];
+  document.getElementById('adv-tabs').style.display = 'none';
+  adviceBodyEl.innerHTML = '<div class="adv-pane-wrap"><section class="adv-pane adv-pane-actions">'
+    + actionScreenHtml(a, a.forState === 'tight' ? 'relief' : 'strengthen', '')
+    + '</section></div>';
+  adviceBodyEl.scrollLeft = 0;
+  bindAdviceScreens();
+  switchTab('fav');
+  Object.keys(NAV_PAGES).forEach(function(k){ document.getElementById(NAV_PAGES[k]).style.display = 'none'; });
+  pageAdvice.style.display = 'flex';
+}
+renderActionsPage();
+// 引擎异步加载：ACTIONS 就绪后重渲染（首屏渲染时动作数据可能还没到）
+if(engineReady && engineReady.then){ engineReady.then(function(){ renderActionsPage(); }); }
 
 
 /* ── 第三页：改善建议 ─────────────────────────────────── */
