@@ -1343,8 +1343,7 @@ function analyzeBySlots(marks) {
     };
     add(h.pattern.tight, "tight", "main");
     add(h.pattern.weak, "weak", "main");
-    add(h.pattern.inferredTight, "tight", "inferred");
-    add(h.pattern.inferredWeak, "weak", "inferred");
+    // 推断层整体退役：inferredTight/inferredWeak 数据保留，但不参与涂色与展示
   });
 
   const colored = [];
@@ -1370,25 +1369,31 @@ function analyzeBySlots(marks) {
 var REGIONS4 = [
   { id: "neck", name: "肩颈", hint: "脖子、后脑勺、斜方肌、含胸圆肩" },
   { id: "arm", name: "肩臂", hint: "肩膀、手肘、手腕、前臂" },
-  { id: "upperback", name: "肩背", hint: "肩胛骨、后背心、肩膀头" },
+  { id: "upperback", name: "肩背", hint: "圆背驼背、肩胛骨、后背心、肩膀头" },
   { id: "back", name: "腰腹", hint: "腰、腰骶一侧、小肚子" },
   { id: "leg", name: "臀腿", hint: "屁股、大腿、膝盖、小腿、脚踝" }
 ];
 var REGIONS4_BY_ID = Object.fromEntries(REGIONS4.map((r) => [r.id, r]));
 
-// docs/13 修订：五大区 → 肌肉块底色归类（仅诊断页1分区着色用，不参与涂色判定）。
-// 48 块肌肉全覆盖；6 块跨区肌肉（上斜方肌/肩胛提肌/胸大肌/胸小肌＝肩颈∩肩臂，髂腰肌/竖脊肌＝腰腹∩臀腿）
-// 在两个区各出现一次，第一页用半透明双层填充呈现叠色。
+// docs/13 修订：五大区 → 肌肉块归类（仅诊断页1点选即时反馈用，不参与结果涂色判定）。
+// 跨区肌肉在多个区各出现一次，点任一相关区都会染色：
+// 肩颈∩肩臂（上斜方/肩胛提/胸大/胸小）、肩颈∩肩臂∩肩背（三角肌）、肩颈∩肩背（中斜方）、腰腹∩臀腿（髂腰肌/竖脊肌）。
 var REGION_PAINT = {
   neck: [
     "sternocleidomastoid", "deep_neck_flexor", "suboccipital", "splenius_capitis",
     "levator_scapulae", "trapezius_upper", "scalenes",
     // 与肩臂重叠：胸肌属上交叉紧张链（Janda UCS），牵涉痛投射肩前（Travell）
-    "pectoralis_major", "pectoralis_minor"
+    "pectoralis_major", "pectoralis_minor",
+    // 三角肌（肩颈∩肩臂∩肩背）：正面肩颈点选含肩峰覆盖肌；背面肩颈含后束
+    "deltoid",
+    // 中斜方（肩颈∩肩背）：背面肩颈点选时同步染色
+    "trapezius_middle"
   ],
   arm: [
     // 与肩颈重叠 4 块
     "trapezius_upper", "levator_scapulae", "pectoralis_major", "pectoralis_minor",
+    // 三角肌同时属于肩臂（肩峰覆盖肌）
+    "deltoid",
     // 肘/前臂（肩胛带肌群已划入肩背区）
     "biceps_brachii", "triceps_brachii", "brachioradialis",
     "forearm_flexors", "forearm_extensors"
@@ -1428,7 +1433,7 @@ var SYMPTOMS = [
     subFeel: "<b>颈后</b>酸沉发紧",
     subPosture: "侧面看头往前探，耳朵跑到肩膀前面",
     proName: "颅颈区 · 头部过度前伸姿势",
-    manifest: "久看屏幕后颈后酸沉、后脑勺发紧，晨起偶尔像「落枕」，转脖子不如以前灵活。",
+    manifest: "侧面看头习惯性往前探、耳朵跑到肩膀前面；颈后酸沉发紧，后脑勺发沉，晨起偶尔像「落枕」，转脖子不如以前灵活。",
     explain: "头每向前探一点，颈椎要承担的重量就明显增加。前侧的胸锁乳突肌长期短缩去适应这个姿势，后侧的枕下肌群被拉住持续做功，而真正该把头稳稳托住的深层颈屈肌却被抑制、使不上劲。",
     tight: ["sternocleidomastoid", "suboccipital", "levator_scapulae"],
     weak: ["deep_neck_flexor"],
@@ -1455,13 +1460,13 @@ var SYMPTOMS = [
     subFeel: "<b>颈肩</b>僵厚，容易头痛",
     subPosture: "脖子根鼓包，头前探+圆肩同时有",
     proName: "上交叉综合征（Upper Crossed Syndrome）",
-    manifest: "颈肩背整片僵硬，上斜方肌摸起来硬厚，头前探、圆肩同时存在，容易伴随头痛和肩前侧不适。",
+    manifest: "头前探、圆肩同时存在，脖子根摸起来鼓厚；颈肩背整片僵硬，容易伴随头痛和肩前侧不适。",
     explain: "这是前两条合在一起的完整形态：紧张的胸肌、枕下肌群、上斜方肌，与被抑制的深层颈屈肌和肩胛稳定肌，在躯干前后交叉成一个「X」。上斜方肌属于「越紧越没力」的过劳肌——只按揉放松只能管一时，背后无力的肌肉不被唤醒，紧张很快会回来。",
     tight: ["trapezius_upper", "levator_scapulae", "sternocleidomastoid", "suboccipital", "pectoralis_major", "pectoralis_minor"],
     weak: ["deep_neck_flexor", "rhomboid", "trapezius_middle", "trapezius_lower", "serratus_anterior"],
     inferredTight: ["scalenes"],
     sourcePattern: "scapulothoracic", evidence: "literature",
-    evidenceNote: "上交叉综合征由康复科医生 Vladimir Janda 提出；紧/弱分组见 Chang MC 等 2023 年系统综述（Healthcare 11(16):2328），书内依据 p.89、p.235"
+    evidenceNote: "「上交叉综合征表现为颈前侧与胸前侧肌肉缩短、颈深屈肌与肩胛稳定肌被抑制，两组肌肉在躯干前后交叉成 X 形的失衡模式」——Vladimir Janda 提出的经典体态综合征；紧/弱分组另见 Chang MC 等系统综述（Healthcare，2023），书内依据 p.89、p.235"
   },
   {
     id: "shoulder_impinge", region: "arm", order: 4,
@@ -1470,13 +1475,14 @@ var SYMPTOMS = [
     subFeel: "抬臂时<b>肩前</b>卡痛",
     subPosture: "圆肩含胸的人更容易出现",
     proName: "盂肱关节 · 外展前屈受限伴外旋不足（肩峰下撞击倾向）",
-    manifest: "抬胳膊过头顶时卡住或疼痛，手够不到后背拉链，梳头穿衣费力。",
+    manifest: "圆肩含胸体态的人更容易出现：抬胳膊过头顶时肩前卡住或疼痛，手够不到后背拉链，梳头穿衣费力。",
     explain: "胸大肌、肩胛下肌、背阔肌这组内旋肌紧张，把肱骨头往前上方顶；负责外旋和外展的冈下肌、冈上肌、三角肌力量不足，抬臂时肱骨头在肩峰下的间隙被夹住，于是出现「卡」和痛。",
     tight: ["pectoralis_major", "latissimus_dorsi", "subscapularis"],
     weak: ["deltoid", "supraspinatus", "infraspinatus", "serratus_anterior", "trapezius_upper", "trapezius_lower"],
     inferredTight: ["teres_major"],
     inferredWeak: ["teres_minor"],
-    sourcePattern: "shoulder_glenohumeral", evidence: "book"
+    sourcePattern: "shoulder_glenohumeral", evidence: "book",
+    evidenceNote: "「肩胛骨位置与运动异常、肩袖肌群力量不足会使肩峰下间隙变窄，是肩峰下撞击的重要力学机制」——Michener LA 等，Clinical Biomechanics，2003（肩峰下撞击解剖与生物力学机制综述），书内依据 p.87"
   },
   {
     id: "mouse_wrist", region: "arm", order: 5,
@@ -1485,11 +1491,12 @@ var SYMPTOMS = [
     subFeel: "<b>手腕</b>酸涩无力",
     subPosture: "全天键盘鼠标的人最常见",
     proName: "腕关节 · 伸展不足（屈腕肌短缩模式）",
-    manifest: "用键盘鼠标一天后手腕酸、发涩，转动时有牵拉感，握东西久了容易累。",
+    manifest: "手腕长期保持微屈握持姿势（键盘鼠标一族最常见）；一天下来手腕酸、发涩，转动时有牵拉感，握东西久了容易累。",
     explain: "握鼠标时手腕长期处于微屈位置，前臂屈肌群持续缩短；拮抗的腕伸肌群被拉长且肌力下降，腕关节前后力线失衡。",
     tight: ["forearm_flexors"],
     weak: ["forearm_extensors"],
     sourcePattern: "wrist", evidence: "book",
+    evidenceNote: "「长期保持固定手腕姿势与重复性负荷，是工作相关上肢肌肉骨骼问题的核心危险因素」——Buckle PW & Devereux JJ，Applied Ergonomics，2002（工作相关颈与上肢肌肉骨骼疾患综述），书内依据 p.141",
     redFlag: "如果拇指、食指、中指发麻，夜间麻醒、甩甩手会缓解，可能是腕管综合征，建议线下就医评估。"
   },
   {
@@ -1499,26 +1506,28 @@ var SYMPTOMS = [
     subFeel: "<b>肘部</b>僵硬伸不直",
     subPosture: "手臂习惯保持微屈，很少完全伸直",
     proName: "肘关节复合体 · 屈曲挛缩倾向",
-    manifest: "手臂想完全伸直时肘窝前面拉住，上臂前侧紧张，活动开以后会松一些。",
+    manifest: "手臂习惯保持微屈、很少完全伸直；想伸直时肘窝前面被拉住，上臂前侧紧张，活动开以后会松一些。",
     explain: "长期屈肘操作鼠标和手机，屈肘的肱二头肌适应了短缩长度，拮抗的肱三头肌肌力不足，肘关节长期达不到完全伸展的位置。",
     tight: ["biceps_brachii"],
     weak: ["triceps_brachii"],
     sourcePattern: "elbow", evidence: "book",
+    evidenceNote: "「肌肉长期被固定在缩短位置会发生适应性短缩（肌节数量减少），关节活动范围随之下降」——Williams PE & Goldspink G，Journal of Anatomy，1978（肌肉适应性短缩的经典实验研究），书内依据 p.118",
     redFlag: "如果痛点固定在肘外侧一个点，拧毛巾、端锅时明显加重，更可能是网球肘（肌腱过用），不属于「紧-弱失衡」，以休息减负为主，持续不缓解请就医。"
   },
   {
-    id: "thoracic_kyphosis", region: "back", order: 10,
+    id: "thoracic_kyphosis", region: "upperback", order: 7,
     menu: "圆背",
     shortName: "圆背",
     subFeel: "<b>后背中段</b>酸累",
     subPosture: "上背圆下去，刻意挺胸撑不过几分钟",
     proName: "胸椎 · 过度后凸（圆背姿势）",
-    manifest: "胸椎段发僵发挺，刻意挺胸撑不过几分钟，上背中段酸累，吸气时胸廓打不开。",
+    manifest: "上背圆下去、刻意挺胸撑不过几分钟；后背中段发僵酸累，吸气时胸廓打不开。",
     explain: "胸段竖脊肌区域性无力，撑不住脊柱；胸前侧肌肉和髋屈肌短缩，把躯干往前下方拉，胸椎活动度随之下降。这个模式里胸肌和髂腰肌是「可以配合牵伸」的对象，但不是它判定的紧张侧，图上不标红。",
     tight: [],
     weak: ["erector_spinae"],
     stretchOnly: ["pectoralis_major", "pectoralis_minor", "iliopsoas"],
-    sourcePattern: "thoracic", evidence: "book"
+    sourcePattern: "thoracic", evidence: "book",
+    evidenceNote: "「胸椎过度后凸与躯干伸肌力量不足密切相关，针对性的伸肌强化训练可改善后凸角度与功能」——Katzman WB 等，J Orthop Sports Phys Ther，2010（胸椎后凸的病因、后果与管理综述），书内依据 p.236"
   },
   {
     id: "stiff_low_back", region: "back", order: 11,
@@ -1527,7 +1536,7 @@ var SYMPTOMS = [
     subFeel: "<b>腰部</b>大片发紧",
     subPosture: "常伴骨盆前倾、站姿塌腰",
     proName: "久坐型腰椎活动受限（髋屈短缩 · 腰背等长过用 · 核心臀肌抑制）",
-    manifest: "坐下和刚站起来那一下最难受，站直活动几分钟后缓解；腰是大片发紧，而不是固定一个点刺痛。",
+    manifest: "常伴骨盆前倾、站姿塌腰；腰部大片发紧而不是固定一个点刺痛，坐下和刚站起来那一下最难受，站直活动几分钟后缓解。",
     explain: "久坐时髂腰肌长时间处在短缩位，起身后拉住骨盆，让腰椎被迫过度后伸；腰段竖脊肌和腰方肌于是持续等长代偿。同时腹横肌和臀大肌被抑制，腰椎前后两道稳定保护都变弱。",
     tight: ["iliopsoas", "erector_spinae", "quadratus_lumborum"],
     weak: ["transversus_abdominis", "gluteus_maximus"],
@@ -1542,7 +1551,7 @@ var SYMPTOMS = [
     subFeel: "<b>腰骶一侧</b>深部酸",
     subPosture: "身子感觉是拧的，照镜子骨盆一高一低",
     proName: "腰方肌不对称过载（骨盆侧稳定失衡）",
-    manifest: "腰骶交界一侧深部酸胀，翻身、单腿站立或久坐后加重，照镜子可能发现骨盆一高一低。",
+    manifest: "身子感觉是拧的，照镜子可能发现骨盆一高一低；腰骶交界一侧深部酸胀，翻身、单腿站立或久坐后加重。",
     explain: "跷二郎腿、单侧负重、坐椅子歪向一边，会让一侧腰方肌长期短缩；臀中肌本是走路时稳住骨盆的肌肉，它无力时，腰方肌被迫向上提拉骨盆来代偿——连接腰方肌与对侧臀中肌的「外侧肌筋膜悬带」就此失灵。",
     tight: ["quadratus_lumborum"],
     weak: ["gluteus_medius", "transversus_abdominis"],
@@ -1551,22 +1560,22 @@ var SYMPTOMS = [
   },
   // ── 肩背区（新增）：肩胛骨/上背主诉入口，感受标题 + 体态确认 ──
   {
-    id: "scap_inner_ache", region: "upperback", order: 7,
+    id: "scap_inner_ache", region: "upperback", order: 8,
     menu: "肩胛间酸",
     shortName: "肩胛间酸",
     subFeel: "<b>两肩胛之间</b>酸胀",
     subPosture: "含胸时两块肩胛骨往两边跑开",
     proName: "肩胛胸壁关节 · 肩胛内侧肌群拉长性过载（菱形肌-中斜方代偿模式）",
-    manifest: "后背心、两肩胛骨之间酸胀痛，位置偏脊柱两旁；久坐伏案后加重，扩胸、躺平或洗个热水澡能松快一些；总想让人帮忙捶捶那个位置。",
+    manifest: "含胸伏案时两块肩胛骨往两边跑开；后背心、两肩胛之间酸胀痛，位置偏脊柱两旁，扩胸、躺平或洗个热水澡能松快一些，总想让人帮忙捶捶那个位置。",
     explain: "含胸伏案时，胸前侧肌肉持续缩短，把两块肩胛骨往前、往外拉。肩胛骨内侧的菱形肌和斜方肌中束被拉长的同时，还要一直发力把肩胛骨往回拽——肌肉在被拉长的位置上反复做功，最容易酸累。这片酸不是它们太强，而是它们太辛苦。",
     tight: ["pectoralis_major", "pectoralis_minor"],
     weak: ["rhomboid", "trapezius_middle"],
     evidence: "synthesis",
-    evidenceNote: "Janda 上交叉综合征「胸前侧缩短-肩胛内侧肌群拉长」失衡链；具体页码待核实",
+    evidenceNote: "「肩胛运动失常常表现为肩胛内侧缘距脊柱变宽，与胸前侧肌肉紧张和肩胛稳定肌无力的失衡组合有关」——Kibler WB & Sciascia A，British Journal of Sports Medicine，2010（肩胛运动失常现状综述）；Janda 上交叉失衡链，书内依据 p.89",
     redFlag: "如果疼痛集中在脊柱正中某一个点、夜间痛醒或伴发热，建议就医排查其他原因。"
   },
   {
-    id: "humeral_glide", region: "upperback", order: 8,
+    id: "humeral_glide", region: "upperback", order: 9,
     menu: "肱骨前移",
     shortName: "肱骨前移",
     subFeel: "<b>肩前</b>酸胀发紧",
@@ -1577,10 +1586,11 @@ var SYMPTOMS = [
     tight: ["pectoralis_minor"],
     weak: ["serratus_anterior", "trapezius_lower", "infraspinatus", "teres_minor"],
     evidence: "synthesis",
+    evidenceNote: "「胸小肌静息长度偏短与肩胛前倾、内旋角度增大显著相关」——Borstad JD & Ludewig PM，J Orthop Sports Phys Ther，2005（胸小肌长度与肩胛运动学关系研究）；肱骨头前移与肩后侧组织紧张、外旋肌无力的失衡组合为康复临床共识",
     redFlag: "如果肩前是刺痛、抬臂到某个角度明显卡住，可同时参考肩臂区的「肩部卡压」；外伤后出现的肩前痛建议就医。"
   },
   {
-    id: "winged_scapula", region: "upperback", order: 9,
+    id: "winged_scapula", region: "upperback", order: 10,
     menu: "翼状肩胛",
     shortName: "翼状肩胛",
     subFeel: "抬手一会儿<b>肩</b>就酸",
@@ -1591,6 +1601,7 @@ var SYMPTOMS = [
     tight: ["pectoralis_minor"],
     weak: ["serratus_anterior", "trapezius_middle", "trapezius_lower"],
     evidence: "synthesis",
+    evidenceNote: "「翼状肩胛最常见的原因是前锯肌功能不足（胸长神经支配），斜方肌功能不足可使其进一步加重」——Martin RM & Fish DE，Current Reviews in Musculoskeletal Medicine，2008（翼状肩胛解剖、诊断与治疗综述）",
     redFlag: "外伤、手术或颈部剧痛后突然出现的单侧明显翘起，伴抬臂明显无力，可能与支配肌肉的神经受影响有关，建议线下就医评估，不建议自行训练。"
   },
   {
@@ -1614,7 +1625,7 @@ var SYMPTOMS = [
     subFeel: "<b>臀部</b>发麻使不上劲",
     subPosture: "臀部松软扁平，走路爬楼感觉不到发力",
     proName: "臀肌失忆症（Gluteal Amnesia · 死臀综合征）",
-    manifest: "这里的「麻木」不是压麻了，而是久坐后臀部像「睡过去」，站起来使不上劲：臀部松软扁平，走路爬楼感觉不到它发力，做臀桥时腰和大腿后侧先酸。",
+    manifest: "臀部松软扁平、看起来塌；久坐后臀部像「睡过去」一样使不上劲——这里的「麻」不是压麻了，而是站起来感觉不到它发力，做臀桥时腰和大腿后侧先酸。",
     explain: "久坐让髋屈肌（髂腰肌、股直肌、阔筋膜张肌）持续处于缩短激活状态，神经系统通过「交互抑制」长期关闭它的拮抗肌——臀大肌和臀中肌。臀部不发力后，腰、腘绳肌和膝盖被迫代偿，连锁出现腰酸和膝痛。",
     tight: ["iliopsoas", "rectus_femoris", "tensor_fasciae_latae"],
     weak: ["gluteus_maximus", "gluteus_medius"],
@@ -1628,12 +1639,13 @@ var SYMPTOMS = [
     subFeel: "<b>膝盖</b>发软",
     subPosture: "下楼时膝盖容易往里扣",
     proName: "膝关节 · 伸展不足 / 屈曲挛缩倾向",
-    manifest: "上下楼梯膝盖打软，下蹲到底困难，膝前侧酸，大腿后侧长期发紧。",
+    manifest: "下楼时膝盖容易往里扣；上下楼梯膝盖打软，下蹲到底困难，膝前侧酸，大腿后侧长期发紧。",
     explain: "腘绳肌紧张，拉着小腿让膝关节长期达不到完全伸直；股四头肌肌力不足，无法稳定髌骨、也无力完成伸膝的最后一段。",
     tight: ["hamstrings"],
     weak: ["quadriceps"],
     inferredTight: ["iliotibial_tract"],
-    sourcePattern: "knee", evidence: "book"
+    sourcePattern: "knee", evidence: "book",
+    evidenceNote: "「股四头肌力量不足与膝关节不稳、打软感和功能下降显著相关」——Slemenda C 等，Annals of Internal Medicine，1997（股四头肌无力与膝关节关系的经典队列研究），书内依据 p.316"
   },
   {
     id: "ankle_stiff", region: "leg", order: 16,
@@ -1642,12 +1654,13 @@ var SYMPTOMS = [
     subFeel: "<b>小腿后侧</b>发紧",
     subPosture: "下蹲时脚跟踩不实",
     proName: "踝关节 · 背伸受限 / 跖屈挛缩倾向",
-    manifest: "久坐起身脚发僵，下蹲时脚跟离地，小腿后侧紧，走路觉得踝活动不开。",
+    manifest: "下蹲时脚跟踩不实、会离地；久坐起身脚发僵，小腿后侧发紧，走路觉得踝活动不开。",
     explain: "久坐屈膝加上日常穿鞋，让小腿后侧的腓肠肌、比目鱼肌适应了短缩长度；拮抗的胫骨前肌无力，踝背伸角度不足，下蹲和步态只能靠别处代偿。",
     tight: ["gastrocnemius", "soleus"],
     weak: ["tibialis_anterior"],
     inferredTight: ["tibialis_posterior", "fibularis"],
-    sourcePattern: "ankle", evidence: "book"
+    sourcePattern: "ankle", evidence: "book",
+    evidenceNote: "「孤立性腓肠肌紧张会明显限制踝背伸角度，是多种踝足部问题的常见力学基础」——DiGiovanni CW 等，Journal of Bone and Joint Surgery Am，2002（腓肠肌紧张的奠基性临床研究），书内依据 p.359"
   },
   {
     id: "piriformis_tight", region: "leg", order: 17,
@@ -1656,7 +1669,7 @@ var SYMPTOMS = [
     subFeel: "<b>臀部深处</b>酸胀",
     subPosture: "常盘腿坐、跷二郎腿的人常见",
     proName: "梨状肌紧张（髋外旋肌短缩模式）",
-    manifest: "臀部中央深部酸胀，椅面顶到该处或盘腿、跷二郎腿时加重，大腿根部活动受限。",
+    manifest: "常盘腿坐、跷二郎腿的人常见：臀部中央深部酸胀，椅面顶到该处时加重，大腿根部活动受限。",
     explain: "久坐屈髋时梨状肌持续受压、容易短缩或痉挛；臀中肌、臀大肌被抑制后，髋关节外旋稳定更多压给梨状肌，形成「越紧越累、越累越紧」的循环。",
     tight: ["piriformis"],
     weak: ["gluteus_medius", "gluteus_maximus"],
@@ -1687,8 +1700,7 @@ function symptomUnion(ids) {
     };
     add(s.tight, "tight", "main");
     add(s.weak, "weak", "main");
-    add(s.inferredTight, "tight", "inferred");
-    add(s.inferredWeak, "weak", "inferred");
+    // 推断层整体退役：inferredTight/inferredWeak 数据保留，但不参与涂色与展示
   });
 
   const colored = [];

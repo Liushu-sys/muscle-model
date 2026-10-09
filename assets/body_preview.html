@@ -629,7 +629,6 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     <div class="diag-legend">
       <span class="lg-item"><span class="lg-dot lg-tight"></span>偏紧</span>
       <span class="lg-item"><span class="lg-dot lg-weak"></span>偏弱</span>
-      <span class="lg-item"><span class="lg-dot lg-inferred"></span>资料推断</span>
     </div>
   </header>
   <div class="app-wrap">
@@ -790,7 +789,7 @@ var DIAGNOSIS_DISCLAIMER = '', BOOK_REF = '';
 // docs/13 目录式诊断
 var REGIONS4 = null, SYMPTOMS = null, SYMPTOM_BY_ID = null, REGION_PAINT = null;
 var symptomUnion = null, actionPackageFor = null;
-var engineReady = import('./mm-engine.js?v=260').then(function(m){
+var engineReady = import('./mm-engine.js?v=261').then(function(m){
   MUSCLE_MAP = m.MUSCLE_MAP;
   REGION_LABEL = m.REGION_LABEL;
   PATTERNS = m.PATTERNS;
@@ -958,8 +957,8 @@ function shortMenu(s){
 /* ── 五区隐形点击热层（注入正/背两张 SVG，随翻转缩放走） ──────── */
 var SVG_NS = 'http://www.w3.org/2000/svg';
 // {区域, 图形}；视觉完全由肌肉分区底色承担，热层只负责好点中。
-// 正背面形状不同：背面躯干切成 肩背(上背+肩胛) / 腰腹(下腰) 两块；正面胸口段归肩颈、胸下到骨盆归腰腹。
-// 绘制顺序=腿→腰腹→肩背→肩臂→肩颈（后画者盖住边缘重叠缝）。
+// 正背面形状不同：背面躯干上段为肩背(上背+肩胛)，腰腹区仅正面可点（背面腰部不设热区）；正面胸口段归肩颈、胸下到骨盆归腰腹。
+// 绘制顺序=腿→腰腹(正)/肩背(背)→肩臂→肩颈（后画者盖住边缘重叠缝）。
 var HZ_NECK = '<path d="M52 88 L60 58 Q56 26 78 10 Q100 2 122 10 Q144 26 140 58 L148 88 Z"/>';
 var HZ_ARM  = '<rect x="10" y="70" width="42" height="190" rx="18"/><rect x="148" y="70" width="42" height="190" rx="18"/>';
 var HZ_LEG  = '<rect x="48" y="230" width="104" height="228" rx="40"/>';
@@ -971,7 +970,6 @@ var HZ_DEFS_FRONT = [
 ];
 var HZ_DEFS_BACK = [
   { region: 'leg',  shapes: HZ_LEG },
-  { region: 'back', shapes: '<rect x="46" y="158" width="108" height="72" rx="22"/>' },
   { region: 'upperback', shapes: '<rect x="46" y="84" width="108" height="74" rx="22"/>' },
   { region: 'arm',  shapes: HZ_ARM },
   { region: 'neck', shapes: HZ_NECK }
@@ -1015,7 +1013,7 @@ function buildRegionPaintMap(){
   });
   return m;
 }
-/* ── 区域标签：正面四枚，背面五枚（背面按人体解剖左右镜像）；仅诊断第一页，克隆时剥离 ── */
+/* ── 区域标签：正面四枚，背面四枚（背面无腰腹区，按人体解剖左右镜像）；仅诊断第一页，克隆时剥离 ── */
 var REGION_LABELS = {
   front: [
     { t: '肩颈区', x: 100, y: 62  },  // 脖子中间
@@ -1027,7 +1025,6 @@ var REGION_LABELS = {
     { t: '肩颈区', x: 100, y: 62  },
     { t: '肩背区', x: 100, y: 126 },  // 下斜方肌中部（肩背热区 84-158 中段）
     { t: '肩臂区', x: 32,  y: 160 },  // 背面镜像：左肘在画面左侧
-    { t: '腰腹区', x: 100, y: 194 },  // 下腰中间（腰腹热区 158-230 中段）
     { t: '臀腿区', x: 128, y: 250 }   // 背面镜像：右大腿在画面右侧
   ]
 };
@@ -1066,7 +1063,7 @@ function stripRegionPaint(root){
   root.querySelectorAll('.region-labels').forEach(function(n){ n.remove(); });
   root.querySelectorAll('[data-paint]').forEach(function(el){
     el.removeAttribute('data-paint');
-    el.classList.remove('r-neck', 'r-arm', 'r-back', 'r-leg');
+    el.classList.remove('r-neck', 'r-arm', 'r-upperback', 'r-back', 'r-leg');
   });
 }
 /* ── 症状目录底部抽屉（全局单选，点别的直接替换） ──────────────── */
@@ -1096,10 +1093,10 @@ function renderSdList(){
     menu.textContent = s.menu;
     var feel = document.createElement('span');
     feel.className = 'sd-desc sd-feel';
-    feel.innerHTML = s.subFeel || '';
+    feel.innerHTML = '<b>不适感受：</b>' + (s.subFeel || '');
     var posture = document.createElement('span');
     posture.className = 'sd-desc sd-posture';
-    posture.textContent = s.subPosture || '';
+    posture.textContent = '姿态确认：' + (s.subPosture || '');
     txt.appendChild(menu);
     txt.appendChild(feel);
     txt.appendChild(posture);
@@ -1592,10 +1589,10 @@ function buildSymptomCard(s){
   h += '<h5 class="tc-sname">' + (s.shortName || s.menu) + '</h5>';
   // 2b 灰字医学描述（专业背书）
   h += '<p class="tc-medical">医学描述：' + s.proName + '</p>';
-  // 3 通俗表现
-  h += '<p class="tc-plain">' + s.manifest + '</p>';
+  // 3 身体表现（先姿态问题表现，再不适感受）
+  h += '<p class="tc-plain"><b>身体表现：</b>' + s.manifest + '</p>';
   // 4 机制解释
-  h += '<p class="tc-explain">' + s.explain + '</p>';
+  h += '<p class="tc-explain"><b>机制解释：</b>' + s.explain + '</p>';
   // 可配合牵伸：不是本症状判定的紧张侧，图上不标红
   if(s.stretchOnly && s.stretchOnly.length){
     h += '<p class="tc-stretch">可配合牵伸：<b>' + s.stretchOnly.map(muscleCn).join('、')
@@ -1666,7 +1663,6 @@ function buildAiSummary(res){
   if(!cards){
     html += '<p style="color:#A2ABAC;font-size:13px">还没有选择症状，请返回上一页选择你的情况。</p>';
   }
-  html += '<p class="tc-tip">虚线/灰色标注为资料推断项；如想了解单块肌肉功能，点击图上肌肉查看。</p>';
   aiCard.innerHTML = html;
 }
 
@@ -2287,7 +2283,7 @@ function openSheet(id){
   if(!m) return;
 
   var st = coloredEntry ? coloredEntry.state : 'neutral';
-  var isInferred = coloredEntry && coloredEntry.level === 'inferred';
+  // 推断层已退役：不再显示「资料推断」标签
   // docs/13：关联症状短名（可能同时出现在多个被选症状中，去重展示）
   var typeShort = '';
   if(coloredEntry){
@@ -2307,7 +2303,6 @@ function openSheet(id){
 
   var h = '<h3>' + m.name + '</h3>';
   if(tagTxt) h += '<span class="sheet-tag ' + tagCls + '">' + tagTxt + '</span>';
-  if(isInferred) h += '<span class="sheet-tag" style="background:#F2F4F4;color:#6E7778">资料推断</span>';
 
   // 主要功能
   h += '<div class="sec"><h5>主要功能</h5><p>' + (m.desc || '参与' + regionName + '区域的活动与稳定。') + '</p></div>';
