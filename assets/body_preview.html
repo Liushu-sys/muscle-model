@@ -486,10 +486,18 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .fav-img svg{width:34px;height:34px}
 .fav-img-label{font-size:11px;font-weight:600;color:var(--home-text-3)}
 .fav-name-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.fav-tag{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;flex-shrink:0}
-.fav-tag.relief{background:#FDECEB;color:#D8403A}
-.fav-tag.strengthen{background:#F0E8F5;color:#7B5BA0}
 .fav-name{font-size:15px;font-weight:700;color:var(--home-text)}
+/* 收藏详情 overlay：复刻 AI 动作推荐屏（上图下文+跟练卡），底部导航 z-20 保持可见可点 */
+.fav-detail{position:absolute;inset:0;z-index:15;background:linear-gradient(0deg,#F2F8F7 0%,#FAFDFD 70%,#FFFFFF 100%);display:flex;flex-direction:column}
+.fav-detail[hidden]{display:none}
+.fav-detail-head{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
+.fav-detail-back{width:34px;height:34px;border-radius:50%;border:0;background:#fff;color:#1D2122;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px -2px rgba(31,68,77,.18)}
+.fav-detail-back svg{width:18px;height:18px}
+.fav-detail-title{font-size:15px;font-weight:700;color:var(--home-text)}
+.fav-detail-body{flex:1;min-height:0;position:relative}
+.fav-detail-body .adv-pane-actions{height:100%}
+/* 动作示意图标签：左下角（仅 AI 动作页与收藏详情，不影响旧页面） */
+#ai-action-list .avd-fig-label,#fav-detail-body .avd-fig-label{position:absolute;left:10px;bottom:10px;top:auto}
 .fav-desc{font-size:12.5px;line-height:1.5;color:var(--home-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fav-star{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:#F5A623;pointer-events:none}
 .fav-star svg{width:16px;height:16px;fill:currentColor}
@@ -825,6 +833,15 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
     </div>
     <div class="fav-list" id="fav-list"></div>
   </div>
+  <div class="fav-detail" id="fav-detail" hidden>
+    <header class="fav-detail-head">
+      <button type="button" class="fav-detail-back" id="fav-detail-back" aria-label="返回">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+      </button>
+      <div class="fav-detail-title">动作详情</div>
+    </header>
+    <div class="fav-detail-body" id="fav-detail-body"></div>
+  </div>
   <nav class="bottom-nav">
     <button type="button" class="bottom-nav-item" data-tab="home"><span class="bn-icon"><svg viewBox="0 0 24 24"><path class="ic-f" d="M4.5 10.6 12 4l7.5 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-3.9v-5h-4.2v5H6A1.5 1.5 0 0 1 4.5 19z"/></svg></span></button>
     <button type="button" class="bottom-nav-item" data-tab="record"><span class="bn-icon"><svg viewBox="0 0 24 24"><circle class="ic-face" cx="12" cy="12" r="8.2"/><path class="ic-hands" d="M12 7.4v4.8l3.1 1.9"/></svg></span></button>
@@ -948,7 +965,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   </div>
 </div>
 
-<script type="module" src="./ai-flow.js?v=18"></script>
+<script type="module" src="./ai-flow.js?v=19"></script>
 <script type="module" src="./meridian-data.js?v=3"></script>
 <script type="module">
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
@@ -2070,9 +2087,9 @@ renderRecordSummary();
 
 /* ── 收藏页：分类过滤（mock data） ── */
 var FAV_MOCK = [
-  {name:'颈部侧向拉伸', region:'肩颈', cat:'neck_shoulder', kind:'relief',     desc:'帮助放松颈部紧张区域。', dose:'20–30秒 × 2'},
-  {name:'肩胛稳定训练', region:'肩颈', cat:'neck_shoulder', kind:'strengthen', desc:'帮助提升肩胛区域的参与程度。', dose:'8–10次 × 2'},
-  {name:'胸椎伸展',     region:'腰背', cat:'low_back_hip',  kind:'relief',     desc:'帮助缓解长时间保持固定姿势后的紧张感。', dose:'20秒 × 2'}
+  {id:'scalene_stretch', name:'颈部侧向拉伸', region:'肩颈', cat:'neck_shoulder', desc:'帮助放松颈部紧张区域。', dose:'20–30秒 × 2'},
+  {id:'desk_scap_set',  name:'肩胛稳定训练', region:'肩颈', cat:'neck_shoulder', desc:'帮助提升肩胛区域的参与程度。', dose:'8–10次 × 2'},
+  {id:'wall_angel',     name:'胸椎伸展',     region:'腰背', cat:'low_back_hip',  desc:'帮助缓解长时间保持固定姿势后的紧张感。', dose:'20秒 × 2'}
 ];
 function renderFavList(cat){
   var list = document.getElementById('fav-list');
@@ -2085,8 +2102,7 @@ function renderFavList(cat){
   var figIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
   var h = '';
   items.forEach(function(a){
-    var tagTxt = a.kind === 'relief' ? '🔴 立即缓解' : '🟣 长期加强';
-    h += '<div class="fav-card">'
+    h += '<div class="fav-card" data-aid="' + a.id + '">'
        + '<div class="fav-imgs">'
        + '<div class="fav-img">' + figIcon + '<span class="fav-img-label">准备姿势</span></div>'
        + '<div class="fav-img">' + figIcon + '<span class="fav-img-label">完成动作</span></div>'
@@ -2094,7 +2110,6 @@ function renderFavList(cat){
        + '</div>'
        + '<div class="fav-name-row">'
        + '<div class="fav-name">' + a.name + '</div>'
-       + '<span class="fav-tag ' + a.kind + '">' + tagTxt + '</span>'
        + '</div>'
        + '<div class="fav-desc">' + a.desc + '</div>'
        + '</div>';
@@ -2106,6 +2121,19 @@ document.getElementById('fav-tabs').addEventListener('click', function(ev){
   if(!tab) return;
   document.querySelectorAll('#fav-tabs .fav-tab').forEach(function(t){ t.classList.toggle('active', t === tab); });
   renderFavList(tab.dataset.cat);
+});
+/* 收藏卡 → 动作详情 overlay（复刻 AI 动作推荐屏） */
+document.getElementById('fav-list').addEventListener('click', function(ev){
+  var card = ev.target.closest('.fav-card');
+  if(!card || !card.dataset.aid) return;
+  var body = document.getElementById('fav-detail-body');
+  if(window.AIFlow && window.AIFlow.renderFavDetail(body, card.dataset.aid)){
+    document.getElementById('fav-detail').hidden = false;
+  }
+});
+document.getElementById('fav-detail-back').addEventListener('click', function(){
+  document.getElementById('fav-detail').hidden = true;
+  if(window.AIFlow) window.AIFlow.closeFavDetail(document.getElementById('fav-detail-body'));
 });
 renderFavList('all');
 

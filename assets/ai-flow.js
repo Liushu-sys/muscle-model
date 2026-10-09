@@ -852,17 +852,13 @@ function initPickPage() {
         openFeelFor(point, payload.clientX, payload.clientY);
       });
     },
-    onDotTap: function (point, e) {
-      // 已设感受的点：再点一次直接取消；未设感受：重新打开感受卡
-      if (point.feel) {
-        flow.points = flow.points.filter(function (x) { return x.id !== point.id; });
-        flow.stage1.points[point.side] = flow.stage1.points[point.side].filter(function (x) { return x.id !== point.id; });
-        flow.stage1.renderDots(point.side);
-        if (feelCard.dataset.pid === point.id) hideFeelCard();
-        refreshPickSummary();
-        return;
-      }
-      openFeelFor(point, e.clientX, e.clientY);
+    onDotTap: function (point) {
+      // 再点一下小红点 = 取消选择（无论是否已选感受）
+      flow.points = flow.points.filter(function (x) { return x.id !== point.id; });
+      flow.stage1.points[point.side] = flow.stage1.points[point.side].filter(function (x) { return x.id !== point.id; });
+      flow.stage1.renderDots(point.side);
+      if (feelCard.dataset.pid === point.id) hideFeelCard();
+      refreshPickSummary();
     },
     onPointsRemoved: function (ids) {
       var map = {};
@@ -1363,7 +1359,33 @@ function initSciencePage() {
 }
 
 /* ════════════════════════════════════════════════════════════
- * 八、启动
+ * 八、收藏页详情（复刻动作推荐屏：上图下文 + 跟练卡）
+ * ════════════════════════════════════════════════════════════ */
+function renderFavDetail(container, actionId) {
+  var a = ACTIONS.find(function (x) { return x.id === actionId; });
+  if (!a || !container) return false;
+  stopAllAiRhythms();
+  container.innerHTML = '<section class="adv-pane adv-pane-actions">' + actionScreenHtml({ a: a }) + '</section>';
+  fillActionImages(container);
+  var scr = $('.adv-action-screen', container);
+  if (scr) {
+    bindAiRhythm(scr, buildRhythm(a));
+    var star = $('.avd-fav-star', scr);
+    if (star) star.addEventListener('click', function () {
+      toggleFav(a.id);
+      star.classList.toggle('on', isFav(a.id));
+    });
+  }
+  return true;
+}
+
+function closeFavDetail(container) {
+  stopAllAiRhythms();
+  if (container) container.innerHTML = '';
+}
+
+/* ════════════════════════════════════════════════════════════
+ * 九、启动
  * ════════════════════════════════════════════════════════════ */
 function start() {
   flow.points = [];
@@ -1381,7 +1403,7 @@ window.addEventListener('DOMContentLoaded', function () {
   initPickPage();
   initActionPage();
   initSciencePage();
-  window.AIFlow = { start: start };
+  window.AIFlow = { start: start, renderFavDetail: renderFavDetail, closeFavDetail: closeFavDetail };
   // 首页「开始诊断」按钮改向到 AI 流程
   var btn = document.getElementById('start-diagnosis');
   if (btn) {
