@@ -1071,7 +1071,7 @@ function actionScreenHtml(item) {
   h += '<div class="adv-screen-tag">' + tag +
     (item.target ? '<span class="avd-target">针对 <b>' + item.target + '</b></span>' : '') +
     '</div>';
-  h += '<div class="avd-figure">'
+  h += '<div class="avd-figure avd-figure-v">'
     + '<div class="avd-fig"><img class="avd-fig-img" data-part="prep" alt="" aria-label="准备姿势"><span class="avd-fig-label">准备姿势</span></div>'
     + '<div class="avd-fig"><img class="avd-fig-img" data-part="complete" alt="" aria-label="完成动作"><span class="avd-fig-label">完成动作</span></div>'
     + '<button type="button" class="avd-fav-star' + (isFav(a.id) ? ' on' : '') + '" data-action-id="' + a.id + '" aria-label="收藏">' + FAV_STAR_SVG + '</button>'
@@ -1079,8 +1079,7 @@ function actionScreenHtml(item) {
   h += '<div class="avd-info">';
   h += '<h3 class="avd-name">' + a.name + '</h3>';
   if (a.why) h += '<p class="avd-purpose">' + a.why + '</p>';
-  h += '<p class="avd-step-label">怎么做</p>';
-  h += '<p class="avd-step">' + (a.howto || '') + '</p>';
+  h += '<p class="avd-step"><b class="avd-step-inline">怎么做：</b>' + (a.howto || '') + '</p>';
   if (a.dose) h += '<div class="avd-dose">建议剂量：' + a.dose + '</div>';
   h += '</div>';
   h += '<div class="avd-rhythm">';

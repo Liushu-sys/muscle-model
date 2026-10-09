@@ -296,9 +296,15 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .adv-action-screen .avd-figure{margin-bottom:0}
 .adv-action-screen .avd-fig{aspect-ratio:auto;height:clamp(86px,13.5vh,118px)}
 .adv-action-screen .avd-fig svg{width:28px;height:28px}
-/* 介绍卡吃掉剩余高度，内容过多时仅卡内滚动，节奏卡始终贴底可见 */
-.adv-action-screen .avd-info{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;margin-bottom:0}
+/* AI 实验版动作屏：双图竖排（上准备下完成），高度固定撑满；文字卡固定较矮 */
+.adv-action-screen .avd-figure-v{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.adv-figure-v .avd-fig{flex:1;min-height:0;aspect-ratio:auto}
+.adv-figure-v .avd-fig-img{object-fit:cover;object-position:center top}
+.adv-figure-v .avd-fav-star{right:10px;bottom:14px;z-index:2}
+.adv-action-screen .avd-info{flex:0 0 auto;height:clamp(108px,17vh,150px);overflow-y:auto;scrollbar-width:none}
 .adv-action-screen .avd-info::-webkit-scrollbar{display:none}
+.adv-step-inline{color:#337F92;font-weight:700}
+/* 节奏卡始终贴底可见（介绍卡已改为固定高度，不再吃剩余空间） */
 .adv-action-screen .avd-rhythm{flex-shrink:0}
 
 /* 纵滑位置指示点（固定在板块右侧，不随屏滚动） */
@@ -941,7 +947,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   </div>
 </div>
 
-<script type="module" src="./ai-flow.js?v=16"></script>
+<script type="module" src="./ai-flow.js?v=17"></script>
 <script type="module" src="./meridian-data.js?v=3"></script>
 <script type="module">
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
