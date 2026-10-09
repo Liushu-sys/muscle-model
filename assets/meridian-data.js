@@ -178,7 +178,7 @@ export function buildMeridianLayers(SVG_NS) {
       p.setAttribute('d', m.d);
       p.setAttribute('class', 'ai-meridian');
       p.dataset.mid = m.id;
-      p.style.stroke = m.color;
+      // 经脉颜色统一由 CSS 控制（主题蓝 #4198AC），不再按经脉着色
       if (mode === 'MIRROR') p.setAttribute('transform', 'translate(200,0) scale(-1,1)');
       gLine.appendChild(p);
 

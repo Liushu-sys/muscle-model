@@ -36,10 +36,10 @@ function zoneOfBlank(side, vx, vy) {
 function delay(ms) {
   return new Promise(function (r) { setTimeout(r, ms); });
 }
-// 左右侧判定：正面 x<100 为人体右侧；背面 x<100 为人体左侧（项目既定规则）
+// 左右侧判定（镜像/观察者视角）：正面屏幕右半判为人体左侧、左半为右侧；
+// 背面沿用 x<100 人体左侧。仅影响描述文案，不影响任何着色与数据逻辑。
 function sideLabelOf(side, vx) {
   if (vx >= 95 && vx <= 105) return '';
-  if (side === 'front') return vx < 100 ? '右侧' : '左侧';
   return vx < 100 ? '左侧' : '右侧';
 }
 function muscleById(id) {
@@ -114,27 +114,51 @@ var MockAI = {
     });
   },
 
-  // VLM：根据采集的部位+感受，在肌肉白名单内判断可能相关的肌肉（不区分过紧/过松）
-  // mock：点中肌肉 → 该肌肉 + 同区域关联肌肉；空白区域点 → 该区域代表肌肉
+  // VLM：根据采集的部位+感受，判断最相关的肌肉（统一橘色高亮，不区分过紧/过松）
+  // ★ 真实接入时的死命令（必须写进 system prompt）：
+  //   相关肌肉不超过 3 块（左右对称两半算同一块），只输出最相关的；
+  //   输出 summary 总述（整合给底部总体解释卡）。
+  // mock：点中肌肉 → 该块（含左右对称）+ 同区域代表块，上限 3 块
   vlmHighlight: function (points) {
     return delay(600).then(function () {
-      var ids = [], seen = {};
-      function add(id) { if (id && !seen[id]) { seen[id] = true; ids.push(id); } }
-      function sameRegion(region, side, n) {
-        if (!region) return [];
-        var sameSide = MUSCLES.filter(function (m) { return m.region === region && m.side === side; });
-        var anySide = MUSCLES.filter(function (m) { return m.region === region; });
-        return sameSide.concat(anySide).slice(0, n);
+      var mIds = [], added = {}, blockNames = [];
+      var regs = {};
+      function blockOf(m) {
+        // 一块 = 该肌肉 + 同名对侧（左右两半算同一块）
+        var ids = [m.id];
+        MUSCLES.forEach(function (o) {
+          if (o.id !== m.id && o.name === m.name && o.side === m.side && ids.indexOf(o.id) < 0) ids.push(o.id);
+        });
+        return ids;
+      }
+      function addBlock(ids, name) {
+        ids.forEach(function (id) { if (!added[id]) { added[id] = true; mIds.push(id); } });
+        if (name && blockNames.indexOf(name) < 0) blockNames.push(name);
       }
       points.forEach(function (p) {
         if (p.muscleId) {
-          add(p.muscleId);
-          sameRegion(p.region, p.side, 3).forEach(function (m) { add(m.id); });
-        } else {
-          sameRegion(p.region, p.side, 2).forEach(function (m) { add(m.id); });
+          var m = muscleById(p.muscleId);
+          if (!m) return;
+          regs[m.region] = true;
+          addBlock(blockOf(m), m.name);
+        } else if (p.region) {
+          regs[p.region] = true;
         }
       });
-      return { muscleIds: ids.slice(0, 6) };
+      // 不足 3 块时补同区域代表肌肉（跳过已加入的）
+      Object.keys(regs).forEach(function (r) {
+        if (blockNames.length >= 3) return;
+        var rep = MUSCLES.find(function (m) { return m.region === r && !added[m.id]; });
+        if (rep) addBlock(blockOf(rep), rep.name);
+      });
+      // 总述：整合最相关的肌肉形成底部总体解释
+      var regCn = { neck_shoulder: '肩颈', arm: '肩臂', upper_back: '肩背', low_back_hip: '腰腹', leg: '臀腿' };
+      var regList = Object.keys(regs).map(function (r) { return regCn[r] || r; }).join('、') || '相关区域';
+      var feels = points.map(function (p) { return p.feel; }).filter(Boolean).join('、') || '不适';
+      var nameTxt = blockNames.slice(0, 3).join('、');
+      var summary = '结合你反馈的「' + regList + ' · ' + feels + '」，AI 判断最相关的肌肉是' + nameTxt +
+        '。它们共同参与这个区域的姿势维持与动作发力，长时间负担偏重时，容易出现酸胀、发紧或使不上力的感受。';
+      return { muscleIds: mIds, summary: summary };
     });
   },
 
@@ -163,11 +187,13 @@ var MockAI = {
   },
 
   // ── 中医 ──
-  // LLM：部位+感受 → 相关经脉/穴位白名单判断 + 总述
-  // mock：区域映射表 → 经脉 id 列表 + 穴位 id 列表（含点中肌肉所在区域），summary 按感受生成
+  // LLM：部位+感受 → 相关经脉/穴位判断 + 总述
+  // ★ 真实接入时的死命令（必须写进 system prompt）：
+  //   相关经脉不超过 2 条、穴位不超过 3 个，只输出最相关的，并整合成 summary 总述。
+  // mock：区域映射表按优先级取前 2 条经脉、前 3 个穴位
   llmMeridian: function (points) {
     return delay(800).then(function () {
-      var regs = {}, feels = {}, hasArm = false;
+      var regs = {}, feels = {};
       points.forEach(function (p) {
         if (p.region) regs[p.region] = true;
         if (p.muscleId) { var m = muscleById(p.muscleId); if (m) regs[m.region] = true; }
@@ -184,21 +210,25 @@ var MockAI = {
         });
       }
       Object.keys(regs).forEach(pushRegion);
+      // 死命令：经脉 ≤2 条、穴位 ≤3 个（映射表已按相关度排序，直接截断）
+      mIds = mIds.slice(0, 2);
+      mAids = mAids.slice(0, 3);
       // 总述
       var regCn = { neck_shoulder: '肩颈', arm: '肩臂', upper_back: '肩背', low_back_hip: '腰腹', leg: '臀腿' };
       var regList = Object.keys(regs).map(function (r) { return regCn[r] || r; }).join('、') || '身体';
-      var mNames = mIds.map(function (id) { return meridianById(id).short; }).slice(0, 4).join('、');
+      var feelList = points.map(function (p) { return p.feel; }).filter(Boolean).join('、') || '不适';
+      var mNames = mIds.map(function (id) { return meridianById(id).short; }).join('、');
       var summary;
       if (feels.stagnant) {
-        summary = '你反馈的是' + regList + '的酸痛/僵硬感受。中医认为"不通则痛"，这类感受多与经脉气血运行不畅有关。从循行路线看，' + mNames + '等都经过你反馈的区域，可能与气血瘀滞相关。';
+        summary = '你反馈的是' + regList + '的' + feelList + '感受。中医认为"不通则痛"，这类感受多与经脉气血运行不畅有关。最相关的经脉是' + mNames + '，都经过你反馈的区域，可能与气血瘀滞相关。';
       } else if (feels.xu) {
-        summary = '你反馈的是' + regList + '的无力感受。中医认为"不荣则痛"、力从气生，这类感受多提示相关经脉气血不足或运化不足。从循行路线看，' + mNames + '等与该区域关系密切。';
+        summary = '你反馈的是' + regList + '的无力感受。中医认为"不荣则痛"、力从气生，这类感受多提示相关经脉气血不足或运化不足。最相关的经脉是' + mNames + '，与该区域关系密切。';
       } else {
-        summary = '你反馈的是' + regList + '的不适。中医讲究"经脉所过，主治所及"，从循行路线看，' + mNames + '等经脉经过该区域，可以循经取穴来理解和调理。';
+        summary = '你反馈的是' + regList + '的不适。中医讲究"经脉所过，主治所及"，最相关的经脉是' + mNames + '，都经过该区域，可以循经取穴来理解和调理。';
       }
       return {
         meridianIds: mIds,
-        acuIds: mAids.slice(0, 8),
+        acuIds: mAids,
         summary: summary,
         note: '以上为一般性中医经络科普内容，不构成诊疗建议；若不适持续或加重，建议就医评估。'
       };
@@ -400,7 +430,7 @@ function buildAiStage(container, opts) {
     $all('.ai-meridian', meridianG.line).forEach(function (p) { p.classList.remove('hl'); });
     $all('.ai-acu', meridianG.acu).forEach(function (g) { g.classList.remove('hl'); });
   }
-  // AI 判断结果：高亮相关经脉 + 穴位
+  // AI 判断结果：只显示相关经脉 + 穴位（无关的不渲染出来）
   view.setMeridianHl = function (meridianIds, acuIds) {
     if (!meridianG) return;
     clearMeridianHl();
@@ -408,6 +438,9 @@ function buildAiStage(container, opts) {
     (meridianIds || []).forEach(function (id) { mSet[id] = true; });
     (acuIds || []).forEach(function (id) { aSet[id] = true; });
     $all('.ai-meridian', meridianG.line).forEach(function (p) {
+      p.classList.toggle('hl', !!mSet[p.dataset.mid]);
+    });
+    $all('.ai-meridian-hot', meridianG.hot).forEach(function (p) {
       p.classList.toggle('hl', !!mSet[p.dataset.mid]);
     });
     $all('.ai-acu', meridianG.acu).forEach(function (g) {
@@ -1034,7 +1067,12 @@ function renderWestPane() {
   function paint(res) {
     if (seq !== sciRenderSeq) return;
     $('#ai-science-stage').style.display = '';
-    bodyEl.innerHTML = '<div class="ai-science-hint">高亮区域为 AI 判断与你不适位置相关的肌肉，点一下肌肉查看机理解释</div>';
+    // 上图下卡：总体介绍卡整合提示行（左对齐）
+    bodyEl.innerHTML =
+      '<div class="ai-sum-card"><div class="ai-sum-title">AI 肌肉判断</div>' +
+        '<p>' + res.summary + '</p>' +
+        '<p class="ai-sum-tip">图中高亮肌肉为 AI 判断结果，点一下肌肉查看机理解释。</p>' +
+      '</div>';
     flow.stage3.resetView();
     flow.stage3.resetPoints();
     flow.stage3.clearHighlight();
@@ -1063,12 +1101,12 @@ function renderTcnPane() {
   function paint(res) {
     if (seq !== sciRenderSeq) return;
     $('#ai-science-stage').style.display = '';
+    // 上图下卡：总体介绍卡整合提示行（左对齐）
     bodyEl.innerHTML =
-      '<div class="ai-tcn-summary">' +
-        '<div class="ai-tcn-summary-title">AI 循经判断</div>' +
+      '<div class="ai-sum-card"><div class="ai-sum-title">AI 循经判断</div>' +
         '<p>' + res.summary + '</p>' +
-      '</div>' +
-      '<div class="ai-science-hint">图中相关经脉（加粗）与穴位（橘点）为 AI 判断结果，点一下经脉线或穴位查看中医解释</div>';
+        '<p class="ai-sum-tip">图中高亮经脉与穴位为 AI 判断结果，点一下经脉线或穴位查看中医解释。</p>' +
+      '</div>';
     flow.stage3.enterTcnMode();
     flow.stage3.setMeridianHl(res.meridianIds, res.acuIds);
   }
