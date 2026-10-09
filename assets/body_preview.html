@@ -44,10 +44,12 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .r-overlay{fill:#4198AC;stroke:none;pointer-events:none;opacity:0;transition:opacity .15s}
 #stage.peek-neck .m[data-paint~="neck"],
 #stage.peek-arm  .m[data-paint~="arm"],
+#stage.peek-upperback .m[data-paint~="upperback"],
 #stage.peek-back .m[data-paint~="back"],
 #stage.peek-leg  .m[data-paint~="leg"]{fill:#4198AC;stroke:#337F92;stroke-width:.7}
 #stage.peek-neck .r-overlay[data-paint~="neck"],
 #stage.peek-arm  .r-overlay[data-paint~="arm"],
+#stage.peek-upperback .r-overlay[data-paint~="upperback"],
 #stage.peek-back .r-overlay[data-paint~="back"],
 #stage.peek-leg  .r-overlay[data-paint~="leg"]{opacity:1}
 /* 区域标签：固定四枚，正背面均显示（背面按解剖左右镜像），pointer-events:none 不拦截任何点击 */
@@ -77,6 +79,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .sd-item.is-on .sd-check::after{transform:rotate(45deg) scale(1)}
 .sd-menu{display:block;font-size:14.5px;font-weight:600;color:#1D2122;line-height:1.4}
 .sd-desc{display:block;margin-top:3px;font-size:12.5px;font-weight:400;color:#8A9394;line-height:1.5}
+.sd-desc b{font-weight:700;color:#5F6B6C}
 .sd-note{display:block;margin-top:5px;font-size:12px;font-weight:500;color:#B0854A}
 .sd-item.is-off{opacity:.52;cursor:not-allowed}
 .sd-item.is-off .sd-menu{color:#8A9394}
@@ -787,7 +790,7 @@ var DIAGNOSIS_DISCLAIMER = '', BOOK_REF = '';
 // docs/13 目录式诊断
 var REGIONS4 = null, SYMPTOMS = null, SYMPTOM_BY_ID = null, REGION_PAINT = null;
 var symptomUnion = null, actionPackageFor = null;
-var engineReady = import('./mm-engine.js?v=259').then(function(m){
+var engineReady = import('./mm-engine.js?v=260').then(function(m){
   MUSCLE_MAP = m.MUSCLE_MAP;
   REGION_LABEL = m.REGION_LABEL;
   PATTERNS = m.PATTERNS;
@@ -952,14 +955,26 @@ function shortMenu(s){
   return c.length > 10 ? c.slice(0, 10) + '…' : c;
 }
 
-/* ── 四大隐形点击热层（注入正/背两张 SVG，随翻转缩放走） ──────── */
+/* ── 五区隐形点击热层（注入正/背两张 SVG，随翻转缩放走） ──────── */
 var SVG_NS = 'http://www.w3.org/2000/svg';
-// {区域, 图形}；视觉完全由肌肉分区底色承担，热层只负责好点中。绘制顺序=腿→腰背→肩臂→肩颈
-var HZ_DEFS = [
-  { region: 'leg',  shapes: '<rect x="48" y="230" width="104" height="228" rx="40"/>' },
-  { region: 'back', shapes: '<rect x="46" y="84" width="108" height="146" rx="22"/>' },
-  { region: 'arm',  shapes: '<rect x="10" y="70" width="42" height="190" rx="18"/><rect x="148" y="70" width="42" height="190" rx="18"/>' },
-  { region: 'neck', shapes: '<path d="M52 88 L60 58 Q56 26 78 10 Q100 2 122 10 Q144 26 140 58 L148 88 Z"/>' }
+// {区域, 图形}；视觉完全由肌肉分区底色承担，热层只负责好点中。
+// 正背面形状不同：背面躯干切成 肩背(上背+肩胛) / 腰腹(下腰) 两块；正面胸口段归肩颈、胸下到骨盆归腰腹。
+// 绘制顺序=腿→腰腹→肩背→肩臂→肩颈（后画者盖住边缘重叠缝）。
+var HZ_NECK = '<path d="M52 88 L60 58 Q56 26 78 10 Q100 2 122 10 Q144 26 140 58 L148 88 Z"/>';
+var HZ_ARM  = '<rect x="10" y="70" width="42" height="190" rx="18"/><rect x="148" y="70" width="42" height="190" rx="18"/>';
+var HZ_LEG  = '<rect x="48" y="230" width="104" height="228" rx="40"/>';
+var HZ_DEFS_FRONT = [
+  { region: 'leg',  shapes: HZ_LEG },
+  { region: 'back', shapes: '<rect x="46" y="118" width="108" height="112" rx="22"/>' },
+  { region: 'arm',  shapes: HZ_ARM },
+  { region: 'neck', shapes: '<path d="M52 118 L60 58 Q56 26 78 10 Q100 2 122 10 Q144 26 140 58 L148 118 Z"/>' }
+];
+var HZ_DEFS_BACK = [
+  { region: 'leg',  shapes: HZ_LEG },
+  { region: 'back', shapes: '<rect x="46" y="158" width="108" height="72" rx="22"/>' },
+  { region: 'upperback', shapes: '<rect x="46" y="84" width="108" height="74" rx="22"/>' },
+  { region: 'arm',  shapes: HZ_ARM },
+  { region: 'neck', shapes: HZ_NECK }
 ];
 
 function regionName(rid){
@@ -968,10 +983,11 @@ function regionName(rid){
   return r ? r.name : '';
 }
 
-function buildHzSvgGroup(){
+function buildHzSvgGroup(side){
   var root = document.createElementNS(SVG_NS, 'g');
   root.setAttribute('class', 'hz-root');
-  HZ_DEFS.forEach(function(def){
+  var defs = side === 'back' ? HZ_DEFS_BACK : HZ_DEFS_FRONT;
+  defs.forEach(function(def){
     var tmp = document.createElementNS(SVG_NS, 'svg');
     tmp.innerHTML = '<g>' + def.shapes + '</g>';
     Array.prototype.slice.call(tmp.firstChild.children).forEach(function(node){
@@ -999,18 +1015,19 @@ function buildRegionPaintMap(){
   });
   return m;
 }
-/* ── 区域标签：固定四枚，正背面均显示（背面按人体解剖左右镜像）；仅诊断第一页，克隆时剥离 ── */
+/* ── 区域标签：正面四枚，背面五枚（背面按人体解剖左右镜像）；仅诊断第一页，克隆时剥离 ── */
 var REGION_LABELS = {
   front: [
     { t: '肩颈区', x: 100, y: 62  },  // 脖子中间
     { t: '肩臂区', x: 168, y: 160 },  // 人体左肘（正面＝画面右侧）
-    { t: '腰腹区', x: 100, y: 155 },  // 肚子中间
+    { t: '腰腹区', x: 100, y: 174 },  // 肚子中间（腰腹热区 118-230 中段）
     { t: '臀腿区', x: 72,  y: 250 }   // 人体右大腿（正面＝画面左侧）
   ],
   back: [
     { t: '肩颈区', x: 100, y: 62  },
+    { t: '肩背区', x: 100, y: 126 },  // 下斜方肌中部（肩背热区 84-158 中段）
     { t: '肩臂区', x: 32,  y: 160 },  // 背面镜像：左肘在画面左侧
-    { t: '腰腹区', x: 100, y: 150 },
+    { t: '腰腹区', x: 100, y: 194 },  // 下腰中间（腰腹热区 158-230 中段）
     { t: '臀腿区', x: 128, y: 250 }   // 背面镜像：右大腿在画面右侧
   ]
 };
@@ -1077,11 +1094,15 @@ function renderSdList(){
     var menu = document.createElement('span');
     menu.className = 'sd-menu';
     menu.textContent = s.menu;
-    var desc = document.createElement('span');
-    desc.className = 'sd-desc';
-    desc.textContent = s.sub || '';
+    var feel = document.createElement('span');
+    feel.className = 'sd-desc sd-feel';
+    feel.innerHTML = s.subFeel || '';
+    var posture = document.createElement('span');
+    posture.className = 'sd-desc sd-posture';
+    posture.textContent = s.subPosture || '';
     txt.appendChild(menu);
-    txt.appendChild(desc);
+    txt.appendChild(feel);
+    txt.appendChild(posture);
     item.appendChild(check);
     item.appendChild(txt);
     item.addEventListener('click', function(){ toggleSymptom(s.id); });
@@ -1103,7 +1124,7 @@ function openDrawer(region){
   /* 点击区域即时反馈：仅本区肌肉实心（底色不变），抽屉关闭时恢复 */
   var st = document.getElementById('stage');
   if(st){
-    st.classList.remove('peek-neck', 'peek-arm', 'peek-back', 'peek-leg');
+    st.classList.remove('peek-neck', 'peek-arm', 'peek-upperback', 'peek-back', 'peek-leg');
     st.classList.add('peek-' + region);
   }
 }
@@ -1113,7 +1134,7 @@ function closeDrawer(){
   symDrawer.setAttribute('aria-hidden', 'true');
   drawerRegion = null;
   var st = document.getElementById('stage');
-  if(st) st.classList.remove('peek-neck', 'peek-arm', 'peek-back', 'peek-leg');
+  if(st) st.classList.remove('peek-neck', 'peek-arm', 'peek-upperback', 'peek-back', 'peek-leg');
 }
 symMask.addEventListener('click', closeDrawer);
 document.getElementById('sdClose').addEventListener('click', closeDrawer);
@@ -1146,7 +1167,7 @@ function setupCatalogUi(){
     if(!svg || svg.querySelector('.hz-root')) return;
     injectRegionLabels(svg, cardId === 'card-back' ? 'back' : 'front');
     paintRegionColors(svg);
-    svg.appendChild(buildHzSvgGroup());
+    svg.appendChild(buildHzSvgGroup(cardId === 'card-back' ? 'back' : 'front'));
   });
   document.querySelectorAll('#stage .hz').forEach(function(el){
     el.addEventListener('click', function(ev){
