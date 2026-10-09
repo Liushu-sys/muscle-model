@@ -1060,17 +1060,10 @@ function toggleFav(id) {
 var FAV_STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg>';
 var FIG_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
 
-// 一个动作 = 一整屏：标签 + 针对肌肉 + 双态示意图 + 介绍 + 跟练节奏 + 收藏星星
+// 一个动作 = 一整屏：双态示意图 + 标题 + 怎么做 + 跟练节奏 + 收藏星星
 function actionScreenHtml(item) {
   var a = item.a;
-  var tag;
-  if (a.forState === 'tight') tag = '<span class="adv-tag adv-tag-relief">放松</span>';
-  else if (a.forState === 'weak') tag = '<span class="adv-tag adv-tag-strengthen">强化</span>';
-  else tag = '<span class="adv-tag adv-tag-active">活动</span>';
   var h = '<div class="adv-action-screen" data-action-id="' + a.id + '">';
-  h += '<div class="adv-screen-tag">' + tag +
-    (item.target ? '<span class="avd-target">针对 <b>' + item.target + '</b></span>' : '') +
-    '</div>';
   h += '<div class="avd-figure avd-figure-v">'
     + '<div class="avd-fig"><img class="avd-fig-img" data-part="prep" alt="" aria-label="准备姿势"><span class="avd-fig-label">准备姿势</span></div>'
     + '<div class="avd-fig"><img class="avd-fig-img" data-part="complete" alt="" aria-label="完成动作"><span class="avd-fig-label">完成动作</span></div>'
@@ -1078,9 +1071,7 @@ function actionScreenHtml(item) {
     + '</div>';
   h += '<div class="avd-info">';
   h += '<h3 class="avd-name">' + a.name + '</h3>';
-  if (a.why) h += '<p class="avd-purpose">' + a.why + '</p>';
   h += '<p class="avd-step"><b class="avd-step-inline">怎么做：</b>' + (a.howto || '') + '</p>';
-  if (a.dose) h += '<div class="avd-dose">建议剂量：' + a.dose + '</div>';
   h += '</div>';
   h += '<div class="avd-rhythm">';
   h += '<div class="avd-rhythm-head">';
