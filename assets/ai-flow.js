@@ -275,6 +275,109 @@ var MockAI = {
 };
 
 /* ════════════════════════════════════════════════════════════
+ * 一·B、动作示意图生图服务
+ * 链路：AI 补全动作文字(准备/完成) → 组「固定人设+姿势」prompt → 生图接口 → 双图
+ * Mock 通道：pollinations（免鉴权免费）；真实接入后换阿里云万相转发（key 在服务器），
+ *           只需替换 genImgUrl 内部实现（改为 POST 自己的 /api/genimg 换回 URL），调用方不变。
+ * 人物一致性：所有图共用同一份人物设定 + 固定 seed；真实接入后用万相参考图锁脸。
+ * ════════════════════════════════════════════════════════════ */
+var IMG_SHEET = 'young asian woman, black hair tied in a neat low bun, white sports bra top, loose gray sweatpants with white side stripe, white sneakers, slim healthy body, full body shot, front view, isolated on pure seamless white background, bright even studio lighting, realistic fitness photography';
+var IMG_SCENE = {
+  sit: 'sitting upright on a light gray office chair',
+  stand: 'standing upright, facing camera',
+  lie: 'lying on a yoga mat'
+};
+var IMG_KIND = { '拉伸': 'slow stretching pose', '按压': 'self pressing massage pose', '激活': 'muscle activation exercise', '强化': 'muscle strengthening exercise' };
+var IMG_CACHE_KEY = 'ai_actimg_v1';
+
+function imgCacheGet(aid) {
+  try { return JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || '{}')[aid] || null; } catch (e) { return null; }
+}
+function imgCachePut(aid, urls) {
+  try {
+    var all = JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || '{}');
+    all[aid] = urls;
+    localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(all));
+  } catch (e) { /* 存储满/隐私模式忽略 */ }
+}
+// LLM：动作 → 准备/完成两段文字（★真实接入时由 LLM 按动作名+要点补全细节；mock 从 howto 拆句）
+MockAI.llmActionDesc = function (a) {
+  return delay(150).then(function () {
+    var sents = (a.howto || '').split('。').map(function (s) { return s.trim(); }).filter(Boolean);
+    var prep = sents[0] || a.name;
+    var complete = sents.length > 1 ? sents[sents.length - 1] : prep;
+    return { prep: prep, complete: complete };
+  });
+};
+function seedOf(str) {
+  var h = 0;
+  for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h % 100000;
+}
+function buildActionPrompt(a, poseTxt) {
+  var bits = [IMG_SHEET];
+  bits.push(IMG_SCENE[a.posture === 'stand' ? 'stand' : (a.posture === 'lie' ? 'lie' : 'sit')]);
+  if (IMG_KIND[a.kind]) bits.push(IMG_KIND[a.kind]);
+  bits.push(poseTxt);
+  return bits.join(', ');
+}
+function genImgUrl(prompt, seed) {
+  return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=768&height=1024&nologo=true&seed=' + seed;
+}
+// 取动作双图 URL：缓存优先，未命中先补文字再组 prompt 出 URL
+function actionImgUrls(a, cb) {
+  var hit = imgCacheGet(a.id);
+  if (hit) { cb(hit); return; }
+  MockAI.llmActionDesc(a).then(function (d) {
+    var urls = {
+      prep: genImgUrl(buildActionPrompt(a, d.prep), seedOf(a.id + '-prep')),
+      complete: genImgUrl(buildActionPrompt(a, d.complete), seedOf(a.id + '-done'))
+    };
+    imgCachePut(a.id, urls);
+    cb(urls);
+  });
+}
+// 渲染后填充双图：加载中 shimmer，生成失败回退火柴人图标
+// 免费生图通道有并发限流：限制同时 2 个请求，单图最多重试 3 次
+function fillActionImages(root) {
+  var imgs = $all('.avd-fig-img', root);
+  var active = 0, idx = 0;
+  function pump() {
+    while (active < 2 && idx < imgs.length) {
+      load(imgs[idx++]);
+    }
+  }
+  function load(img) {
+    active++;
+    var scr = img.closest('.adv-action-screen');
+    var a = scr && ACTIONS.find(function (x) { return x.id === scr.dataset.actionId; });
+    if (!a) { active--; pump(); return; }
+    actionImgUrls(a, function (urls) {
+      var tries = 0;
+      function tryLoad() {
+        tries++;
+        img.onload = function () { img.classList.add('loaded'); done(); };
+        img.onerror = function () {
+          if (tries < 5) setTimeout(tryLoad, 2000 * tries);
+          else {
+            var box = img.parentNode;
+            if (box) {
+              img.remove();
+              box.insertAdjacentHTML('afterbegin', FIG_ICON_SVG);
+            }
+            done();
+          }
+        };
+        img.src = (img.dataset.part === 'prep' ? urls.prep : urls.complete) + '&r=' + tries;
+      }
+      function done() { active--; pump(); }
+      tryLoad();
+    });
+  }
+  pump();
+}
+
+/* ════════════════════════════════════════════════════════════
  * 二、工具函数
  * ════════════════════════════════════════════════════════════ */
 function $(sel, root) { return (root || document).querySelector(sel); }
@@ -969,8 +1072,8 @@ function actionScreenHtml(item) {
     (item.target ? '<span class="avd-target">针对 <b>' + item.target + '</b></span>' : '') +
     '</div>';
   h += '<div class="avd-figure">'
-    + '<div class="avd-fig">' + FIG_ICON_SVG + '<span class="avd-fig-label">准备姿势</span></div>'
-    + '<div class="avd-fig">' + FIG_ICON_SVG + '<span class="avd-fig-label">完成动作</span></div>'
+    + '<div class="avd-fig"><img class="avd-fig-img" data-part="prep" alt="" aria-label="准备姿势"><span class="avd-fig-label">准备姿势</span></div>'
+    + '<div class="avd-fig"><img class="avd-fig-img" data-part="complete" alt="" aria-label="完成动作"><span class="avd-fig-label">完成动作</span></div>'
     + '<button type="button" class="avd-fav-star' + (isFav(a.id) ? ' on' : '') + '" data-action-id="' + a.id + '" aria-label="收藏">' + FAV_STAR_SVG + '</button>'
     + '</div>';
   h += '<div class="avd-info">';
@@ -1028,6 +1131,7 @@ function renderAiActionGroup(group) {
       dots += '</div>';
     }
     list.innerHTML = '<section class="adv-pane adv-pane-actions">' + screens + '</section>' + dots;
+    fillActionImages(list);
 
     // 绑定跟练节奏
     $all('.adv-action-screen[data-action-id]', list).forEach(function (scr) {
