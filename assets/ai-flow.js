@@ -3,6 +3,7 @@
 // key 到位后，仅需把 MockAI 四个方法内部替换为对阿里云转发接口的 fetch 调用，
 // 入参/出参签名保持不变，页面层零改动。
 import { ACTIONS, MUSCLES } from './mm-engine.js?v=261';
+import { MERIDIANS, REGION_MERIDIAN, REGION_ACUPOINT, acuPrincipleOf, buildMeridianLayers, meridianById, acuById } from './meridian-data.js?v=2';
 
 /* ════════════════════════════════════════════════════════════
  * 一、MockAI —— 未来真实接口的替身
@@ -159,6 +160,78 @@ var MockAI = {
         note: '以上为一般性肌肉学科普内容，不构成医学诊断；若出现持续疼痛、麻木或活动受限，建议就医评估。'
       };
     });
+  },
+
+  // ── 中医 ──
+  // LLM：部位+感受 → 相关经脉/穴位白名单判断 + 总述
+  // mock：区域映射表 → 经脉 id 列表 + 穴位 id 列表（含点中肌肉所在区域），summary 按感受生成
+  llmMeridian: function (points) {
+    return delay(800).then(function () {
+      var regs = {}, feels = {}, hasArm = false;
+      points.forEach(function (p) {
+        if (p.region) regs[p.region] = true;
+        if (p.muscleId) { var m = muscleById(p.muscleId); if (m) regs[m.region] = true; }
+        if (p.feel === '酸痛' || p.feel === '僵硬') feels.stagnant = true;
+        if (p.feel === '无力') feels.xu = true;
+      });
+      var mIds = [], mAids = [], seenM = {}, seenA = {};
+      function pushRegion(r) {
+        (REGION_MERIDIAN[r] || []).forEach(function (id) {
+          if (!seenM[id]) { seenM[id] = true; mIds.push(id); }
+        });
+        (REGION_ACUPOINT[r] || []).forEach(function (id) {
+          if (acuById(id) && !seenA[id]) { seenA[id] = true; mAids.push(id); }
+        });
+      }
+      Object.keys(regs).forEach(pushRegion);
+      // 总述
+      var regCn = { neck_shoulder: '肩颈', arm: '肩臂', upper_back: '肩背', low_back_hip: '腰腹', leg: '臀腿' };
+      var regList = Object.keys(regs).map(function (r) { return regCn[r] || r; }).join('、') || '身体';
+      var mNames = mIds.map(function (id) { return meridianById(id).short; }).slice(0, 4).join('、');
+      var summary;
+      if (feels.stagnant) {
+        summary = '你反馈的是' + regList + '的酸痛/僵硬感受。中医认为"不通则痛"，这类感受多与经脉气血运行不畅有关。从循行路线看，' + mNames + '等都经过你反馈的区域，可能与气血瘀滞相关。';
+      } else if (feels.xu) {
+        summary = '你反馈的是' + regList + '的无力感受。中医认为"不荣则痛"、力从气生，这类感受多提示相关经脉气血不足或运化不足。从循行路线看，' + mNames + '等与该区域关系密切。';
+      } else {
+        summary = '你反馈的是' + regList + '的不适。中医讲究"经脉所过，主治所及"，从循行路线看，' + mNames + '等经脉经过该区域，可以循经取穴来理解和调理。';
+      }
+      return {
+        meridianIds: mIds,
+        acuIds: mAids.slice(0, 8),
+        summary: summary,
+        note: '以上为一般性中医经络科普内容，不构成诊疗建议；若不适持续或加重，建议就医评估。'
+      };
+    });
+  },
+
+  // LLM：穴位 → 中医机理卡
+  llmAkuCard: function (payload) {
+    return delay(550).then(function () {
+      var a = acuById(payload.acuId);
+      return {
+        name: a.name,
+        meridian: a.meridian,
+        location: a.location,
+        effects: a.effects,
+        principle: acuPrincipleOf(a),
+        note: '以上为一般性穴位科普内容，不构成诊疗建议；孕妇及特殊人群按摩穴位前请咨询专业医师。'
+      };
+    });
+  },
+
+  // LLM：经脉 → 循行/主治卡
+  llmMeridianCard: function (payload) {
+    return delay(550).then(function () {
+      var m = meridianById(payload.meridianId);
+      return {
+        name: m.name,
+        group: m.group + ' · 第' + m.num + '条 · ' + m.dir,
+        runs: m.runs,
+        principle: '中医认为"经脉所过，主治所及"：这条经脉的循行覆盖范围与其主治倾向直接相关。经脉气血通畅时，循行部位得到濡养；若长期姿势不良、受寒或劳累，气血在经气郁滞处运行不畅，循行部位就容易出现酸、僵、痛等感受。按揉该经的常用穴位，有助于帮助气血恢复流通。',
+        note: '以上为一般性经络科普内容，不构成诊疗建议；若不适持续或加重，建议就医评估。'
+      };
+    });
   }
 };
 
@@ -194,6 +267,15 @@ function buildAiStage(container, opts) {
     highlightOnly: !!opts.highlightOnly,
     hlIds: {}
   };
+  view.onMeridianTap = opts.onMeridianTap || null;
+  view.onAcuTap = opts.onAcuTap || null;
+  view.tcn = false;
+
+  // 经络层（仅 front 注入；默认隐藏，由 enterTcnMode 显示）
+  var meridianG = null;
+  if (opts.meridianLayer) {
+    meridianG = buildMeridianLayers(SVG_NS);
+  }
 
   ['front', 'back'].forEach(function (side) {
     var srcSel = side === 'front' ? '#card-front svg' : '#card-back svg';
@@ -225,6 +307,14 @@ function buildAiStage(container, opts) {
     svg.appendChild(dotsG);
     view[side].dotsG = dotsG;
   });
+
+  // 经络层注入 front svg（需在循环之后，拿到 view.front.svg）
+  if (meridianG) {
+    view.front.svg.appendChild(meridianG.hot);
+    view.front.svg.appendChild(meridianG.line);
+    view.front.svg.appendChild(meridianG.acu);
+    ['line', 'hot', 'acu'].forEach(function (k) { meridianG[k].style.display = 'none'; });
+  }
 
   function cur() { return view[view.side]; }
 
@@ -288,6 +378,42 @@ function buildAiStage(container, opts) {
   view.setHighlight = setHighlight;
   function clearHighlight() { setHighlight([]); }
   view.clearHighlight = clearHighlight;
+
+  /* ── 中医经络模式 ── */
+  // 显示经络层，淡化肌肉层
+  view.enterTcnMode = function () {
+    view.tcn = true;
+    if (!meridianG) return;
+    ['line', 'hot', 'acu'].forEach(function (k) { meridianG[k].style.display = ''; });
+    view.front.svg.classList.add('tcn-mode');
+    clearHighlight();
+  };
+  view.exitTcnMode = function () {
+    view.tcn = false;
+    if (!meridianG) return;
+    ['line', 'hot', 'acu'].forEach(function (k) { meridianG[k].style.display = 'none'; });
+    view.front.svg.classList.remove('tcn-mode');
+    clearMeridianHl();
+  };
+  function clearMeridianHl() {
+    if (!meridianG) return;
+    $all('.ai-meridian', meridianG.line).forEach(function (p) { p.classList.remove('hl'); });
+    $all('.ai-acu', meridianG.acu).forEach(function (g) { g.classList.remove('hl'); });
+  }
+  // AI 判断结果：高亮相关经脉 + 穴位
+  view.setMeridianHl = function (meridianIds, acuIds) {
+    if (!meridianG) return;
+    clearMeridianHl();
+    var mSet = {}, aSet = {};
+    (meridianIds || []).forEach(function (id) { mSet[id] = true; });
+    (acuIds || []).forEach(function (id) { aSet[id] = true; });
+    $all('.ai-meridian', meridianG.line).forEach(function (p) {
+      p.classList.toggle('hl', !!mSet[p.dataset.mid]);
+    });
+    $all('.ai-acu', meridianG.acu).forEach(function (g) {
+      g.classList.toggle('hl', !!aSet[g.dataset.aid]);
+    });
+  };
 
   function resetView() {
     view.scale = 1; view.tx = 0; view.ty = 0;
@@ -378,6 +504,8 @@ function buildAiStage(container, opts) {
       return {
         dot: elHere.closest('.ai-dot'),
         muscle: elHere.closest('.ai-m'),
+        acu: elHere.closest('.ai-acu-hot'),
+        meridian: elHere.closest('.ai-meridian-hot'),
         inside: !!elHere.closest('.ai-m')
       };
     }
@@ -395,6 +523,12 @@ function buildAiStage(container, opts) {
       var v = clientToSvg(svg, e.clientX, e.clientY);
 
       if (view.highlightOnly) {
+        // 中医模式：穴位 > 经脉 > 肌肉
+        if (view.tcn) {
+          if (hit.acu && view.onAcuTap) { view.onAcuTap(hit.acu.dataset.aid); return; }
+          if (hit.meridian && view.onMeridianTap) { view.onMeridianTap(hit.meridian.dataset.mid); return; }
+          return;
+        }
         if (hit.muscle && hit.muscle.classList.contains('ai-hl') && view.onMuscleTap) {
           view.onMuscleTap(hit.muscle.dataset.id);
         }
@@ -423,6 +557,7 @@ function buildAiStage(container, opts) {
     // 双击空白翻转；双击肌肉/红点不翻
     // 例外：双击时第二下落在第一下刚造出的"无感受"空白点上 → 视为空白双击（撤销该点并翻转）
     svg.addEventListener('dblclick', function (e) {
+      if (view.tcn) return; // 经络只在正面，中医模式禁止翻转
       var hit = hitAt(e.clientX, e.clientY);
       if (hit.muscle) return;
       if (hit.dot) {
@@ -798,8 +933,10 @@ function emptyActionScreenHtml(group) {
 }
 
 var aiCurGroup = 'sit';
+var aiRecSeq = 0;  // 渲染序号：快速切换坐/站时丢弃过期回调
 
 function renderAiActionGroup(group) {
+  var seq = ++aiRecSeq;
   aiCurGroup = group;
   stopAllAiRhythms();
   $all('#ai-act-tabs .adv-tab').forEach(function (t) {
@@ -809,6 +946,7 @@ function renderAiActionGroup(group) {
   list.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><div>AI 正在根据你的情况生成动作…</div></div>';
 
   function paint(res) {
+    if (seq !== aiRecSeq) return;
     var items = group === 'sit' ? res.sit : res.stand;
     var screens = items.length
       ? items.map(actionScreenHtml).join('')
@@ -875,40 +1013,120 @@ function initActionPage() {
 }
 
 /* ════════════════════════════════════════════════════════════
- * 七、页面三：西医科普（AI 白名单内判断相关肌肉 → 统一橘色高亮）
+ * 七、页面三：科普页（双 Tab：西医 · 肌肉 / 中医 · 经络）
  * ════════════════════════════════════════════════════════════ */
-function enterSciencePage() {
-  showPage('page-ai-science');
+var sciCache = { west: null, tcn: null };  // 两种模式的 AI 结果缓存
+var sciMode = 'west';
+var sciRenderSeq = 0;  // 渲染序号：快速切换 Tab 时丢弃过期回调
+
+function renderWestPane() {
+  var seq = ++sciRenderSeq;
+  sciMode = 'west';
+  $all('#ai-sc-tabs .adv-tab').forEach(function (t) {
+    t.classList.toggle('active', t.dataset.pane === 'west');
+  });
+  var fh = $('#ai-science-stage .flip-hint');
+  if (fh) fh.style.display = '';
+  flow.stage3.exitTcnMode();
   var bodyEl = $('#ai-science-body');
   bodyEl.innerHTML = '<div class="ai-loading ai-loading-sm"><div class="ai-spinner"></div><div>AI 正在判断相关肌肉…</div></div>';
   $('#ai-science-stage').style.display = 'none';
-  MockAI.vlmHighlight(flow.points).then(function (res) {
+  function paint(res) {
+    if (seq !== sciRenderSeq) return;
     $('#ai-science-stage').style.display = '';
     bodyEl.innerHTML = '<div class="ai-science-hint">高亮区域为 AI 判断与你不适位置相关的肌肉，点一下肌肉查看机理解释</div>';
     flow.stage3.resetView();
     flow.stage3.resetPoints();
     flow.stage3.clearHighlight();
     flow.stage3.setHighlight(res.muscleIds);
+  }
+  if (sciCache.west) { paint(sciCache.west); return; }
+  MockAI.vlmHighlight(flow.points).then(function (res) {
+    sciCache.west = res;
+    paint(res);
   });
 }
 
-function openExplain(id) {
+function renderTcnPane() {
+  var seq = ++sciRenderSeq;
+  sciMode = 'tcn';
+  $all('#ai-sc-tabs .adv-tab').forEach(function (t) {
+    t.classList.toggle('active', t.dataset.pane === 'tcn');
+  });
+  flow.stage3.resetView();
+  flow.stage3.resetPoints();
+  var fh = $('#ai-science-stage .flip-hint');
+  if (fh) fh.style.display = 'none'; // 经络只在正面，不提示翻转
+  var bodyEl = $('#ai-science-body');
+  bodyEl.innerHTML = '<div class="ai-loading ai-loading-sm"><div class="ai-spinner"></div><div>AI 正在循经判断相关经络…</div></div>';
+  $('#ai-science-stage').style.display = 'none';
+  function paint(res) {
+    if (seq !== sciRenderSeq) return;
+    $('#ai-science-stage').style.display = '';
+    bodyEl.innerHTML =
+      '<div class="ai-tcn-summary">' +
+        '<div class="ai-tcn-summary-title">AI 循经判断</div>' +
+        '<p>' + res.summary + '</p>' +
+      '</div>' +
+      '<div class="ai-science-hint">图中相关经脉（加粗）与穴位（橘点）为 AI 判断结果，点一下经脉线或穴位查看中医解释</div>';
+    flow.stage3.enterTcnMode();
+    flow.stage3.setMeridianHl(res.meridianIds, res.acuIds);
+  }
+  if (sciCache.tcn) { paint(sciCache.tcn); return; }
+  MockAI.llmMeridian(flow.points).then(function (res) {
+    sciCache.tcn = res;
+    paint(res);
+  });
+}
+
+function enterSciencePage() {
+  showPage('page-ai-science');
+  sciCache = { west: null, tcn: null };
+  renderWestPane();
+}
+
+// 解释卡：type = muscle / acu / meridian
+function openExplain(type, id) {
   var sheet = $('#ai-explain-sheet');
   var mask = $('#ai-explain-mask');
   var content = $('#ai-explain-content');
-  content.innerHTML = '<div class="ai-loading ai-loading-sm"><div class="ai-spinner"></div><div>AI 正在生成机理解释…</div></div>';
+  content.innerHTML = '<div class="ai-loading ai-loading-sm"><div class="ai-spinner"></div><div>AI 正在生成解释…</div></div>';
   sheet.classList.add('show');
   mask.classList.add('show');
-  var point = flow.points.find(function (p) { return p.muscleId === id; }) || flow.points[0];
-  MockAI.llmExplain({ muscleId: id, feel: point ? point.feel : null }).then(function (r) {
-    content.innerHTML =
-      '<div class="ai-explain-name">' + r.name + '</div>' +
-      '<div class="ai-explain-row"><div class="ai-explain-label">生理功能</div>' +
-        '<div class="ai-explain-txt">' + r.func + '</div></div>' +
-      '<div class="ai-explain-row"><div class="ai-explain-label">常见原因</div>' +
-        '<div class="ai-explain-txt">' + r.cause + '</div></div>' +
-      '<div class="ai-explain-note">' + r.note + '</div>';
-  });
+  if (type === 'muscle') {
+    var point = flow.points.find(function (p) { return p.muscleId === id; }) || flow.points[0];
+    MockAI.llmExplain({ muscleId: id, feel: point ? point.feel : null }).then(function (r) {
+      content.innerHTML =
+        '<div class="ai-explain-name">' + r.name + '</div>' +
+        '<div class="ai-explain-row"><div class="ai-explain-label">生理功能</div>' +
+          '<div class="ai-explain-txt">' + r.func + '</div></div>' +
+        '<div class="ai-explain-row"><div class="ai-explain-label">常见原因</div>' +
+          '<div class="ai-explain-txt">' + r.cause + '</div></div>' +
+        '<div class="ai-explain-note">' + r.note + '</div>';
+    });
+  } else if (type === 'acu') {
+    MockAI.llmAkuCard({ acuId: id }).then(function (r) {
+      content.innerHTML =
+        '<div class="ai-explain-name">' + r.name + '</div>' +
+        '<div class="ai-explain-sub">' + r.meridian + ' · ' + r.location + '</div>' +
+        '<div class="ai-explain-row"><div class="ai-explain-label">常用调理</div>' +
+          '<div class="ai-explain-txt">' + r.effects + '</div></div>' +
+        '<div class="ai-explain-row"><div class="ai-explain-label">取穴机理</div>' +
+          '<div class="ai-explain-txt">' + r.principle + '</div></div>' +
+        '<div class="ai-explain-note">' + r.note + '</div>';
+    });
+  } else {
+    MockAI.llmMeridianCard({ meridianId: id }).then(function (r) {
+      content.innerHTML =
+        '<div class="ai-explain-name">' + r.name + '</div>' +
+        '<div class="ai-explain-sub">' + r.group + '</div>' +
+        '<div class="ai-explain-row"><div class="ai-explain-label">循行路线</div>' +
+          '<div class="ai-explain-txt">' + r.runs + '</div></div>' +
+        '<div class="ai-explain-row"><div class="ai-explain-label">中医机理</div>' +
+          '<div class="ai-explain-txt">' + r.principle + '</div></div>' +
+        '<div class="ai-explain-note">' + r.note + '</div>';
+    });
+  }
 }
 function closeExplain() {
   $('#ai-explain-sheet').classList.remove('show');
@@ -919,10 +1137,22 @@ function initSciencePage() {
   var stageBox = $('#ai-science-stage');
   flow.stage3 = buildAiStage(stageBox, {
     highlightOnly: true,
+    meridianLayer: true,
     onPick: function () { /* 高亮模式不允许新增点 */ },
     onDotTap: function () {},
-    // 点击高亮肌肉 → 底部弹出解释卡
-    onMuscleTap: function (id) { openExplain(id); }
+    // 西医：点高亮肌肉；中医：点高亮经脉/穴位
+    onMuscleTap: function (id) { openExplain('muscle', id); },
+    onMeridianTap: function (id) { openExplain('meridian', id); },
+    onAcuTap: function (id) { openExplain('acu', id); }
+  });
+
+  // 双 Tab 切换
+  $('#ai-sc-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.adv-tab');
+    if (!b || b.dataset.pane === sciMode) return;
+    closeExplain();
+    if (b.dataset.pane === 'west') renderWestPane();
+    else renderTcnPane();
   });
 
   $('#ai-explain-mask').addEventListener('click', closeExplain);
@@ -935,8 +1165,10 @@ function initSciencePage() {
     closeExplain();
     flow.points = [];
     aiRecCache = null;
+    sciCache = { west: null, tcn: null };
     flow.stage1.resetView(); flow.stage1.resetPoints();
     flow.stage3.resetView(); flow.stage3.clearHighlight();
+    flow.stage3.exitTcnMode();
     hideFeelCard();
     refreshPickSummary();
     showPage('page-home');
