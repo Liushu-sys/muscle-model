@@ -336,11 +336,14 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 #advice-home-btn:active{transform:scale(.98);background:#F2F8F7}
 
 /* 双态示意图：左准备 → 右完成（动作屏内） */
-.avd-figure{display:flex;align-items:stretch;gap:8px}
+.avd-figure{display:flex;align-items:stretch;gap:8px;position:relative}
 .avd-fig{flex:1;aspect-ratio:4/3;border-radius:14px;background:#EEF3F3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#93A0A1}
-.avd-fig svg{width:30px;height:30px}
 .avd-fig-label{font-size:11.5px;font-weight:600}
-.avd-fig-arrow{flex:0 0 18px;display:flex;align-items:center;justify-content:center;color:#B7C2C3}
+.avd-fav-star{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:#F5A623;cursor:pointer;transition:transform .15s ease}
+.avd-fav-star:active{transform:scale(.88)}
+.avd-fav-star svg{width:16px;height:16px;fill:currentColor}
+.avd-fav-star:not(.on){color:#B7C2C3}
+.avd-fav-star:not(.on) svg{fill:none;stroke:currentColor;stroke-width:1.8}
 .avd-fig-cap{margin:0 0 14px;font-size:12px;color:#9AA4A5;text-align:center}
 
 /* 动作介绍卡 */
@@ -466,16 +469,17 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .fav-tab{flex-shrink:0;padding:7px 16px;border:0;border-radius:99px;background:rgba(65,152,172,.1);color:var(--home-text-2);font:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .16s,color .16s}
 .fav-tab.active{background:var(--home-accent);color:#fff;font-weight:600;box-shadow:0 4px 12px -4px rgba(65,152,172,.4)}
 .fav-list{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
-.fav-card{flex:1;min-height:0;display:flex;align-items:center;gap:14px;background:#fff;border-radius:16px;padding:12px 12px 12px 16px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
-.fav-card-text{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
-.fav-tag{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;margin-bottom:7px}
+.fav-card{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 24px -12px rgba(31,68,77,.1)}
+.fav-imgs{position:relative;display:flex;gap:8px;flex:1;min-height:0}
+.fav-img{flex:1;border-radius:12px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--home-accent-dark)}
+.fav-img svg{width:34px;height:34px}
+.fav-img-label{font-size:11px;font-weight:600;color:var(--home-text-3)}
+.fav-name-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fav-tag{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;flex-shrink:0}
 .fav-tag.relief{background:#FDECEB;color:#D8403A}
 .fav-tag.strengthen{background:#F0E8F5;color:#7B5BA0}
-.fav-name{font-size:14.5px;font-weight:700;color:var(--home-text);margin-bottom:3px}
-.fav-region{font-size:11px;font-weight:500;color:var(--home-text-3);margin-bottom:6px}
-.fav-desc{font-size:13px;line-height:1.55;color:var(--home-text-2);display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.fav-dose{margin-top:auto;padding-top:7px;font-size:12.5px;font-weight:600;color:var(--home-accent-dark)}
-.fav-img{position:relative;flex-shrink:0;width:50%;align-self:stretch;border-radius:12px;background:linear-gradient(135deg,rgba(65,152,172,.14) 0%,rgba(51,127,146,.2) 100%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--home-accent-dark)}
+.fav-name{font-size:15px;font-weight:700;color:var(--home-text)}
+.fav-desc{font-size:12.5px;line-height:1.5;color:var(--home-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fav-star{position:absolute;right:6px;bottom:6px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:#F5A623;pointer-events:none}
 .fav-star svg{width:16px;height:16px;fill:currentColor}
 .fav-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:var(--home-text-3)}
@@ -1913,17 +1917,22 @@ function renderFavList(cat){
     list.innerHTML = '<div class="fav-empty">这个分类下还没有收藏的动作</div>';
     return;
   }
+  var figIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
   var h = '';
   items.forEach(function(a){
     var tagTxt = a.kind === 'relief' ? '🔴 立即缓解' : '🟣 长期加强';
-    h += '<div class="fav-card"><div class="fav-card-text">'
-       + '<span class="fav-tag ' + a.kind + '">' + tagTxt + '</span>'
+    h += '<div class="fav-card">'
+       + '<div class="fav-imgs">'
+       + '<div class="fav-img">' + figIcon + '<span class="fav-img-label">准备姿势</span></div>'
+       + '<div class="fav-img">' + figIcon + '<span class="fav-img-label">完成动作</span></div>'
+       + '<button class="fav-star" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg></button>'
+       + '</div>'
+       + '<div class="fav-name-row">'
        + '<div class="fav-name">' + a.name + '</div>'
-       + '<div class="fav-region">' + a.region + '</div>'
+       + '<span class="fav-tag ' + a.kind + '">' + tagTxt + '</span>'
+       + '</div>'
        + '<div class="fav-desc">' + a.desc + '</div>'
-       + '<div class="fav-dose">' + a.dose + '</div>'
-       + '</div><div class="fav-img"><span>动作示意</span>'
-       + '<button class="fav-star" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg></button></div></div>';
+       + '</div>';
   });
   list.innerHTML = h;
 }
@@ -1991,7 +2000,7 @@ function actionScreenHtml(a, kind, targetText){
     ? '<span class="adv-tag adv-tag-relief">放松</span>'
     : '<span class="adv-tag adv-tag-strengthen">强化</span>';
   var figIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
-  var arrow = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="20" y2="12"/><polyline points="15 7 20 12 15 17"/></svg>';
+  var favStar = '<svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg>';
   var rhythmMode = buildRhythm(a).mode;
   var h = '<div class="adv-action-screen" data-action-id="' + a.id + '">';
   h += '<div class="adv-screen-tag">' + tag
@@ -1999,8 +2008,8 @@ function actionScreenHtml(a, kind, targetText){
     + '</div>';
   h += '<div class="avd-figure">'
     + '<div class="avd-fig">' + figIcon + '<span class="avd-fig-label">准备姿势</span></div>'
-    + '<div class="avd-fig-arrow">' + arrow + '</div>'
     + '<div class="avd-fig">' + figIcon + '<span class="avd-fig-label">完成动作</span></div>'
+    + '<button type="button" class="avd-fav-star" data-action-id="' + a.id + '" aria-label="收藏">' + favStar + '</button>'
     + '</div>';
   h += '<div class="avd-info">';
   h += '<h3 class="avd-name">' + a.name + '</h3>';
@@ -2106,6 +2115,19 @@ function renderAdvicePage(){
   bindAdviceScreens();
 }
 
+/* 收藏星星：localStorage 持久化 */
+var FAV_KEY = 'bodymap_fav_actions';
+function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }catch(e){ return []; } }
+function setFavs(arr){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(arr)); }catch(e){} }
+function isFav(id){ return getFavs().indexOf(id) !== -1; }
+function toggleFav(id){
+  var arr = getFavs();
+  var i = arr.indexOf(id);
+  if(i === -1) arr.push(id); else arr.splice(i, 1);
+  setFavs(arr);
+  return i === -1; // true = 新收藏
+}
+
 /* 渲染后绑定：纵滑指示点 + 每个动作屏的节奏引擎（每次 render 重新绑） */
 function bindAdviceScreens(){
   adviceBodyEl.querySelectorAll('.adv-pane-actions').forEach(function(pane){
@@ -2122,6 +2144,16 @@ function bindAdviceScreens(){
       if(ACTIONS[i].id === scr.dataset.actionId){ act = ACTIONS[i]; break; }
     }
     if(act) bindAdviceRhythm(scr, buildRhythm(act));
+  });
+  // 收藏星星：初始化状态 + 点击切换
+  adviceBodyEl.querySelectorAll('.avd-fav-star').forEach(function(btn){
+    var id = btn.dataset.actionId;
+    if(isFav(id)) btn.classList.add('on');
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var nowOn = toggleFav(id);
+      btn.classList.toggle('on', nowOn);
+    });
   });
 }
 
