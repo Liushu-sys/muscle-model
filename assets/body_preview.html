@@ -142,8 +142,8 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .hm:hover{fill:#EADFD2}
 /* 首页点选透视：复用诊断页层级逻辑（选中强调 + 覆盖层变淡） */
 .hm.hm-sel{fill:#4198AC;stroke:#337F92;stroke-width:.7}
-.hm.hm-layer-1{opacity:.8}
-.hm.hm-layer-2{opacity:.65}
+.hm.hm-layer-1{opacity:.45}
+.hm.hm-layer-2{opacity:.3}
 .stage-home .flip-hint{color:#9FB8BD;bottom:calc(162px + max(14px,env(safe-area-inset-bottom,0px)))}
 
 /* 右侧毛玻璃竖条缩放控件（仅 +/−） */
@@ -402,8 +402,8 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .app-wrap{position:relative;display:flex;flex-direction:column;height:100%}
 
 /* 解剖层级透视：点击深层肌肉时，遮盖它的浅层按层差变淡 */
-.m.layer-1{opacity:.8}
-.m.layer-2{opacity:.65}
+.m.layer-1{opacity:.45}
+.m.layer-2{opacity:.3}
 /* 人物阴影：WPS 参数→颜色#000 透明度39% 模糊25px 距离8px 角度220° */
 .zoom-wrap{filter:drop-shadow(-4px 5px 14px rgba(0,0,0,0.39))}
 
