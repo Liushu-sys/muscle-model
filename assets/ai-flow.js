@@ -48,19 +48,24 @@ function muscleById(id) {
 }
 
 var MockAI = {
-  // VLM：人体图 + 点击坐标 → 细节部位描述（如"左侧腋下靠近胸大肌的位置"）
-  // mock：命中肌肉 → "左侧+肌肉名+附近"；空白区 → 侧别+区域名。
+  // VLM：人体图 + 点击坐标 → 精准部位描述，格式统一为：
+  //   「正面左-斜角肌下部」「背面右-斜方肌右部」「正面中-腹部」
+  //   = 面(正面/背面) + 侧(左/右/中) + 部位名 + 细分部(上/下/左/右部，可无)
+  // ★ 真实接入时把此格式写进 system prompt，要求 VLM 输出同结构定位串。
+  // mock：命中肌肉 → 面-侧-肌肉名+细分部；空白区 → 面-侧-区域名。
   // 仅处理人体内点击（stage 层已过滤人体外点击）。
   vlmLocate: function (payload) {
     return delay(450).then(function () {
-      var label = sideLabelOf(payload.side, payload.vx);
+      var face = payload.side === 'front' ? '正面' : '背面';
+      var sd = sideLabelOf(payload.side, payload.vx);
+      var head = face + (sd ? sd.replace('侧', '') : '中') + '-';
       if (payload.muscleId) {
         var m = muscleById(payload.muscleId);
         if (m) {
           return {
             muscleId: m.id,
             region: m.region,
-            description: label + m.name + '附近'
+            description: head + m.name + (payload.sub || '')
           };
         }
       }
@@ -68,7 +73,7 @@ var MockAI = {
       return {
         muscleId: null,
         region: z.region,
-        description: label + z.name
+        description: head + z.name
       };
     });
   },
@@ -151,12 +156,14 @@ var MockAI = {
         var rep = MUSCLES.find(function (m) { return m.region === r && !added[m.id]; });
         if (rep) addBlock(blockOf(rep), rep.name);
       });
-      // 总述：整合最相关的肌肉形成底部总体解释
+      // 总述：整合最相关的肌肉形成底部总体解释（引用采集到的精准定位串）
       var regCn = { neck_shoulder: '肩颈', arm: '肩臂', upper_back: '肩背', low_back_hip: '腰腹', leg: '臀腿' };
       var regList = Object.keys(regs).map(function (r) { return regCn[r] || r; }).join('、') || '相关区域';
-      var feels = points.map(function (p) { return p.feel; }).filter(Boolean).join('、') || '不适';
+      var feelList = points.map(function (p) { return p.feel; }).filter(Boolean).join('、') || '不适';
+      var locs = points.map(function (p) { return p.description; }).filter(Boolean).join('、');
+      var quote = (locs ? locs : regList) + ' · ' + feelList;
       var nameTxt = blockNames.slice(0, 3).join('、');
-      var summary = '结合你反馈的「' + regList + ' · ' + feels + '」，AI 判断最相关的肌肉是' + nameTxt +
+      var summary = '结合你反馈的「' + quote + '」，AI 判断最相关的肌肉是' + nameTxt +
         '。它们共同参与这个区域的姿势维持与动作发力，长时间负担偏重时，容易出现酸胀、发紧或使不上力的感受。';
       return { muscleIds: mIds, summary: summary };
     });
@@ -217,14 +224,16 @@ var MockAI = {
       var regCn = { neck_shoulder: '肩颈', arm: '肩臂', upper_back: '肩背', low_back_hip: '腰腹', leg: '臀腿' };
       var regList = Object.keys(regs).map(function (r) { return regCn[r] || r; }).join('、') || '身体';
       var feelList = points.map(function (p) { return p.feel; }).filter(Boolean).join('、') || '不适';
+      var locs = points.map(function (p) { return p.description; }).filter(Boolean).join('、');
+      var quote = (locs ? locs : regList) + ' · ' + feelList;
       var mNames = mIds.map(function (id) { return meridianById(id).short; }).join('、');
       var summary;
       if (feels.stagnant) {
-        summary = '你反馈的是' + regList + '的' + feelList + '感受。中医认为"不通则痛"，这类感受多与经脉气血运行不畅有关。最相关的经脉是' + mNames + '，都经过你反馈的区域，可能与气血瘀滞相关。';
+        summary = '结合你反馈的「' + quote + '」。中医认为"不通则痛"，这类感受多与经脉气血运行不畅有关。最相关的经脉是' + mNames + '，都经过你反馈的区域，可能与气血瘀滞相关。';
       } else if (feels.xu) {
-        summary = '你反馈的是' + regList + '的无力感受。中医认为"不荣则痛"、力从气生，这类感受多提示相关经脉气血不足或运化不足。最相关的经脉是' + mNames + '，与该区域关系密切。';
+        summary = '结合你反馈的「' + quote + '」。中医认为"不荣则痛"、力从气生，这类感受多提示相关经脉气血不足或运化不足。最相关的经脉是' + mNames + '，与该区域关系密切。';
       } else {
-        summary = '你反馈的是' + regList + '的不适。中医讲究"经脉所过，主治所及"，最相关的经脉是' + mNames + '，都经过该区域，可以循经取穴来理解和调理。';
+        summary = '结合你反馈的「' + quote + '」。中医讲究"经脉所过，主治所及"，最相关的经脉是' + mNames + '，都经过该区域，可以循经取穴来理解和调理。';
       }
       return {
         meridianIds: mIds,
@@ -317,6 +326,10 @@ function buildAiStage(container, opts) {
     $all('.m', svg).forEach(function (p) {
       p.classList.remove('m');
       p.classList.add('ai-m');
+    });
+    // 非肌肉 path（人体底色/轮廓/头部装饰）打标：科普页半透明模式用
+    $all('path', svg).forEach(function (p) {
+      if (!p.classList.contains('ai-m')) p.classList.add('ai-sil');
     });
     // 人体轮廓填充 path（无 .m 类、有 fill）：用于判断点击是否落在人体内
     var silhouettes = $all('path', svg).filter(function (p) {
@@ -529,6 +542,15 @@ function buildAiStage(container, opts) {
     svg.addEventListener('pointerup', endPointer);
     svg.addEventListener('pointercancel', function () { pointers = {}; drag = null; pinchStart = null; });
 
+    // 触控板捏合 / Ctrl(⌘)+滚轮缩放（参数与主工程 zoom-scroller 一致）
+    svg.addEventListener('wheel', function (e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      view.scale = Math.min(2.6, Math.max(1, view.scale * (e.deltaY > 0 ? 0.92 : 1.09)));
+      if (view.scale === 1) { view.tx = 0; view.ty = 0; }
+      applyTransform();
+    }, { passive: false });
+
     // pointer capture 会把 pointerup 的 e.target 重定向到 svg，
     // 因此松手时用 elementFromPoint 重新做命中检测
     function hitAt(cx, cy) {
@@ -576,11 +598,26 @@ function buildAiStage(container, opts) {
       // 只允许人体内选点：命中肌肉，或落在人体轮廓填充内
       var inside = hit.inside || insideBodyAt(v.x, v.y);
       if (!inside) return;
+      // 细分部：点击点相对命中肌肉包围盒的方位（上部/下部/左部/右部），供 AI 精准定位
+      var sub = '';
+      if (hit.muscle) {
+        try {
+          var bb = hit.muscle.getBBox();
+          if (bb.width > 0 && bb.height > 0) {
+            var fx = (v.x - bb.x) / bb.width, fy = (v.y - bb.y) / bb.height;
+            if (fy <= 0.38) sub = '上部';
+            else if (fy >= 0.62) sub = '下部';
+            else if (fx <= 0.38) sub = '左部';
+            else if (fx >= 0.62) sub = '右部';
+          }
+        } catch (err) { /* getBBox 不可用时忽略细分 */ }
+      }
       var payload = {
         side: side,
         vx: Math.round(v.x * 10) / 10,
         vy: Math.round(v.y * 10) / 10,
         muscleId: hit.muscle ? hit.muscle.dataset.id : null,
+        sub: sub,
         clientX: e.clientX,
         clientY: e.clientY
       };
@@ -1124,10 +1161,25 @@ function enterSciencePage() {
 }
 
 // 解释卡：type = muscle / acu / meridian
+// 点开的元素加 .picked 变实心（科普页半透明模式下突出当前查看项），关闭后恢复半透明
+function markPicked(query) {
+  var v3 = flow.stage3;
+  if (!v3) return;
+  ['front', 'back'].forEach(function (s) {
+    if (!v3[s]) return;
+    $all('.ai-m.picked, .ai-meridian.picked, .ai-acu.picked', v3[s].svg).forEach(function (n) {
+      n.classList.remove('picked');
+    });
+    if (query) $all(query, v3[s].svg).forEach(function (n) { n.classList.add('picked'); });
+  });
+}
 function openExplain(type, id) {
   var sheet = $('#ai-explain-sheet');
   var mask = $('#ai-explain-mask');
   var content = $('#ai-explain-content');
+  if (type === 'muscle') markPicked('.ai-m[data-id="' + id + '"]');
+  else if (type === 'acu') markPicked('.ai-acu[data-aid="' + id + '"]');
+  else markPicked('.ai-meridian[data-mid="' + id + '"]');
   content.innerHTML = '<div class="ai-loading ai-loading-sm"><div class="ai-spinner"></div><div>AI 正在生成解释…</div></div>';
   sheet.classList.add('show');
   mask.classList.add('show');
@@ -1167,6 +1219,7 @@ function openExplain(type, id) {
   }
 }
 function closeExplain() {
+  markPicked(null);
   $('#ai-explain-sheet').classList.remove('show');
   $('#ai-explain-mask').classList.remove('show');
 }
@@ -1183,6 +1236,8 @@ function initSciencePage() {
     onMeridianTap: function (id) { openExplain('meridian', id); },
     onAcuTap: function (id) { openExplain('acu', id); }
   });
+  // 科普页半透明模式：人体/肌肉微透，选中项点开解释卡时变实心
+  $all('.ai-svg', stageBox).forEach(function (s) { s.classList.add('soft'); });
 
   // 双 Tab 切换
   $('#ai-sc-tabs').addEventListener('click', function (e) {

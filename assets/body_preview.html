@@ -506,9 +506,9 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .me-footer p{margin:0 0 5px;font-size:11.5px;line-height:1.6;color:var(--home-text-3)}
 /* ══════════ AI 驱动实验流程（ai-flow） ══════════ */
 #page-ai-pick,#page-ai-action,#page-ai-science{flex-direction:column;background:#fff}
-.ai-stage{position:relative;flex:1;min-height:0;margin:6px 12px 0;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#F6F0E9 0%,#FBF8F3 100%)}
+.ai-stage{position:relative;flex:1;min-height:0;margin:6px 12px 0;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#E8F3F5 0%,#F3FAFB 100%)}
 .ai-card{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;touch-action:none}
-.ai-zoom{width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-origin:center center;will-change:transform}
+.ai-zoom{width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform-origin:center center;will-change:transform;filter:drop-shadow(-4px 5px 14px rgba(0,0,0,0.39))}
 .ai-svg{width:100%;height:100%}
 .ai-m{fill:#F6F0E9;stroke:#E3D5C8;stroke-width:.46;cursor:pointer;transition:fill .12s ease,filter .15s ease}
 .ai-m.layer-1{opacity:.45}
@@ -550,7 +550,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .ai-spinner{width:30px;height:30px;border:3px solid #E4DCD2;border-top-color:#4198AC;border-radius:50%;animation:ai-spin .8s linear infinite}
 @keyframes ai-spin{to{transform:rotate(360deg)}}
 .ai-empty{font-size:13px;color:#A99B8D;text-align:center;padding:22px 0;border:1px dashed #E4DCD2;border-radius:14px;font-weight:500}
-.ai-science-top{position:relative;flex:1;min-height:0;margin:6px 12px 0;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#F6F0E9 0%,#FBF8F3 100%)}
+.ai-science-top{position:relative;flex:1;min-height:0;margin:6px 12px 0;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#E8F3F5 0%,#F3FAFB 100%)}
 .ai-science-body{padding:10px 16px 6px;max-height:44%;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .ai-science-hint{font-size:12.5px;color:#9A8F84;text-align:center;padding:6px 4px;font-weight:500}
 .ai-explain-card{background:#fff;border:1px solid #EEE7DE;border-radius:18px;padding:15px 16px;box-shadow:0 4px 16px rgba(90,70,40,.05)}
@@ -579,6 +579,17 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
 .ai-acu-hot{fill:transparent;stroke:none;cursor:pointer;pointer-events:all}
 .ai-acu-dot{fill:#E0703F;opacity:1;pointer-events:none}
 .ai-acu-halo{fill:none;stroke:#E0703F;stroke-width:1.2;opacity:.85;pointer-events:none}
+/* 科普页半透明模式：人体底色与肌肉微微透明，AI 选中项同透明度，点开解释卡（.picked）变实心 */
+.ai-svg.soft .ai-sil{opacity:.55}
+.ai-svg.soft:not(.tcn-mode) .ai-m{fill-opacity:.55;stroke-opacity:.5}
+.ai-svg.soft .ai-m.ai-hl{fill:#E0703F;stroke:#BF5228;fill-opacity:.55;stroke-opacity:.55;opacity:1}
+.ai-svg.soft .ai-m.ai-hl.picked{fill-opacity:1;stroke-opacity:1}
+.ai-svg.soft .ai-meridian.hl{opacity:.55}
+.ai-svg.soft .ai-meridian.hl.picked{opacity:1}
+.ai-svg.soft .ai-acu-dot{opacity:.55}
+.ai-svg.soft .ai-acu-halo{opacity:.45}
+.ai-svg.soft .ai-acu.picked .ai-acu-dot{opacity:1}
+.ai-svg.soft .ai-acu.picked .ai-acu-halo{opacity:.95}
 /* 中医模式：淡化肌肉底图 */
 .ai-svg.tcn-mode .ai-m{fill-opacity:.16;stroke-opacity:.25}
 /* AI 总述卡（西医/中医共用）：主题色系、左对齐 */
@@ -926,7 +937,7 @@ body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF P
   </div>
 </div>
 
-<script type="module" src="./ai-flow.js?v=12"></script>
+<script type="module" src="./ai-flow.js?v=13"></script>
 <script type="module" src="./meridian-data.js?v=3"></script>
 <script type="module">
 // 引擎动态加载：即使 mm-engine.js 加载失败，也不影响点选和缩放
