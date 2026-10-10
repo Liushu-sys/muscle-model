@@ -1,0 +1,29 @@
+{
+  "_comment": "由 assets/mm-engine.js 与 assets/meridian-data.js 导出（2026-10-10）。前端数据增删后需重新生成；服务端只信任此名单内的 id。",
+  "regions": ["neck", "arm", "upperback", "back", "leg"],
+  "muscles": [
+    "sternocleidomastoid", "deep_neck_flexor", "suboccipital", "splenius_capitis",
+    "levator_scapulae", "trapezius_upper", "scalenes",
+    "pectoralis_major", "pectoralis_minor", "subscapularis",
+    "latissimus_dorsi", "teres_major",
+    "supraspinatus", "infraspinatus", "teres_minor",
+    "deltoid", "serratus_anterior", "rhomboid",
+    "trapezius_middle", "trapezius_lower",
+    "iliopsoas", "quadratus_lumborum", "erector_spinae", "multifidus",
+    "rectus_abdominis", "transversus_abdominis", "obliquus_externus", "obliquus_internus",
+    "gluteus_maximus", "gluteus_medius", "piriformis",
+    "tensor_fasciae_latae", "iliotibial_tract",
+    "hamstrings", "quadriceps", "rectus_femoris", "hip_adductors", "sartorius",
+    "gastrocnemius", "soleus", "fibularis", "tibialis_posterior", "tibialis_anterior",
+    "biceps_brachii", "triceps_brachii",
+    "brachioradialis", "forearm_flexors", "forearm_extensors"
+  ],
+  "meridians": ["lu", "li", "st", "sp", "ht", "si", "bl", "ki", "pc", "sj", "gb", "lr"],
+  "acupoints": [
+    "baihui", "touwei", "zanzhu", "taiyang", "sibai", "shuigou", "yingxiang",
+    "toufu", "tiantu", "zhongfu", "tanzhong", "jiuwei", "qimen", "burong",
+    "zhangmen", "zhongwan", "tianshu", "shenque", "qihai", "guanyuan", "zhongji",
+    "neiguan", "shenmen", "laogong", "quchi", "xuehai", "yinlingquan",
+    "zusanli", "fenglong", "sanyinjiao", "taichong", "zulinqi"
+  ]
+}

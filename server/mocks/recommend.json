@@ -1,0 +1,87 @@
+{
+  "sit": [
+    {
+      "slug": "sit-neck-lateral-stretch-7c21",
+      "name": "颈部侧向拉伸",
+      "kind": "stretch",
+      "targetMuscle": "斜角肌、上斜方肌",
+      "howto": [
+        "坐稳在椅面前缘，双脚平放，脊柱向上延展",
+        "一手绕过头顶轻放对侧耳上，手臂只负责引导",
+        "头向同侧轻侧倾约 30 度，对侧肩主动下沉",
+        "保持自然呼吸，结束后换侧"
+      ],
+      "dose": "每侧保持 20–30 秒，做 2 次",
+      "why": "帮助放松颈侧紧张的肌群，减轻肩颈牵拉感。",
+      "caution": "不要用手用力压头；出现手麻、头晕或症状串到手臂，立即停止。",
+      "rhythm": { "mode": "hold", "holdSec": 30 },
+      "imageSpec": {
+        "view": "side",
+        "basePosture": "sit",
+        "tier": "T2",
+        "fidelity": "medium",
+        "twoStage": false,
+        "cropRef": "full",
+        "props": ["chair"],
+        "bareFoot": false
+      },
+      "imagePrompt": "GOAL: edit the reference photo - keep the identical woman, outfit and studio set, CHANGE ONLY her pose into seated lateral neck stretch (scalene stretch). Make the pose change clearly visible and complete. [本地开发时此段不渲染，联调时为完整九段式英文指令]"
+    },
+    {
+      "slug": "sit-chin-tuck-4a8d",
+      "name": "收下巴（颈椎回缩）",
+      "kind": "activate",
+      "targetMuscle": "颈深屈肌",
+      "howto": [
+        "坐稳，目光平视，肩放松下沉",
+        "下巴水平向后收，像做出「双下巴」",
+        "保持后颈拉长，不要低头",
+        "放松还原"
+      ],
+      "dose": "保持 5 秒，做 10 次",
+      "why": "帮助唤醒颈椎前方的稳定肌群，缓解头前引带来的紧张。",
+      "caution": "动作缓慢无痛；出现眩晕立即停止。",
+      "rhythm": { "mode": "reps", "count": 10 },
+      "imageSpec": {
+        "view": "side",
+        "basePosture": "sit",
+        "tier": "T1",
+        "fidelity": "medium",
+        "twoStage": false,
+        "cropRef": "upper_body",
+        "props": ["chair"],
+        "bareFoot": false
+      },
+      "imagePrompt": "GOAL: ... chin tuck, upper-body crop reference ... [九段式英文指令]"
+    }
+  ],
+  "stand": [
+    {
+      "slug": "stand-trap-release-9e03",
+      "name": "耸肩再沉肩",
+      "kind": "release",
+      "targetMuscle": "上斜方肌、肩胛提肌",
+      "howto": [
+        "站立，双脚与髋同宽，手臂自然下垂",
+        "吸气，双肩缓慢耸向耳朵，保持 2 秒",
+        "呼气，肩膀完全放松下沉，感受肩胛骨落下",
+        "重复进行"
+      ],
+      "dose": "重复 8–10 次",
+      "why": "通过主动收缩后放松，帮助释放肩颈上部的紧绷。",
+      "caution": "动作柔和缓慢，不要借脖子发力；头晕者改为坐姿进行。",
+      "rhythm": { "mode": "reps", "count": 10 },
+      "imageSpec": {
+        "view": "front",
+        "basePosture": "stand",
+        "tier": "T1",
+        "fidelity": "medium",
+        "twoStage": false,
+        "cropRef": "upper_body",
+        "props": [],
+        "bareFoot": false
+      },
+      "imagePrompt": "GOAL: ... shoulder shrug and release, upper-body crop reference ... [九段式英文指令]"
+    }
+  ]
+}

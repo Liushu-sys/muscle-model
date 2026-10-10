@@ -1,0 +1,15 @@
+# 加到现有站点配置中（47.82.159.182 / /var/www/3x3）
+# 静态站保持原样，仅把 /api/* 反代给本机 ai-relay。
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8790
+	}
+
+	# handle_path /api/img/* 不需要单独配置：上面的 /api/* 已包含，
+	# 生成图由 ai-relay 返回（immutable 缓存头）。
+
+	handle {
+		root * /var/www/3x3
+		file_server
+		try_files {path} /body_preview.html
+	}

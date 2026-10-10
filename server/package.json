@@ -1,0 +1,13 @@
+{
+  "name": "bodymap-ai-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BodyCare AI relay: hides DashScope key, validates whitelists, caches generated action images.",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node index.js",
+    "dev:mock": "AI_MOCK=1 node index.js"
+  },
+  "dependencies": {}
+}
