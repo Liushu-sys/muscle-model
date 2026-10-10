@@ -354,23 +354,40 @@ function fillActionImages(root) {
     if (!a) { active--; pump(); return; }
     actionImgUrls(a, function (urls) {
       var tries = 0;
+      var finished = false;
+      // 本地火柴人示意图：立即可见（外网真图加载成功后覆盖它）
+      var box = img.parentNode;
+      if (box && !box.querySelector('svg')) box.insertAdjacentHTML('afterbegin', FIG_ICON_SVG);
+      function fallbackStick() {
+        var b = img.parentNode;
+        if (b) {
+          img.remove();
+          if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', FIG_ICON_SVG);
+        }
+      }
+      function done() {
+        if (finished) return;
+        finished = true;
+        active--; pump();
+      }
       function tryLoad() {
         tries++;
-        img.onload = function () { img.classList.add('loaded'); done(); };
+        // 超时兜底：外网生图被墙/过慢时，8 秒后只留本地示意图
+        var timer = setTimeout(function () {
+          if (!img.classList.contains('loaded')) { fallbackStick(); done(); }
+        }, 8000);
+        img.onload = function () {
+          clearTimeout(timer);
+          img.classList.add('loaded');
+          done();
+        };
         img.onerror = function () {
-          if (tries < 5) setTimeout(tryLoad, 2000 * tries);
-          else {
-            var box = img.parentNode;
-            if (box) {
-              img.remove();
-              box.insertAdjacentHTML('afterbegin', FIG_ICON_SVG);
-            }
-            done();
-          }
+          clearTimeout(timer);
+          if (tries < 2) setTimeout(tryLoad, 2000);
+          else { fallbackStick(); done(); }
         };
         img.src = (img.dataset.part === 'prep' ? urls.prep : urls.complete) + '&r=' + tries;
       }
-      function done() { active--; pump(); }
       tryLoad();
     });
   }
@@ -959,77 +976,99 @@ function buildRhythm(a) {
 function stopAllAiRhythms() {
   aiRhythms.forEach(function (st) { if (st.timer) { clearTimeout(st.timer); st.timer = null; } });
 }
+var AI_RING_CIRC = 226.2;
+var AI_RING_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+function ringHtml(){
+  return '<div class="ai-ring-wrap"><svg class="ai-ring" viewBox="0 0 84 84">'
+    + '<circle class="ai-ring-track" cx="42" cy="42" r="36"></circle>'
+    + '<circle class="ai-ring-prog" cx="42" cy="42" r="36"></circle>'
+    + '</svg><div class="ai-ring-center"></div></div>';
+}
 function resetAiRhythm(st) {
   if (st.timer) { clearTimeout(st.timer); st.timer = null; }
+  if (st.interval) { clearInterval(st.interval); st.interval = null; }
   st.running = false; st.finished = false;
   st.cur = 0; st.left = st.r.total;
-  st.countEl.classList.remove('done');
-  st.countEl.textContent = st.r.mode === 'reps' ? '共 ' + st.r.total + ' 次' : '共 ' + st.r.total + ' 秒';
+  st.centerEl.classList.remove('done');
+  st.centerEl.innerHTML = st.r.mode === 'reps' ? ('共 ' + st.r.total + ' 次') : ('共 ' + st.r.total + ' 秒');
+  st.progEl.style.transition = 'none';
+  st.progEl.style.strokeDashoffset = 0;
   st.phaseEl.textContent = '';
   st.doneEl.classList.remove('show');
   st.btnEl.textContent = '开始跟练';
   st.btnEl.classList.remove('ghost');
-  if (st.r.mode === 'reps') st.dots.forEach(function (d) { d.classList.remove('on'); });
-  else st.bar.style.width = '0%';
 }
 function bindAiRhythm(root, r) {
+  if (!root.querySelector('.avd-rhythm-viz')) return; // 卡片已无跟练区时跳过
   var st = {
-    root: root, r: r, timer: null, running: false, finished: false, cur: 0, left: r.total,
-    countEl: root.querySelector('.avd-rhythm-count'),
+    root: root, r: r, timer: null, interval: null, running: false, finished: false, cur: 0, left: r.total,
     phaseEl: root.querySelector('.avd-phase'),
     vizEl: root.querySelector('.avd-rhythm-viz'),
     btnEl: root.querySelector('.avd-start'),
     doneEl: root.querySelector('.avd-done-tip'),
-    dots: [], bar: null
+    centerEl: null, progEl: null
   };
-  if (r.mode === 'reps') {
-    var dotsHtml = '';
-    for (var i = 0; i < r.total; i++) dotsHtml += '<span class="avd-dot"></span>';
-    st.vizEl.innerHTML = '<div class="avd-track">' + dotsHtml + '</div>';
-    st.dots = Array.prototype.slice.call(st.vizEl.querySelectorAll('.avd-dot'));
-  } else {
-    st.vizEl.innerHTML = '<div class="avd-bar"><div class="avd-bar-fill"></div></div>';
-    st.bar = st.vizEl.querySelector('.avd-bar-fill');
+  st.vizEl.innerHTML = ringHtml();
+  st.centerEl = st.vizEl.querySelector('.ai-ring-center');
+  st.progEl = st.vizEl.querySelector('.ai-ring-prog');
+  function setProgress(frac) {
+    st.progEl.style.strokeDashoffset = (AI_RING_CIRC * Math.max(0, Math.min(1, frac))).toFixed(1);
   }
   function finish() {
     st.running = false; st.finished = true;
     if (st.timer) { clearTimeout(st.timer); st.timer = null; }
+    if (st.interval) { clearInterval(st.interval); st.interval = null; }
     st.phaseEl.textContent = '';
-    st.countEl.classList.add('done');
-    st.countEl.textContent = '完成';
+    setProgress(1);
+    st.centerEl.classList.add('done');
+    st.centerEl.innerHTML = AI_RING_CHECK;
     st.doneEl.classList.add('show');
     st.btnEl.textContent = '再做一次';
     st.btnEl.classList.remove('ghost');
   }
+  // 保持类：整段倒计时一圈走完，圆心显示剩余秒数，结束变对号
+  function holdLoop() {
+    var startAt = Date.now();
+    var totalMs = r.total * 1000;
+    st.progEl.style.transition = 'stroke-dashoffset .1s linear';
+    st.interval = setInterval(function () {
+      var elapsed = Date.now() - startAt;
+      if (elapsed >= totalMs) { finish(); return; }
+      var left = Math.ceil((totalMs - elapsed) / 1000);
+      st.left = left;
+      setProgress(elapsed / totalMs);
+      st.centerEl.textContent = left;
+      st.phaseEl.textContent = left <= 3 ? '最后坚持一下' : '保持住，自然呼吸';
+    }, 100);
+  }
+  // 次数类：每个「发力+回位」周期一圈，圆心显示 x/总数，全部完成变对号
   function repLoop() {
+    var totalMs = (r.active + r.rest) * 1000;
+    var startAt = Date.now();
+    st.progEl.style.transition = 'stroke-dashoffset .1s linear';
+    st.interval = setInterval(function () {
+      var elapsed = Date.now() - startAt;
+      if (elapsed >= totalMs) { repNext(); return; }
+      setProgress(elapsed / totalMs);
+    }, 100);
+  }
+  function repNext() {
     st.cur += 1;
     if (st.cur > r.total) { finish(); return; }
-    st.dots[st.cur - 1].classList.add('on');
-    st.countEl.textContent = st.cur + ' / ' + r.total;
+    st.centerEl.textContent = st.cur + '/' + r.total;
     st.phaseEl.textContent = '缓慢发力，保持 ' + r.active + ' 秒';
-    st.timer = setTimeout(function () {
-      if (st.cur < r.total) st.phaseEl.textContent = '回位放松';
-      st.timer = setTimeout(repLoop, r.rest * 1000);
-    }, r.active * 1000);
-  }
-  function holdTick() {
-    st.left -= 1;
-    if (st.left < 0) { finish(); return; }
-    st.bar.style.width = Math.round((r.total - st.left) / r.total * 100) + '%';
-    st.countEl.textContent = '还剩 ' + st.left + ' 秒';
-    st.phaseEl.textContent = st.left <= 3 ? '最后坚持一下' : '保持住，自然呼吸';
-    st.timer = setTimeout(holdTick, 1000);
+    repLoop();
   }
   function start() {
     aiRhythms.forEach(function (o) { if (o !== st && o.running) resetAiRhythm(o); });
     st.running = true; st.finished = false;
     st.cur = 0; st.left = r.total;
-    st.countEl.classList.remove('done');
+    st.centerEl.classList.remove('done');
     st.doneEl.classList.remove('show');
     st.btnEl.textContent = '结束';
     st.btnEl.classList.add('ghost');
-    if (r.mode === 'reps') repLoop();
-    else { st.bar.style.width = '0%'; st.countEl.textContent = '还剩 ' + st.left + ' 秒'; st.phaseEl.textContent = '保持住，自然呼吸'; st.timer = setTimeout(holdTick, 1000); }
+    if (r.mode === 'reps') repNext();
+    else { st.centerEl.textContent = st.left; st.phaseEl.textContent = '保持住，自然呼吸'; holdLoop(); }
   }
   st.btnEl.addEventListener('click', function () {
     if (!st.running && !st.finished) start();
@@ -1038,6 +1077,9 @@ function bindAiRhythm(root, r) {
   });
   resetAiRhythm(st);
   aiRhythms.push(st);
+}
+function resetAllAiRhythms() {
+  aiRhythms.forEach(function (st) { resetAiRhythm(st); });
 }
 
 // 收藏（与旧版共用 localStorage key：bodymap_fav_actions，JSON 数组存动作 id）
@@ -1056,28 +1098,17 @@ function toggleFav(id) {
 var FAV_STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26L22 9.77l-5 4.87 1.18 6.88L12 18.27l-6.18 3.25L7 14.64 2 9.77l6.91-1.01z"/></svg>';
 var FIG_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.2" r="2.4"/><path d="M12 8.4v6.2M12 11l-4 2.4M12 11l4 2.4M12 14.6l-3.2 5.6M12 14.6l3.2 5.6"/></svg>';
 
-// 一个动作 = 一整屏：双态示意图 + 标题 + 怎么做 + 跟练节奏 + 收藏星星
+// 一个动作 = 一整屏：单张火柴人示意图 + 标题 + 怎么做（无跟练区）
 function actionScreenHtml(item) {
   var a = item.a;
   var h = '<div class="adv-action-screen" data-action-id="' + a.id + '">';
   h += '<div class="avd-figure avd-figure-v">'
-    + '<div class="avd-fig"><img class="avd-fig-img" data-part="prep" alt="" aria-label="准备姿势"><span class="avd-fig-label">准备姿势</span></div>'
-    + '<div class="avd-fig"><img class="avd-fig-img" data-part="complete" alt="" aria-label="完成动作"><span class="avd-fig-label">完成动作</span></div>'
+    + '<div class="avd-fig">' + FIG_ICON_SVG + '</div>'
     + '<button type="button" class="avd-fav-star' + (isFav(a.id) ? ' on' : '') + '" data-action-id="' + a.id + '" aria-label="收藏">' + FAV_STAR_SVG + '</button>'
     + '</div>';
   h += '<div class="avd-info">';
   h += '<h3 class="avd-name">' + a.name + '</h3>';
   h += '<p class="avd-step"><b class="avd-step-inline">怎么做：</b>' + (a.howto || '') + '</p>';
-  h += '</div>';
-  h += '<div class="avd-rhythm">';
-  h += '<div class="avd-rhythm-head">';
-  h += '<div class="avd-rhythm-title">' + (buildRhythm(a).mode === 'reps' ? '跟着节奏，一次一下' : '跟着节奏保持住') + '</div>';
-  h += '<div class="avd-rhythm-count"></div>';
-  h += '</div>';
-  h += '<div class="avd-phase"></div>';
-  h += '<div class="avd-rhythm-viz"></div>';
-  h += '<button type="button" class="avd-start">开始跟练</button>';
-  h += '<div class="avd-done-tip"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>完成，做得好</div>';
   h += '</div>';
   h += '</div>';
   return h;
@@ -1108,31 +1139,25 @@ function renderAiActionGroup(group) {
     if (seq !== aiRecSeq) return;
     var items = group === 'sit' ? res.sit : res.stand;
     var screens = items.length
-      ? items.map(actionScreenHtml).join('')
-      : emptyActionScreenHtml(group);
+      ? items.map(function (it, i) {
+          return '<div class="ai-card-item' + (i === 0 ? ' top' : '') + '">' + actionScreenHtml(it) + '</div>';
+        }).join('')
+      : '<div class="ai-card-item top">' + emptyActionScreenHtml(group) + '</div>';
     var dots = '';
     if (items.length > 1) {
-      dots = '<div class="adv-vdots">';
+      dots = '<div class="ai-deck-dots">';
       for (var i = 0; i < items.length; i++) dots += '<i' + (i === 0 ? ' class="on"' : '') + '></i>';
       dots += '</div>';
     }
-    list.innerHTML = '<section class="adv-pane adv-pane-actions">' + screens + '</section>' + dots;
+    var followHtml = items.length ? ('<button type="button" class="ai-follow" id="ai-follow-btn" aria-label="开始跟练">'
+      + '<svg class="ai-follow-ring" viewBox="0 0 96 96">'
+      + '<circle class="fr-prog" cx="48" cy="48" r="45"></circle>'
+      + '</svg><span class="fr-center">开始跟练</span></button>') : '';
+    list.innerHTML = '<div class="ai-deck">' + screens + followHtml + '</div>' + dots;
     fillActionImages(list);
 
-    // 绑定跟练节奏
-    $all('.adv-action-screen[data-action-id]', list).forEach(function (scr) {
-      var a = ACTIONS.find(function (x) { return x.id === scr.dataset.actionId; });
-      if (a) bindAiRhythm(scr, buildRhythm(a));
-    });
-    // 纵滑指示点同步
-    var sec = $('.adv-pane-actions', list);
-    var vdots = $all('.adv-vdots i', list);
-    if (sec && vdots.length) {
-      sec.addEventListener('scroll', function () {
-        var idx = Math.round(sec.scrollTop / Math.max(1, sec.clientHeight));
-        vdots.forEach(function (d, i) { d.classList.toggle('on', i === idx); });
-      }, { passive: true });
-    }
+    // 卡片堆叠：第一张最前颜色最深，其余在后依次变浅；左/右滑切换
+    initDeck($('.ai-deck', list));
   }
 
   if (aiRecCache) { paint(aiRecCache); return; }
@@ -1145,6 +1170,196 @@ function renderAiActionGroup(group) {
 function enterActionPage() {
   showPage('page-ai-action');
   renderAiActionGroup('sit');
+}
+
+/* 动作卡轮播：≥3 张居中主卡+两侧倾斜露出边缘；2 张横向并列；1 张居中 */
+var aiDeckSuppressClick = false;
+function initDeck(deck) {
+  if (!deck) return;
+  var cards = $all('.ai-card-item', deck);
+  var N = cards.length;
+  var front = 0;
+  var dots = $all('.ai-deck-dots i', deck.parentElement);
+  var peek = 26;   // 两侧卡片露出的宽度（保留，兼容旧逻辑）
+  // 卡片尺寸：正方形，约占剩余区域宽度 77%（参照样图），不超过容器高度 85%
+  function cardSize() {
+    var s = Math.min(Math.round(deck.clientWidth * 0.77), Math.round(deck.clientHeight * 0.85));
+    s = Math.max(200, s);
+    return { w: s, h: s };
+  }
+  function sizeDeck() {
+    var s = cardSize();
+    cards.forEach(function (c) { c.style.width = s.w + 'px'; c.style.height = s.h + 'px'; });
+    if (followEl) followEl.style.top = (16 + s.h + 44) + 'px';
+  }
+  sizeDeck();
+  window.addEventListener('resize', function () { sizeDeck(); apply(false); });
+
+  /* 圆形「开始跟练」按钮：白底 + D5F77A 圆环；点击后数字倒数、圆环随时间变短，结束弹对号 */
+  var followEl = $('.ai-follow', deck);
+  var fst = null;
+  if (followEl) {
+    fst = {
+      timer: null, interval: null, running: false, finished: false,
+      center: followEl.querySelector('.fr-center'),
+      prog: followEl.querySelector('.fr-prog')
+    };
+    var FR_CIRC = 2 * Math.PI * 45;
+    var FR_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    function setProg(frac) {
+      fst.prog.style.strokeDashoffset = (FR_CIRC * Math.max(0, Math.min(1, frac))).toFixed(1);
+    }
+    function resetFollow() {
+      if (fst.timer) { clearTimeout(fst.timer); fst.timer = null; }
+      if (fst.interval) { clearInterval(fst.interval); fst.interval = null; }
+      fst.running = false; fst.finished = false;
+      fst.center.classList.remove('num');
+      fst.center.textContent = '开始跟练';
+      fst.prog.style.transition = 'none';
+      fst.prog.style.display = '';
+      setProg(0);
+    }
+    function finishFollow() {
+      fst.running = false; fst.finished = true;
+      if (fst.interval) { clearInterval(fst.interval); fst.interval = null; }
+      fst.prog.style.transition = 'none';
+      setProg(1); // 边框完全走完
+      fst.prog.style.display = 'none'; // 结束后不再显示按钮框
+      fst.center.classList.remove('num');
+      fst.center.innerHTML = FR_CHECK;
+    }
+    function currentRhythm() {
+      var fc = cards[front];
+      var scr = fc && fc.querySelector('.adv-action-screen[data-action-id]');
+      var a = scr && ACTIONS.find(function (x) { return x.id === scr.dataset.actionId; });
+      return a ? buildRhythm(a) : { mode: 'hold', total: 30 };
+    }
+    function runFollow() {
+      var r = currentRhythm();
+      fst.running = true; fst.finished = false;
+      fst.center.classList.add('num');
+      fst.prog.style.transition = 'stroke-dashoffset .12s linear';
+      function holdLoop() {
+        var startAt = Date.now();
+        var totalMs = r.total * 1000;
+        fst.interval = setInterval(function () {
+          var elapsed = Date.now() - startAt;
+          if (elapsed >= totalMs) { finishFollow(); return; }
+          var left = Math.ceil((totalMs - elapsed) / 1000);
+          fst.center.textContent = left;
+          setProg(elapsed / totalMs);
+        }, 100);
+      }
+      function repLoop() {
+        var totalMs = (r.active + r.rest) * 1000;
+        var startAt = Date.now();
+        fst.interval = setInterval(function () {
+          var elapsed = Date.now() - startAt;
+          if (elapsed >= totalMs) { repNext(); return; }
+          setProg(elapsed / totalMs);
+        }, 100);
+      }
+      function repNext() {
+        var cur = (parseInt(fst.center.textContent.split('/')[0], 10) || 0) + 1;
+        if (cur > r.total) { finishFollow(); return; }
+        fst.center.textContent = cur + '/' + r.total;
+        repLoop();
+      }
+      if (r.mode === 'reps') { fst.center.textContent = '1/' + r.total; repLoop(); }
+      else { fst.center.textContent = r.total; holdLoop(); }
+    }
+    followEl.addEventListener('click', function () {
+      if (!fst.running && !fst.finished) runFollow();
+      else resetFollow();
+    });
+    followEl.style.top = (16 + cardSize().h + 44) + 'px';
+  }
+  // 后方卡片颜色依次减淡（同色系浅蓝，参照样图）
+  var AI_CARD_FADE = ['#C9D5F8', '#DCE4FA', '#EBF0FC', '#F5F8FD'];
+  function behindColor(off) {
+    return AI_CARD_FADE[Math.min(off - 1, AI_CARD_FADE.length - 1)];
+  }
+  // 各位置卡片的基础几何（当前卡居中，后方依次向右下错开、旋转、缩小）
+  function baseOf(off, s) {
+    return {
+      x: -s.w / 2 + off * 16,
+      y: off * 18,
+      rot: off * 3.5,
+      sc: 1 - off * 0.02
+    };
+  }
+  function apply(animate, skipCard) {
+    var s = cardSize();
+    cards.forEach(function (c, i) {
+      if (c === skipCard) return;
+      var off = (i - front + N) % N;
+      var b = baseOf(off, s);
+      c.style.transition = animate
+        ? 'transform .38s cubic-bezier(.3,.75,.3,1), opacity .38s, background .38s ease'
+        : 'none';
+      c.style.transform = 'translate(' + b.x + 'px,' + b.y + 'px) rotate(' + b.rot + 'deg) scale(' + b.sc.toFixed(3) + ')';
+      c.style.opacity = 1;
+      c.style.background = off === 0 ? '#7E96E8' : behindColor(off);
+      c.style.zIndex = off === 0 ? 10 : String(N - off);
+      c.classList.toggle('top', off === 0);
+    });
+    dots.forEach(function (d, i) { d.classList.toggle('on', i === front); });
+  }
+  // 当前卡在轮播中的基准 x（拖拽/飞出时叠加位移用）
+  function frontX() {
+    return -cardSize().w / 2;
+  }
+  apply(false);
+  // 布局稳定后再重排一次（防止首帧容器尺寸未就绪导致错位）
+  requestAnimationFrame(function () { sizeDeck(); apply(false); });
+  if (N <= 1) return; // 单卡居中即可，无滑动
+  var drag = { active: false, dragging: false, x0: 0, dx: 0 };
+  deck.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.avd-fav-star')) return; // 星星点击不触发滑动
+    if (e.target.closest('.ai-follow')) return; // 跟练按钮不触发滑动
+    drag.active = true; drag.dragging = false; drag.x0 = e.clientX; drag.dx = 0;
+  });
+  deck.addEventListener('pointermove', function (e) {
+    if (!drag.active) return;
+    drag.dx = e.clientX - drag.x0;
+    if (!drag.dragging && Math.abs(drag.dx) > 8) { drag.dragging = true; deck.setPointerCapture(e.pointerId); }
+    if (!drag.dragging) return;
+    var top = cards[front];
+    top.style.transition = 'none';
+    top.style.transform = 'translateX(' + (frontX() + drag.dx) + 'px) rotate(' + (drag.dx / 28).toFixed(2) + 'deg)';
+    top.style.opacity = Math.max(0.35, 1 - Math.abs(drag.dx) / 400);
+  });
+  function settle(advance) {
+    drag.active = false; drag.dragging = false;
+    if (!advance) { apply(true); return; }
+    aiDeckSuppressClick = true;
+    setTimeout(function () { aiDeckSuppressClick = false; }, 420);
+    var dir = drag.dx > 0 ? 1 : -1;
+    var s = cardSize();
+    var outDist = deck.clientWidth / 2 + s.w / 2 + 60; // 滑出距离：确保完全离屏（由页面裁切隐藏）
+    var outCard = cards[front];
+    // 出卡继续滑出，不淡出；下一张同时从侧边滑入中间，无缝衔接
+    outCard.style.transition = 'transform .38s cubic-bezier(.45,.05,.35,1)';
+    outCard.style.transform = 'translateX(' + (frontX() + dir * outDist) + 'px) rotate(' + (dir * 8) + 'deg)';
+    front = (front + 1) % N;
+    resetAllAiRhythms();
+    if (fst) resetFollow();
+    apply(true, outCard);
+    setTimeout(function () {
+      outCard.style.transition = 'none';
+      apply(false, null); // 出卡已在屏幕外，静默归位到尾部
+    }, 380);
+  }
+  deck.addEventListener('pointerup', function () {
+    if (!drag.active) return;
+    var adv = drag.dragging && Math.abs(drag.dx) > 60;
+    settle(adv);
+  });
+  deck.addEventListener('pointercancel', function () { if (drag.active) settle(false); });
+  // 滑动结束后抑制一次 click，防止误触「开始跟练」/「收藏」
+  deck.addEventListener('click', function (e) {
+    if (aiDeckSuppressClick) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
 }
 
 function initActionPage() {
